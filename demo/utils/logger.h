@@ -43,6 +43,7 @@ public:
 	};
 
 	static void toLog(const std::string& message);
+	static void toLog(const std::wstring& message);
 	static void toLogWithFormat(const char* format, ...);
 
 	static void setOutputFlags(OutputFlags flag);

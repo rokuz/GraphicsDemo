@@ -34,12 +34,12 @@
 #endif
 
 #include <d3d11.h>
-
 #include <string>
 #include <list>
 #include "CEGUI/CEGUI.h"
 
 #include "window.h"
+#include "autoreleasepool.h"
 
 #include "matrix.h"
 
@@ -136,6 +136,8 @@ private:
 
 	//bool checkOpenGLVersion();
 	//bool checkDeviceCapabilities(std::vector<int>& multisamplingLevels);
+
+	bool initDevice(AuroreleasePool<IUnknown>& autorelease);
 
 	void initGui();
 	void destroyGui();

@@ -24,8 +24,6 @@
 #include "application.h"
 #include <algorithm>
 
-#include "uniquecomptr.h"
-
 #pragma warning(disable:4005) // CEGUI uses some obsolete stuff
 #include "CEGUI/RendererModules/Direct3D11/Renderer.h"
 
@@ -91,6 +89,7 @@ int Application::run(Application* self)
 	init();
 	m_isRunning = true;
 
+	// create a window
 	if (!m_window.init(m_info.windowWidth, m_info.windowHeight, m_info.title))
 	{
 		utils::Logger::toLog("Error: could not create window.\n");
@@ -98,10 +97,13 @@ int Application::run(Application* self)
 	}
 
 	HRESULT hr = S_OK;
+	AuroreleasePool<IUnknown> autorelease;
 
-	IDXGIFactory* pFactory = 0;
-	hr = CreateDXGIFactory1( __uuidof(IDXGIFactory), reinterpret_cast<void**>(&pFactory));
-	auto factoryPtr = UniqueComPtr<IDXGIFactory>::Wrap(pFactory);
+	// init D3D device
+	if (!initDevice(autorelease))
+	{
+		return EXIT_FAILURE;
+	}
 
 	/*
 	// init GL3w
@@ -174,9 +176,43 @@ int Application::run(Application* self)
 	glfwDestroyWindow(m_window);
 	glfwTerminate();*/
 
+	autorelease.perform();
 	m_window.destroy();
-
+	
 	return EXIT_SUCCESS;
+}
+
+bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
+{
+	HRESULT hr = S_OK;
+
+	// dxgi factory
+	IDXGIFactory* factory = 0;
+	hr = CreateDXGIFactory1(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory));
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not create DXGI factory.\n");
+		return false;
+	}
+	autorelease.add(factory);
+
+	// adapter
+	IDXGIAdapter* adapter = 0;
+	if (factory->EnumAdapters(0, &adapter) == DXGI_ERROR_NOT_FOUND)
+	{
+		utils::Logger::toLog("Error: could not find a graphics adapter.\n");
+		return false;
+	}
+	autorelease.add(adapter);
+
+	// adapter description
+	DXGI_ADAPTER_DESC desc;
+	if (adapter->GetDesc(&desc) != S_OK)
+	{
+		utils::Logger::toLog("Error: could not find a graphics adapter.\n");
+		return false;
+	}
+	utils::Logger::toLog(L"Graphics adapter: " + std::wstring(desc.Description) + L".\n");
 }
 
 void Application::measureFps(double delta)

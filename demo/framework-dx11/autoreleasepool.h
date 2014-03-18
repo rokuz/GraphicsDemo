@@ -21,72 +21,46 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UNIQUE_COM_PTR_H__
-#define __UNIQUE_COM_PTR_H__
+#ifndef __AUTO_RELEASE_POOL_H__
+#define __AUTO_RELEASE_POOL_H__
 #ifdef WIN32
     #pragma once
 #endif
 
+#include <list>
+
 namespace framework
 {
 
-template<typename ComInterface>
-class UniqueComPtr
+template <typename Releasable>
+class AuroreleasePool
 {
 public:
-	UniqueComPtr(UniqueComPtr&& ptr)
+	AuroreleasePool()
 	{
-		m_ptr = std::move(ptr.m_ptr);
 	}
 
-	UniqueComPtr& operator=(UniqueComPtr&& ptr)
+	~AuroreleasePool()
 	{
-		if (*this == &ptr) return *this;
-		m_ptr = std::move(ptr.m_ptr);
-		return *this;
+		perform();
 	}
 
-	~UniqueComPtr()
+	void add(Releasable* ptr)
 	{
-		if (m_ptr != 0)
+		m_pool.push_back(ptr);
+	}
+
+	void perform()
+	{
+		for (auto it = m_pool.rbegin(); it != m_pool.rend(); ++it)
 		{
-			m_ptr->Release();
+			(*it)->Release();
 		}
-	}
-
-	ComInterface* get()
-	{
-		return m_ptr;
-	}
-
-	static UniqueComPtr Create()
-	{
-		return UniqueComPtr((ComInterface*)0);
-	}
-
-	static UniqueComPtr Wrap(ComInterface* ptr)
-	{
-		return UniqueComPtr(ptr);
+		m_pool.clear();
 	}
 
 private:
-	ComInterface* m_ptr;
-
-	explicit UniqueComPtr(ComInterface* ptr)
-	{
-		m_ptr = ptr;
-	}
-
-	UniqueComPtr(const UniqueComPtr& ptr)
-	{
-		// copying is forbidden
-	}
-
-	UniqueComPtr& operator=(UniqueComPtr& ptr)
-	{
-		// copying is forbidden
-		return *this;
-	}
+	std::list<Releasable*> m_pool;
 };
 
 

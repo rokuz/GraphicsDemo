@@ -3,6 +3,7 @@ set(SOURCE_LIB  application.h
 				application.cpp
 				window.h
 				window.cpp
+				autoreleasepool.h
 )
 source_group(core FILES ${SOURCE_LIB})
 add_library(framework STATIC ${SOURCE_LIB})
@@ -30,13 +31,13 @@ set_target_properties(${LIBRARY_NAME} PROPERTIES
 )
 set(DEPS_LIBS ${DEPS_LIBS} ${LIBRARY_NAME})
 
-#set(LIBRARY_NAME d3dx11)
-#add_library(${LIBRARY_NAME} STATIC IMPORTED GLOBAL)
-#set_target_properties(${LIBRARY_NAME} PROPERTIES
-#	IMPORTED_LOCATION_DEBUG $ENV{DXSDK_DIR}Lib/x86/d3dx11.lib
-#	IMPORTED_LOCATION_RELEASE $ENV{DXSDK_DIR}Lib/x86/d3dx11d.lib
-#)
-#set(DEPS_LIBS ${DEPS_LIBS} ${LIBRARY_NAME})
+set(LIBRARY_NAME dxgi)
+add_library(${LIBRARY_NAME} STATIC IMPORTED GLOBAL)
+set_target_properties(${LIBRARY_NAME} PROPERTIES
+	IMPORTED_LOCATION_DEBUG $ENV{DXSDK_DIR}Lib/x86/dxgi.lib
+	IMPORTED_LOCATION_RELEASE $ENV{DXSDK_DIR}Lib/x86/dxgi.lib
+)
+set(DEPS_LIBS ${DEPS_LIBS} ${LIBRARY_NAME})
 
 #link CEGUI
 set(LIBRARY_NAME cegui)

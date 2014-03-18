@@ -55,6 +55,24 @@ void Logger::toLog(const std::string& message)
 #endif
 }
 
+void Logger::toLog(const std::wstring& message)
+{
+#ifdef WIN32
+	if ((outputFlags & (unsigned char)OutputFlags::IDE_OUTPUT) != 0)
+	{
+		OutputDebugStringW(message.c_str());
+	}
+	if ((outputFlags & (unsigned char)OutputFlags::CONSOLE) != 0)
+	{
+		std::wcout << message;
+	}
+	if ((outputFlags & (unsigned char)OutputFlags::FILE) != 0)
+	{
+		//TODO: implement
+	}
+#endif
+}
+
 void Logger::toLogWithFormat(const char* format, ...)
 {
 #ifdef WIN32
