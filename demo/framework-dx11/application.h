@@ -33,6 +33,8 @@
     #include <Windows.h>
 #endif
 
+#include <d3d11.h>
+
 #include <string>
 #include <list>
 #include "CEGUI/CEGUI.h"
@@ -84,6 +86,7 @@ protected:
         int windowWidth;
         int windowHeight;
         int samples;
+		D3D_FEATURE_LEVEL featureLevel;
         union
         {
             struct
@@ -91,7 +94,6 @@ protected:
                 unsigned int    fullscreen  : 1;
                 unsigned int    vsync       : 1;
                 unsigned int    cursor      : 1;
-                unsigned int    stereo      : 1;
                 unsigned int    debug       : 1;
             };
             unsigned int        all;
@@ -119,6 +121,11 @@ private:
 	double m_timeSinceLastFpsUpdate;
 	double m_averageFps;
 	size_t m_framesCounter;
+
+	ID3D11Device* m_device;
+	ID3D11Debug* m_debugger;
+	D3D_DRIVER_TYPE m_driverType;
+
 	//std::list<std::weak_ptr<Destroyable> > m_destroyableList;
 	//std::shared_ptr<Line3D> m_axisX;
 	//std::shared_ptr<Line3D> m_axisY;

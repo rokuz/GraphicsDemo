@@ -24,6 +24,8 @@
 #include "application.h"
 #include <algorithm>
 
+#include "uniquecomptr.h"
+
 #pragma warning(disable:4005) // CEGUI uses some obsolete stuff
 #include "CEGUI/RendererModules/Direct3D11/Renderer.h"
 
@@ -36,13 +38,13 @@ Application::AppInfo::AppInfo() :
 	title("Demo"), 
 	windowWidth(1024), 
 	windowHeight(768),
-	samples(0)
+	samples(0),
+	featureLevel(D3D_FEATURE_LEVEL_11_0)
 {
 	flags.all = 0;
 	flags.fullscreen = 0;
 	flags.vsync = 0;
 	flags.cursor = 1;
-	flags.stereo = 0;
 	#ifdef _DEBUG
 	flags.debug = 1;
 	#else
@@ -61,7 +63,10 @@ Application::Application() :
 	m_fpsStorage(0), 
 	m_timeSinceLastFpsUpdate(0),
 	m_averageFps(0), 
-	m_framesCounter(0)//,
+	m_framesCounter(0),
+	m_device(0),
+	m_debugger(0),
+	m_driverType(D3D_DRIVER_TYPE_HARDWARE)
 	//m_axisX(0), 
 	//m_axisY(0), 
 	//m_axisZ(0) 
@@ -91,6 +96,12 @@ int Application::run(Application* self)
 		utils::Logger::toLog("Error: could not create window.\n");
 		return EXIT_FAILURE;
 	}
+
+	HRESULT hr = S_OK;
+
+	IDXGIFactory* pFactory = 0;
+	hr = CreateDXGIFactory1( __uuidof(IDXGIFactory), reinterpret_cast<void**>(&pFactory));
+	auto factoryPtr = UniqueComPtr<IDXGIFactory>::Wrap(pFactory);
 
 	/*
 	// init GL3w
@@ -204,12 +215,12 @@ void Application::renderGui(double elapsedTime)
 	//GLboolean blendingEnable = glIsEnabled(GL_BLEND);
 	//GLboolean cullfaceEnable = glIsEnabled(GL_CULL_FACE);
 
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
+	/*CEGUI::System& gui_system(CEGUI::System::getSingleton());
 	gui_system.injectTimePulse((float)elapsedTime);
 	m_guiRenderer->beginRendering();
 	gui_system.getDefaultGUIContext().draw();
 	m_guiRenderer->endRendering();
-	CEGUI::WindowManager::getSingleton().cleanDeadPool();
+	CEGUI::WindowManager::getSingleton().cleanDeadPool();*/
 
 	//if (scissorTestEnable) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
 	//if (depthTestEnable) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
@@ -324,8 +335,8 @@ void Application::initGui()
 
 void Application::destroyGui()
 {
-	CEGUI::System::destroy();
-	CEGUI::Direct3D11Renderer::destroy(static_cast<CEGUI::Direct3D11Renderer&>(*m_guiRenderer));
+	//CEGUI::System::destroy();
+	//CEGUI::Direct3D11Renderer::destroy(static_cast<CEGUI::Direct3D11Renderer&>(*m_guiRenderer));
 }
 
 /*void Application::initAxes()
