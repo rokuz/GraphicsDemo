@@ -122,8 +122,16 @@ private:
 	double m_averageFps;
 	size_t m_framesCounter;
 
-	ID3D11Device* m_device;
-	ID3D11Debug* m_debugger;
+	struct Device
+	{
+		ID3D11Device* device;
+		ID3D11DeviceContext* context;
+		ID3D11Debug* debugger;
+		D3D_FEATURE_LEVEL featureLevel;
+		Device() : device(0), context(0), debugger(0) {}
+	};
+
+	Device m_device;
 	D3D_DRIVER_TYPE m_driverType;
 
 	//std::list<std::weak_ptr<Destroyable> > m_destroyableList;
@@ -138,6 +146,7 @@ private:
 	//bool checkDeviceCapabilities(std::vector<int>& multisamplingLevels);
 
 	bool initDevice(AuroreleasePool<IUnknown>& autorelease);
+	bool isFeatureLevelSupported(D3D_FEATURE_LEVEL level);
 
 	void initGui();
 	void destroyGui();

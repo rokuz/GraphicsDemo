@@ -62,8 +62,6 @@ Application::Application() :
 	m_timeSinceLastFpsUpdate(0),
 	m_averageFps(0), 
 	m_framesCounter(0),
-	m_device(0),
-	m_debugger(0),
 	m_driverType(D3D_DRIVER_TYPE_HARDWARE)
 	//m_axisX(0), 
 	//m_axisY(0), 
@@ -213,6 +211,44 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 		return false;
 	}
 	utils::Logger::toLog(L"Graphics adapter: " + std::wstring(desc.Description) + L".\n");
+
+	// check for feature level
+	if (!isFeatureLevelSupported(m_info.featureLevel))
+	{
+		utils::Logger::toLog("Error: chosen feature level is unsupported.\n");
+		return false;
+	}
+
+	UINT CreateDeviceFlags = 0;
+	if (m_info.flags.debug)
+	{
+		CreateDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	}
+
+	D3D_FEATURE_LEVEL level[] = { m_info.featureLevel };
+	D3D_FEATURE_LEVEL createdLevel;
+	hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, CreateDeviceFlags, level, 1, D3D11_SDK_VERSION, &m_device.device, &createdLevel, &m_device.context);
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not create D3D device.\n");
+		return false;
+	}
+	m_device.featureLevel = createdLevel;
+	autorelease.add(m_device.device);
+	autorelease.add(m_device.context);
+	
+	if (m_info.flags.debug)
+	{
+		hr = m_device.device->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&m_device.debugger));
+		if (hr != S_OK)
+		{
+			utils::Logger::toLog("Error: could not get D3D debugger interface.\n");
+			return false;
+		}
+		autorelease.add(m_device.debugger);
+	}
+
+	return true;
 }
 
 void Application::measureFps(double delta)
@@ -373,6 +409,15 @@ void Application::destroyGui()
 {
 	//CEGUI::System::destroy();
 	//CEGUI::Direct3D11Renderer::destroy(static_cast<CEGUI::Direct3D11Renderer&>(*m_guiRenderer));
+}
+
+bool Application::isFeatureLevelSupported(D3D_FEATURE_LEVEL level)
+{
+	D3D_FEATURE_LEVEL FeatureLevel;
+	HRESULT hr = D3D11CreateDevice(nullptr, m_driverType, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, nullptr, &FeatureLevel, nullptr);
+	if (FAILED(hr)) return false;
+
+	return level <= FeatureLevel;
 }
 
 /*void Application::initAxes()
