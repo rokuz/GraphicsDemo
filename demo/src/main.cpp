@@ -169,6 +169,7 @@ public:
 	virtual void init()
 	{
 		m_info.title = "Test application";
+		m_info.samples = 4;
 	}
 
 	virtual void startup(CEGUI::DefaultWindow* root)

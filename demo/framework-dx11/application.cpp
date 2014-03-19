@@ -103,32 +103,16 @@ int Application::run(Application* self)
 		return EXIT_FAILURE;
 	}
 
-	/*
-	// init GL3w
-	gl3wInit();
+	//initGui();
 
-	std::vector<int> multisamplingLevels;
-	if (!checkOpenGLVersion() || !checkDeviceCapabilities(multisamplingLevels))
-	{
-		glfwDestroyWindow(m_window);
-		glfwTerminate();
-		return EXIT_FAILURE;
-	}
-
-	#ifdef _DEBUG
-	utils::Logger::toLogWithFormat("Video adapter: %s - %s, OpenGL: %s\n", (const char*)glGetString(GL_VENDOR), (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VERSION));
-	#endif
-
-	initGui();
-
-	if (!StandardGpuPrograms::init())
-	{
-		glfwDestroyWindow(m_window);
-		glfwTerminate();
-		return EXIT_FAILURE;
-	}
-	initAxes();
-	startup(m_rootWindow);*/
+	//if (!StandardGpuPrograms::init())
+	//{
+	//	glfwDestroyWindow(m_window);
+	//	glfwTerminate();
+	//	return EXIT_FAILURE;
+	//}
+	//initAxes();
+	startup(m_rootWindow);
 
 	do
     {
@@ -140,18 +124,18 @@ int Application::run(Application* self)
 		}
 		//m_isRunning &= (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_RELEASE);
 
-		/*Texture::beginFrame();
+		//Texture::beginFrame();
 		if (fabs(m_lastTime) < 1e-7)
 		{
 			render(0);
-			Texture::endFrame();
-			renderGui(0);
+			//Texture::endFrame();
+			//renderGui(0);
 
-			m_lastTime = glfwGetTime();
+			//m_lastTime = glfwGetTime();
 		}
 		else
 		{
-			double curTime = glfwGetTime();
+			double curTime = 0;// glfwGetTime();
 			double delta = curTime - m_lastTime;
 				
 			// fps counter
@@ -159,20 +143,17 @@ int Application::run(Application* self)
 
 			// rendering
 			render(delta);
-			Texture::endFrame();
-			renderGui(delta);
+			//Texture::endFrame();
+			//renderGui(delta);
 
 			m_lastTime = curTime;
-		}*/
+		}
     } 
 	while(m_isRunning);
 
-	/*shutdown();
-	destroyAllDestroyable();
-	destroyGui();
-
-	glfwDestroyWindow(m_window);
-	glfwTerminate();*/
+	shutdown();
+	//destroyAllDestroyable();
+	//destroyGui();
 
 	autorelease.perform();
 	m_window.destroy();
@@ -210,7 +191,7 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 		utils::Logger::toLog("Error: could not find a graphics adapter.\n");
 		return false;
 	}
-	utils::Logger::toLog(L"Graphics adapter: " + std::wstring(desc.Description) + L".\n");
+	utils::Logger::toLog(L"Video adapter: " + std::wstring(desc.Description) + L".\n");
 
 	// check for feature level
 	if (!isFeatureLevelSupported(m_info.featureLevel))
@@ -234,6 +215,8 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 		return false;
 	}
 	m_device.featureLevel = createdLevel;
+	utils::Logger::toLogWithFormat("Feature level: %s.\n", toString(m_info.featureLevel).c_str());
+
 	autorelease.add(m_device.device);
 	autorelease.add(m_device.context);
 	
@@ -246,6 +229,18 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 			return false;
 		}
 		autorelease.add(m_device.debugger);
+	}
+
+	// check for multisampling level
+	if (m_info.samples != 0)
+	{
+		UINT numQuality = 0;
+		hr = m_device.device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, m_info.samples, &numQuality);
+		if (hr != S_OK || numQuality == 0)
+		{
+			utils::Logger::toLogWithFormat("Error: %dx-multisampling is not supported.\n", m_info.samples);
+			return false;
+		}
 	}
 
 	return true;
@@ -282,22 +277,12 @@ std::string Application::getGuiFullName(const std::string& name)
 
 void Application::renderGui(double elapsedTime)
 {
-	//GLboolean scissorTestEnable = glIsEnabled(GL_SCISSOR_TEST);
-	//GLboolean depthTestEnable = glIsEnabled(GL_DEPTH_TEST);
-	//GLboolean blendingEnable = glIsEnabled(GL_BLEND);
-	//GLboolean cullfaceEnable = glIsEnabled(GL_CULL_FACE);
-
-	/*CEGUI::System& gui_system(CEGUI::System::getSingleton());
+	CEGUI::System& gui_system(CEGUI::System::getSingleton());
 	gui_system.injectTimePulse((float)elapsedTime);
 	m_guiRenderer->beginRendering();
 	gui_system.getDefaultGUIContext().draw();
 	m_guiRenderer->endRendering();
-	CEGUI::WindowManager::getSingleton().cleanDeadPool();*/
-
-	//if (scissorTestEnable) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
-	//if (depthTestEnable) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-	//if (blendingEnable) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-	//if (cullfaceEnable) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+	CEGUI::WindowManager::getSingleton().cleanDeadPool();
 }
 
 void Application::renderAxes(const matrix44& viewProjection)
@@ -353,34 +338,9 @@ void Application::renderAxes(const matrix44& viewProjection)
 	return true;
 }*/
 
-/*bool Application::checkDeviceCapabilities(std::vector<int>& multisamplingLevels)
-{
-	GLint samplesCount = 0;
-	glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA8, GL_NUM_SAMPLE_COUNTS, 1, &samplesCount);
-	GLint* samples = new GLint[samplesCount];
-	glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA8, GL_SAMPLES, samplesCount, samples);
-	multisamplingLevels.reserve(samplesCount);
-	for (int i = 0; i < samplesCount; i++) 
-	{
-		if (samples[i] > 0) multisamplingLevels.push_back(samples[i]);
-	}
-	multisamplingLevels.push_back(0);
-	delete [] samples;
-	std::sort(multisamplingLevels.begin(), multisamplingLevels.end());
-
-	if (std::find(multisamplingLevels.begin(), multisamplingLevels.end(), m_info.samples) == multisamplingLevels.end())
-	{
-		utils::Logger::toLogWithFormat("Error: Multisampling level (%d) is unsupported.\n", m_info.samples);
-		return false;
-	}
-
-	return true;
-}*/
-
 void Application::initGui()
 {
-	/*m_guiRenderer = &CEGUI::Direct3D11Renderer::create();
-	static_cast<CEGUI::Direct3D11Renderer*>(m_guiRenderer)->enableExtraStateSettings(true);
+	m_guiRenderer = &CEGUI::Direct3D11Renderer::create(m_device.device, m_device.context);
 	CEGUI::System::create(*m_guiRenderer);
 	initialiseResources();
 
@@ -402,13 +362,13 @@ void Application::initGui()
 	m_fpsLabel->setPosition(CEGUI::UVector2(CEGUI::UDim(1.0f, -150.0f), cegui_reldim(0.0)));
 	m_fpsLabel->setSize(CEGUI::USize(cegui_absdim(150.0f), cegui_absdim(25.0f)));
 	m_fpsLabel->setProperty("HorzFormatting", "RightAligned");
-	m_fpsLabel->setText("0 fps");*/
+	m_fpsLabel->setText("0 fps");
 }
 
 void Application::destroyGui()
 {
-	//CEGUI::System::destroy();
-	//CEGUI::Direct3D11Renderer::destroy(static_cast<CEGUI::Direct3D11Renderer&>(*m_guiRenderer));
+	CEGUI::System::destroy();
+	CEGUI::Direct3D11Renderer::destroy(static_cast<CEGUI::Direct3D11Renderer&>(*m_guiRenderer));
 }
 
 bool Application::isFeatureLevelSupported(D3D_FEATURE_LEVEL level)
@@ -441,17 +401,6 @@ bool Application::isFeatureLevelSupported(D3D_FEATURE_LEVEL level)
 /*void Application::errorCallback(int error, const char* description)
 {
 	utils::Logger::toLogWithFormat("Error: %s\n", description);
-}*/
-
-/*void APIENTRY Application::debugCallback(GLenum source,
-                                    GLenum type,
-                                    GLuint id,
-                                    GLenum severity,
-                                    GLsizei length,
-                                    const GLchar* message,
-                                    GLvoid* userParam)
-{
-	utils::Logger::toLogWithFormat("Debug: %s\n", message);
 }*/
 
 /*void Application::_setWindowSize(GLFWwindow* window, int width, int height)
@@ -520,7 +469,7 @@ bool Application::isFeatureLevelSupported(D3D_FEATURE_LEVEL level)
 	gui_system.getDefaultGUIContext().injectMouseWheelChange((float)yoffset);
 }*/
 
-/*void Application::initialiseResources()
+void Application::initialiseResources()
 {
 	CEGUI::DefaultResourceProvider* rp = static_cast<CEGUI::DefaultResourceProvider*>(CEGUI::System::getSingleton().getResourceProvider());
 
@@ -546,7 +495,7 @@ bool Application::isFeatureLevelSupported(D3D_FEATURE_LEVEL level)
 	{
 		parser->setProperty("SchemaDefaultResourceGroup", "schemas");
 	}
-}*/
+}
 
 /*CEGUI::Key::Scan Application::glfwToCeguiKey(int glfwKey)
 {

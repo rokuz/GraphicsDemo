@@ -40,6 +40,7 @@
 
 #include "window.h"
 #include "autoreleasepool.h"
+#include "outputd3d11.h"
 
 #include "matrix.h"
 
@@ -141,9 +142,6 @@ private:
 
 	//void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	//void destroyAllDestroyable();
-
-	//bool checkOpenGLVersion();
-	//bool checkDeviceCapabilities(std::vector<int>& multisamplingLevels);
 
 	bool initDevice(AuroreleasePool<IUnknown>& autorelease);
 	bool isFeatureLevelSupported(D3D_FEATURE_LEVEL level);

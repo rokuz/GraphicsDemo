@@ -4,6 +4,8 @@ set(SOURCE_LIB  application.h
 				window.h
 				window.cpp
 				autoreleasepool.h
+				outputd3d11.h
+				outputd3d11.cpp
 )
 source_group(core FILES ${SOURCE_LIB})
 add_library(framework STATIC ${SOURCE_LIB})
