@@ -94,6 +94,8 @@ int Application::run(Application* self)
 		return EXIT_FAILURE;
 	}
 
+	initInput();
+
 	HRESULT hr = S_OK;
 	AuroreleasePool<IUnknown> autorelease;
 
@@ -107,8 +109,6 @@ int Application::run(Application* self)
 
 	//if (!StandardGpuPrograms::init())
 	//{
-	//	glfwDestroyWindow(m_window);
-	//	glfwTerminate();
 	//	return EXIT_FAILURE;
 	//}
 	//initAxes();
@@ -151,14 +151,24 @@ int Application::run(Application* self)
     } 
 	while(m_isRunning);
 
+	// destroy everything
 	shutdown();
-	//destroyAllDestroyable();
+	destroyAllDestroyable();
 	//destroyGui();
-
 	autorelease.perform();
 	m_window.destroy();
 	
 	return EXIT_SUCCESS;
+}
+
+void Application::resize()
+{
+	if (m_guiRenderer)
+	{
+		m_guiRenderer->setDisplaySize(CEGUI::Sizef((float)m_info.windowWidth, (float)m_info.windowHeight));
+	}
+
+	onResize(m_info.windowWidth, m_info.windowHeight);
 }
 
 bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
@@ -292,7 +302,7 @@ void Application::renderAxes(const matrix44& viewProjection)
 	//m_axisZ->renderWithStandardGpuProgram(viewProjection, vector4(0, 0, 1, 1), false);
 }
 
-/*void Application::registerDestroyable(std::weak_ptr<Destroyable> ptr)
+void Application::registerDestroyable(std::weak_ptr<Destroyable> ptr)
 {
 	if (!ptr.expired())
 	{
@@ -308,35 +318,16 @@ void Application::renderAxes(const matrix44& viewProjection)
 			m_destroyableList.push_back(ptr);
 		}
 	}
-}*/
+}
 
-/*void Application::destroyAllDestroyable()
+void Application::destroyAllDestroyable()
 {
 	for (auto it = m_destroyableList.begin(); it != m_destroyableList.end(); ++it)
 	{
 		if (!(*it).expired()) it->lock()->destroy();
 	}
 	m_destroyableList.clear();
-}*/
-
-/*bool Application::checkOpenGLVersion()
-{
-	int majorVersion = 0;
-	int minorVersion = 0;
-	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
-	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
-	if (majorVersion == 0 && minorVersion == 0)
-	{
-		utils::Logger::toLog("Error: Probably OpenGL 3+ is not supported in your hardware/drivers.\n");
-		return false;
-	}
-	if (majorVersion < m_info.majorVersion || minorVersion < m_info.minorVersion)
-	{
-		utils::Logger::toLogWithFormat("Error: Your hardware supports OpenGL %d.%d. You are trying to use OpenGL %d.%d.\n", majorVersion, minorVersion, m_info.majorVersion, m_info.minorVersion);
-		return false;
-	}
-	return true;
-}*/
+}
 
 void Application::initGui()
 {
@@ -380,6 +371,40 @@ bool Application::isFeatureLevelSupported(D3D_FEATURE_LEVEL level)
 	return level <= FeatureLevel;
 }
 
+void Application::initInput()
+{
+	m_window.setKeyboardHandler([this](int key, int scancode, bool pressed)
+	{
+		CEGUI::Key::Scan ceguiKey = (CEGUI::Key::Scan)(key);
+		if (CEGUI::System::getSingletonPtr())
+		{
+			CEGUI::System& gui_system(CEGUI::System::getSingleton());
+			if (pressed)
+			{
+				gui_system.getDefaultGUIContext().injectKeyDown(ceguiKey);
+			}
+			else
+			{
+				gui_system.getDefaultGUIContext().injectKeyUp(ceguiKey);
+			}
+		}
+
+		// hint to exit on ESC
+		if (ceguiKey == CEGUI::Key::Escape) m_isRunning = false;
+
+		onKeyButton(key, scancode, pressed);
+	});
+
+	m_window.setCharHandler([this](int codepoint)
+	{
+		if (CEGUI::System::getSingletonPtr())
+		{
+			CEGUI::System& gui_system(CEGUI::System::getSingleton());
+			gui_system.getDefaultGUIContext().injectChar((CEGUI::String::value_type)codepoint);
+		}
+	});
+}
+
 /*void Application::initAxes()
 {	
 	#define INIT_POINTS(name, point) std::vector<vector3> name; name.push_back(vector3()); name.push_back(point);
@@ -396,44 +421,6 @@ bool Application::isFeatureLevelSupported(D3D_FEATURE_LEVEL level)
 
 	m_axisZ.reset(new Line3D());
 	m_axisZ->initWithArray(points_z);
-}*/
-
-/*void Application::errorCallback(int error, const char* description)
-{
-	utils::Logger::toLogWithFormat("Error: %s\n", description);
-}*/
-
-/*void Application::_setWindowSize(GLFWwindow* window, int width, int height)
-{
-	glfwMakeContextCurrent(window);
-	m_self->m_guiRenderer->setDisplaySize(CEGUI::Sizef((float)width, (float)height));
-	m_self->m_info.windowWidth = width;
-	m_self->m_info.windowHeight = height;
-
-	m_self->onResize(width, height);
-}*/
-
-/*void Application::_onKey(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	CEGUI::Key::Scan ceguiKey = glfwToCeguiKey(key);
-
-	if(action == GLFW_PRESS)
-	{
-		gui_system.getDefaultGUIContext().injectKeyDown(ceguiKey);
-	}
-	else if (action == GLFW_RELEASE)
-	{
-		gui_system.getDefaultGUIContext().injectKeyUp(ceguiKey);
-	}
-
-	m_self->onKeyButton(key, scancode, action, mods);
-}*/
-
-/*void Application::_onChar(GLFWwindow* window, unsigned int codepoint)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	gui_system.getDefaultGUIContext().injectChar(codepoint);
 }*/
 
 /*void Application::_onMouse(GLFWwindow* window, int button, int action, int mods)
@@ -496,50 +483,6 @@ void Application::initialiseResources()
 		parser->setProperty("SchemaDefaultResourceGroup", "schemas");
 	}
 }
-
-/*CEGUI::Key::Scan Application::glfwToCeguiKey(int glfwKey)
-{
-	switch(glfwKey)
-	{
-		case GLFW_KEY_ESCAPE : return CEGUI::Key::Escape;
-		case GLFW_KEY_F1 : return CEGUI::Key::F1;
-		case GLFW_KEY_F2 : return CEGUI::Key::F2;
-		case GLFW_KEY_F3 : return CEGUI::Key::F3;
-		case GLFW_KEY_F4 : return CEGUI::Key::F4;
-		case GLFW_KEY_F5 : return CEGUI::Key::F5;
-		case GLFW_KEY_F6 : return CEGUI::Key::F6;
-		case GLFW_KEY_F7 : return CEGUI::Key::F7;
-		case GLFW_KEY_F8 : return CEGUI::Key::F8;
-		case GLFW_KEY_F9 : return CEGUI::Key::F9;
-		case GLFW_KEY_F10 : return CEGUI::Key::F10;
-		case GLFW_KEY_F11 : return CEGUI::Key::F11;
-		case GLFW_KEY_F12 : return CEGUI::Key::F12;
-		case GLFW_KEY_F13 : return CEGUI::Key::F13;
-		case GLFW_KEY_F14 : return CEGUI::Key::F14;
-		case GLFW_KEY_F15 : return CEGUI::Key::F15;
-		case GLFW_KEY_UP : return CEGUI::Key::ArrowUp;
-		case GLFW_KEY_DOWN : return CEGUI::Key::ArrowDown;
-		case GLFW_KEY_LEFT : return CEGUI::Key::ArrowLeft;
-		case GLFW_KEY_RIGHT : return CEGUI::Key::ArrowRight;
-		case GLFW_KEY_LEFT_SHIFT : return CEGUI::Key::LeftShift;
-		case GLFW_KEY_RIGHT_SHIFT : return CEGUI::Key::RightShift;
-		case GLFW_KEY_LEFT_CONTROL : return CEGUI::Key::LeftControl;
-		case GLFW_KEY_RIGHT_CONTROL : return CEGUI::Key::RightControl;
-		case GLFW_KEY_LEFT_ALT : return CEGUI::Key::LeftAlt;
-		case GLFW_KEY_RIGHT_ALT : return CEGUI::Key::RightAlt;
-		case GLFW_KEY_TAB : return CEGUI::Key::Tab;
-		case GLFW_KEY_ENTER : return CEGUI::Key::Return;
-		case GLFW_KEY_BACKSPACE : return CEGUI::Key::Backspace;
-		case GLFW_KEY_INSERT : return CEGUI::Key::Insert;
-		case GLFW_KEY_DELETE : return CEGUI::Key::Delete;
-		case GLFW_KEY_PAGE_UP : return CEGUI::Key::PageUp;
-		case GLFW_KEY_PAGE_DOWN : return CEGUI::Key::PageDown;
-		case GLFW_KEY_HOME : return CEGUI::Key::Home;
-		case GLFW_KEY_END : return CEGUI::Key::End;
-		case GLFW_KEY_KP_ENTER : return CEGUI::Key::NumpadEnter;
-		default : return CEGUI::Key::Unknown;
-	}
-}*/
 
 /*CEGUI::MouseButton Application::glfwToCeguiMouseButton(int glfwButton)
 {

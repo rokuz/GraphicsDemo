@@ -6,6 +6,8 @@ set(SOURCE_LIB  application.h
 				autoreleasepool.h
 				outputd3d11.h
 				outputd3d11.cpp
+				destroyable.h
+				destroyable.cpp
 )
 source_group(core FILES ${SOURCE_LIB})
 add_library(framework STATIC ${SOURCE_LIB})

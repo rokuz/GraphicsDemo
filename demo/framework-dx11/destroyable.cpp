@@ -21,52 +21,31 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __WINDOW_H__
-#define __WINDOW_H__
-#ifdef WIN32
-    #pragma once
-	#define WIN32_LEAN_AND_MEAN 1
-	#include <Windows.h>
-#endif
-
-#include <string>
-#include <functional>
+#include "destroyable.h"
+#include "application.h"
 
 namespace framework
 {
 
-class Window
+void Destroyable::initDestroyable()
 {
-public:
-	Window();
-	~Window();
-
-	bool init(size_t width, size_t height, const std::string& title);
-	void destroy();
-	void pollEvents();
-	bool shouldClose() const;
-	HWND getHandle() const;
-	std::pair<int, int> size(int renderWidth, int renderHeight) const;
-	void setKeyboardHandler(std::function<void(int key, int scancode, bool pressed)> handler);
-	void setCharHandler(std::function<void(int codepoint)> handler);
-	void setMouseHandler(std::function<void(double xpos, double ypos, int button, bool pressed)> handler);
-
-private:
-	HWND m_handle;
-	size_t m_width;
-	size_t m_height;
-	bool m_shouldClose;
-	std::function<void(int, int, bool)> m_keyboardHandler;
-	std::function<void(double, double, int, bool)> m_mouseHandler;
-	std::function<void(int)> m_charHandler;
-
-	LRESULT handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-	int translateKey(WPARAM wParam, LPARAM lParam);
-
-	static LRESULT CALLBACK _windowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-};
-
-
+	if (isSmartPointer())
+	{
+		Application::Instance()->registerDestroyable(shared_from_this());
+	}
 }
 
-#endif
+bool Destroyable::isSmartPointer()
+{
+	try
+	{
+		auto ptr = shared_from_this();
+	}
+	catch (const std::bad_weak_ptr&)
+	{
+		return false;
+	}
+	return true;
+}
+
+}

@@ -44,7 +44,7 @@
 
 #include "matrix.h"
 
-//#include "destroyable.h"
+#include "destroyable.h"
 #include "logger.h"
 #include "utils.h"
 //#include "geometry3D.h"
@@ -61,7 +61,7 @@ namespace framework
 
 class Application
 {
-	//friend class Destroyable;
+	friend class Destroyable;
 
 public:
 	Application();
@@ -72,8 +72,8 @@ public:
 	virtual void render(double elapsedTime){}
 	virtual void shutdown(){}
 	virtual void onResize(int width, int height){}
-	virtual void onKeyButton(int key, int scancode, int action, int mods){}
-	virtual void onMouseButton(double xpos, double ypos, int button, int action, int mods){}
+	virtual void onKeyButton(int key, int scancode, bool pressed){}
+	virtual void onMouseButton(double xpos, double ypos, int button, bool pressed){}
 	virtual void onMouseMove(double xpos, double ypos){}
 
 	static Application* Instance();
@@ -110,6 +110,8 @@ protected:
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
 
+	void resize();
+
 private:
 	static Application* m_self;
 	Window m_window;
@@ -135,13 +137,13 @@ private:
 	Device m_device;
 	D3D_DRIVER_TYPE m_driverType;
 
-	//std::list<std::weak_ptr<Destroyable> > m_destroyableList;
+	std::list<std::weak_ptr<Destroyable> > m_destroyableList;
 	//std::shared_ptr<Line3D> m_axisX;
 	//std::shared_ptr<Line3D> m_axisY;
 	//std::shared_ptr<Line3D> m_axisZ;
 
-	//void registerDestroyable(std::weak_ptr<Destroyable> ptr);
-	//void destroyAllDestroyable();
+	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
+	void destroyAllDestroyable();
 
 	bool initDevice(AuroreleasePool<IUnknown>& autorelease);
 	bool isFeatureLevelSupported(D3D_FEATURE_LEVEL level);
@@ -150,19 +152,15 @@ private:
 	void destroyGui();
 	void initialiseResources();
 
+	void initInput();
+
 	//void initAxes();
 
 	void measureFps(double delta);
 
-	//static void errorCallback(int error, const char* description);
-	//static void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, GLvoid* userParam);
-	//static void _setWindowSize(GLFWwindow* window, int width, int height);
-	//static void _onKey(GLFWwindow* window, int key, int scancode, int action, int mods);
-	//static void _onChar(GLFWwindow* window, unsigned int codepoint);
 	//static void _onMouse(GLFWwindow* window, int button, int action, int mods);
 	//static void _onCursor(GLFWwindow* window, double xpos, double ypos);
 	//static void _onScroll(GLFWwindow* window, double xoffset, double yoffset);
-	//static CEGUI::Key::Scan glfwToCeguiKey(int glfwKey);
 	//static CEGUI::MouseButton glfwToCeguiMouseButton(int glfwButton);
 };
 
