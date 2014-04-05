@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014 Roman Kuznetsov 
+ * Implementation is borrowed from GLFW
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,18 +22,22 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
+#ifndef __TIMER_H__
+#define __TIMER_H__
 #include <string>
 
 namespace utils
 {
 
-class Utils
+class Timer
 {
 public:
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
+	bool init();
+	double getTime();
+
+private:
+	double m_resolution;
+	unsigned __int64 m_base;
 };
 
 }

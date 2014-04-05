@@ -23,10 +23,6 @@
 
 #ifndef __LOGGER_H__
 #define __LOGGER_H__
-#ifdef WIN32
-    #pragma once
-#endif
-
 #include <string>
 
 namespace utils
@@ -55,4 +51,4 @@ private:
 
 }
 
-#endif //__LOGGER_H__
+#endif

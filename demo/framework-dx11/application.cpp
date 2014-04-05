@@ -62,7 +62,9 @@ Application::Application() :
 	m_timeSinceLastFpsUpdate(0),
 	m_averageFps(0), 
 	m_framesCounter(0),
-	m_driverType(D3D_DRIVER_TYPE_HARDWARE)
+	m_factory(0),
+	m_driverType(D3D_DRIVER_TYPE_HARDWARE),
+	m_multisamplingQuality(0)
 	//m_axisX(0), 
 	//m_axisY(0), 
 	//m_axisZ(0) 
@@ -77,6 +79,12 @@ Application* Application::Instance()
 int Application::run(Application* self)
 {
 	m_self = self;
+
+	if (!m_timer.init())
+	{
+		utils::Logger::toLog("Error: could not initialize a timer.\n");
+		return EXIT_FAILURE;
+	}
 
 	if (!utils::Utils::exists("data/gui"))
 	{
@@ -93,79 +101,101 @@ int Application::run(Application* self)
 		utils::Logger::toLog("Error: could not create window.\n");
 		return EXIT_FAILURE;
 	}
+	m_window.setCursorVisibility((bool)m_info.flags.cursor);
 
 	initInput();
 
-	HRESULT hr = S_OK;
-	AuroreleasePool<IUnknown> autorelease;
-
 	// init D3D device
+	AuroreleasePool<IUnknown> autorelease;
 	if (!initDevice(autorelease))
 	{
+		destroyAllDestroyable();
 		return EXIT_FAILURE;
 	}
 
-	//initGui();
+	initGui();
 
 	//if (!StandardGpuPrograms::init())
 	//{
 	//	return EXIT_FAILURE;
 	//}
 	//initAxes();
+
 	startup(m_rootWindow);
 
-	do
-    {
-		m_window.pollEvents();
-
-		if (m_window.shouldClose())
-		{
-			m_isRunning = false;
-		}
-		//m_isRunning &= (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_RELEASE);
-
-		//Texture::beginFrame();
-		if (fabs(m_lastTime) < 1e-7)
-		{
-			render(0);
-			//Texture::endFrame();
-			//renderGui(0);
-
-			//m_lastTime = glfwGetTime();
-		}
-		else
-		{
-			double curTime = 0;// glfwGetTime();
-			double delta = curTime - m_lastTime;
-				
-			// fps counter
-			measureFps(delta);
-
-			// rendering
-			render(delta);
-			//Texture::endFrame();
-			//renderGui(delta);
-
-			m_lastTime = curTime;
-		}
-    } 
-	while(m_isRunning);
+	mainLoop();
 
 	// destroy everything
 	shutdown();
 	destroyAllDestroyable();
-	//destroyGui();
+	destroyGui();
 	autorelease.perform();
 	m_window.destroy();
 	
 	return EXIT_SUCCESS;
 }
 
+void Application::mainLoop()
+{
+	do
+	{
+		// process events from the window
+		m_window.pollEvents();
+
+		// need to close?
+		if (m_window.shouldClose())
+		{
+			m_isRunning = false;
+		}
+
+		//Texture::beginFrame();
+		m_pipelineManager.beginFrame();
+		m_defaultRasterizer->apply(m_device);
+		if (fabs(m_lastTime) < 1e-7)
+		{
+			// the first frame
+			render(0);
+			//Texture::endFrame();
+			renderGui(0);
+
+			m_lastTime = m_timer.getTime();
+		}
+		else
+		{
+			double curTime = m_timer.getTime();
+			double delta = curTime - m_lastTime;
+
+			// fps counter
+			measureFps(delta);
+
+			// rendering
+			render(delta);
+			//Texture::endFrame();
+			renderGui(delta);
+
+			m_lastTime = curTime;
+		}
+		m_pipelineManager.endFrame();
+	} 
+	while (m_isRunning);
+}
+
+void Application::exit()
+{
+	m_isRunning = false;
+}
+
 void Application::resize()
 {
-	if (m_guiRenderer)
+	if (m_guiRenderer != 0)
 	{
 		m_guiRenderer->setDisplaySize(CEGUI::Sizef((float)m_info.windowWidth, (float)m_info.windowHeight));
+	}
+
+	if (m_defaultRasterizer.get() != 0)
+	{
+		m_defaultRasterizer->clearViewports();
+		m_defaultRasterizer->addViewport(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
 	}
 
 	onResize(m_info.windowWidth, m_info.windowHeight);
@@ -183,6 +213,7 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 		utils::Logger::toLog("Error: could not create DXGI factory.\n");
 		return false;
 	}
+	m_factory = factory;
 	autorelease.add(factory);
 
 	// adapter
@@ -244,14 +275,71 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 	// check for multisampling level
 	if (m_info.samples != 0)
 	{
-		UINT numQuality = 0;
-		hr = m_device.device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, m_info.samples, &numQuality);
-		if (hr != S_OK || numQuality == 0)
+		m_multisamplingQuality = 0;
+		hr = m_device.device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, m_info.samples, &m_multisamplingQuality);
+		if (hr != S_OK || m_multisamplingQuality == 0)
 		{
 			utils::Logger::toLogWithFormat("Error: %dx-multisampling is not supported.\n", m_info.samples);
 			return false;
 		}
+		m_multisamplingQuality--;
 	}
+
+	// swap chain
+	if (!initSwapChain(m_device, autorelease))
+	{
+		return false;
+	}
+
+	// init default rasterizer
+	m_defaultRasterizer.reset(new framework::RasterizerStage());
+	D3D11_RASTERIZER_DESC rastDesc = framework::RasterizerStage::getDefault();
+	rastDesc.MultisampleEnable = m_info.samples > 0 ? TRUE : FALSE;
+	m_defaultRasterizer->init(m_device);
+	m_defaultRasterizer->addViewport(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
+	if (!m_defaultRasterizer->isValid())
+	{
+		return false;
+	}
+	m_defaultRasterizer->apply(m_device);
+
+	return true;
+}
+
+bool Application::initSwapChain(Device& device, AuroreleasePool<IUnknown>& autorelease)
+{
+	HRESULT hr = S_OK;
+
+	// parameters
+	DXGI_SWAP_CHAIN_DESC state;
+	state.BufferDesc.Width = m_info.windowWidth;
+	state.BufferDesc.Height = m_info.windowHeight;
+	state.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	state.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+	state.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+	state.BufferDesc.RefreshRate.Numerator = 60;
+	state.BufferDesc.RefreshRate.Denominator = 1;
+
+	state.SampleDesc.Count = m_info.samples;
+	state.SampleDesc.Quality = m_multisamplingQuality;
+
+	state.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	state.BufferCount = 2;
+	state.OutputWindow = m_window.getHandle();
+	state.Windowed = ((bool)m_info.flags.fullscreen == false);
+	state.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+	state.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+	// initialization
+	hr = m_factory->CreateSwapChain(device.device, &state, &device.swapChain);
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not create a swap chain.\n");
+		return false;
+	}
+
+	autorelease.add(device.swapChain);
 
 	return true;
 }
@@ -403,6 +491,42 @@ void Application::initInput()
 			gui_system.getDefaultGUIContext().injectChar((CEGUI::String::value_type)codepoint);
 		}
 	});
+
+	m_window.setMouseHandler([this](double xpos, double ypos, double zdelta, int button, bool pressed)
+	{
+		if (CEGUI::System::getSingletonPtr())
+		{
+			CEGUI::System& gui_system(CEGUI::System::getSingleton());
+			if (button >= 0)
+			{
+				if (pressed)
+				{
+					gui_system.getDefaultGUIContext().injectMouseButtonDown((CEGUI::MouseButton)button);
+				}
+				else
+				{
+					gui_system.getDefaultGUIContext().injectMouseButtonUp((CEGUI::MouseButton)button);
+				}
+			}
+			else
+			{
+				gui_system.getDefaultGUIContext().injectMousePosition((float)xpos, (float)ypos);
+				if (fabs(zdelta) > 1e-4)
+				{
+					gui_system.getDefaultGUIContext().injectMouseWheelChange((float)zdelta);
+				}
+			}
+		}
+
+		if (button >= 0)
+		{
+			onMouseButton(xpos, ypos, button, pressed);
+		}
+		else
+		{
+			onMouseMove(xpos, ypos);
+		}
+	});
 }
 
 /*void Application::initAxes()
@@ -421,39 +545,6 @@ void Application::initInput()
 
 	m_axisZ.reset(new Line3D());
 	m_axisZ->initWithArray(points_z);
-}*/
-
-/*void Application::_onMouse(GLFWwindow* window, int button, int action, int mods)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	CEGUI::MouseButton ceguiMouseButton = glfwToCeguiMouseButton(button);
-
-	if(action == GLFW_PRESS)
-	{
-		gui_system.getDefaultGUIContext().injectMouseButtonDown(ceguiMouseButton);
-	}
-	else if (action == GLFW_RELEASE)
-	{
-		gui_system.getDefaultGUIContext().injectMouseButtonUp(ceguiMouseButton);
-	}
-
-	double xpos = 0, ypos = 0;
-	glfwGetCursorPos(window, &xpos, &ypos);
-	m_self->onMouseButton(xpos, ypos, button, action, mods);
-}*/
-
-/*void Application::_onCursor(GLFWwindow* window, double xpos, double ypos)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	gui_system.getDefaultGUIContext().injectMousePosition((float)xpos, (float)ypos);
-
-	m_self->onMouseMove(xpos, ypos);
-}*/
-
-/*void Application::_onScroll(GLFWwindow* window, double xoffset, double yoffset)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	gui_system.getDefaultGUIContext().injectMouseWheelChange((float)yoffset);
 }*/
 
 void Application::initialiseResources()
@@ -483,16 +574,5 @@ void Application::initialiseResources()
 		parser->setProperty("SchemaDefaultResourceGroup", "schemas");
 	}
 }
-
-/*CEGUI::MouseButton Application::glfwToCeguiMouseButton(int glfwButton)
-{
-	switch(glfwButton)
-	{
-		case GLFW_MOUSE_BUTTON_LEFT     : return CEGUI::LeftButton;
-		case GLFW_MOUSE_BUTTON_RIGHT    : return CEGUI::RightButton;
-		case GLFW_MOUSE_BUTTON_MIDDLE   : return CEGUI::MiddleButton;
-		default                         : return CEGUI::NoButton;
-	}
-}*/
 
 }

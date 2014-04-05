@@ -3,6 +3,8 @@ set(SOURCE_LIB  logger.h
 				utils.h 
 				logger.cpp 
 				utils.cpp
+				timer.h
+				timer.cpp
 )
 source_group(utils FILES ${SOURCE_LIB})
 add_library(utils STATIC ${SOURCE_LIB})

@@ -1,6 +1,7 @@
 #sources
 set(SOURCE_LIB  application.h 
 				application.cpp
+				structs.h
 				window.h
 				window.cpp
 				autoreleasepool.h
@@ -8,6 +9,10 @@ set(SOURCE_LIB  application.h
 				outputd3d11.cpp
 				destroyable.h
 				destroyable.cpp
+				pipelinestage.h
+				pipelinestage.cpp
+				rasterizerstage.h
+				rasterizerstage.cpp
 )
 source_group(core FILES ${SOURCE_LIB})
 add_library(framework STATIC ${SOURCE_LIB})

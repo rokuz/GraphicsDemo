@@ -21,14 +21,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __WINDOW_H__
-#define __WINDOW_H__
-#ifdef WIN32
-    #pragma once
-	#define WIN32_LEAN_AND_MEAN 1
-	#include <Windows.h>
-#endif
-
+#pragma once
+#define WIN32_LEAN_AND_MEAN 1
+#include <Windows.h>
 #include <string>
 #include <functional>
 
@@ -47,9 +42,11 @@ public:
 	bool shouldClose() const;
 	HWND getHandle() const;
 	std::pair<int, int> size(int renderWidth, int renderHeight) const;
+	std::pair<double, double> getCursorPosition();
+	void setCursorVisibility(bool isVisible);
 	void setKeyboardHandler(std::function<void(int key, int scancode, bool pressed)> handler);
 	void setCharHandler(std::function<void(int codepoint)> handler);
-	void setMouseHandler(std::function<void(double xpos, double ypos, int button, bool pressed)> handler);
+	void setMouseHandler(std::function<void(double xpos, double ypos, double zdelta, int button, bool pressed)> handler);
 
 private:
 	HWND m_handle;
@@ -57,7 +54,7 @@ private:
 	size_t m_height;
 	bool m_shouldClose;
 	std::function<void(int, int, bool)> m_keyboardHandler;
-	std::function<void(double, double, int, bool)> m_mouseHandler;
+	std::function<void(double, double, double, int, bool)> m_mouseHandler;
 	std::function<void(int)> m_charHandler;
 
 	LRESULT handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
@@ -68,5 +65,3 @@ private:
 
 
 }
-
-#endif

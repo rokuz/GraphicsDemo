@@ -1,5 +1,10 @@
 #sources
-set(SOURCE_EXE main.cpp)
+if( GRAPHICS_API STREQUAL GRAPHICS_API_OGL )
+set(SOURCE_EXE main_ogl.cpp)
+endif()
+if( GRAPHICS_API STREQUAL GRAPHICS_API_DX11 )
+set(SOURCE_EXE main_dx11.cpp)
+endif()
 add_executable(${PROJECT_NAME} ${SOURCE_EXE})
 
 #options

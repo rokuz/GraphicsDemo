@@ -21,12 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __AUTO_RELEASE_POOL_H__
-#define __AUTO_RELEASE_POOL_H__
-#ifdef WIN32
-    #pragma once
-#endif
-
+#pragma once
 #include <list>
 
 namespace framework
@@ -63,7 +58,4 @@ private:
 	std::list<Releasable*> m_pool;
 };
 
-
 }
-
-#endif

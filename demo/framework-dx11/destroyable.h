@@ -21,12 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __DESTROYABLE_H__
-#define __DESTROYABLE_H__
-#ifdef WIN32
-    #pragma once
-#endif
-
+#pragma once
 #include <memory>
 
 namespace framework
@@ -38,10 +33,9 @@ public:
 	virtual ~Destroyable(){}
 	virtual void destroy(){}
 
+protected:
 	void initDestroyable();
 	bool isSmartPointer();
 };
 
 }
-
-#endif

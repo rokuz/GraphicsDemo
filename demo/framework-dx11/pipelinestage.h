@@ -21,20 +21,59 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
+#pragma once
+#include <d3d11.h>
+#include <vector>
 
-namespace utils
+#include "destroyable.h"
+#include "structs.h"
+
+namespace framework
 {
 
-class Utils
+class PipelineStageManager;
+
+enum PipelineStageType
 {
+	RasterizerStageType = 0,
+	PipelineStageCount
+};
+
+class PipelineStage : public Destroyable
+{
+	friend class Application;
+	friend class PipelineStageManager;
+	
 public:
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
+	virtual ~PipelineStage(){}
+	virtual PipelineStageType GetType() const = 0;
+	virtual bool isValid() { return true; }
+	
+	void init(const Device& device);
+	void apply(const Device& device);
+	void cancel(const Device& device);
+	
+protected:
+	virtual void onInit(const Device& device){}
+	virtual void onApply(const Device& device){}
+	virtual void onCancel(const Device& device){}
+};
+
+class PipelineStageManager
+{
+	friend class PipelineStage;
+
+public:
+	PipelineStageManager();
+	void beginFrame();
+	void endFrame();
+
+private:
+	void pushPipelineStage(std::shared_ptr<PipelineStage> stagePtr);
+	void popPipelineStage(std::shared_ptr<PipelineStage> stagePtr, const Device& device);
+
+	std::vector<std::shared_ptr<PipelineStage> > m_stages[PipelineStageCount];
+	int m_indices[PipelineStageCount];
 };
 
 }
-
-#endif

@@ -159,57 +159,82 @@ LRESULT Window::handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_LBUTTONUP:
 		{
-			//EvtMouseLButtonUpPtr pEvent = EvtMouseLButtonUpPtr(new EvtMouseLButtonUp(hwnd, wparam, lparam));
-			//EvtManager.ProcessEvent(pEvent);
+			if (m_mouseHandler != 0)
+			{
+				auto pos = getCursorPosition();
+				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::LeftButton, false);
+			}
 		}
 		break;
 
 		case WM_LBUTTONDOWN:
 		{
-			//EvtMouseLButtonDownPtr pEvent = EvtMouseLButtonDownPtr(new EvtMouseLButtonDown(hwnd, wparam, lparam));
-			//EvtManager.ProcessEvent(pEvent);
+			if (m_mouseHandler != 0)
+			{
+				auto pos = getCursorPosition();
+				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::LeftButton, true);
+			}
 		}
 		break;
 
 		case WM_MBUTTONUP:
 		{
-			//EvtMouseMButtonUpPtr pEvent = EvtMouseMButtonUpPtr(new EvtMouseMButtonUp(hwnd, wparam, lparam));
-			//EvtManager.ProcessEvent(pEvent);
+			if (m_mouseHandler != 0)
+			{
+				auto pos = getCursorPosition();
+				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::MiddleButton, false);
+			}
 		}
 		break;
 
 		case WM_MBUTTONDOWN:
 		{
-			//EvtMouseMButtonDownPtr pEvent = EvtMouseMButtonDownPtr(new EvtMouseMButtonDown(hwnd, wparam, lparam));
-			//EvtManager.ProcessEvent(pEvent);
+			if (m_mouseHandler != 0)
+			{
+				auto pos = getCursorPosition();
+				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::MiddleButton, true);
+			}
 		}
 		break;
 
 		case WM_RBUTTONUP:
 		{
-			//EvtMouseRButtonUpPtr pEvent = EvtMouseRButtonUpPtr(new EvtMouseRButtonUp(hwnd, wparam, lparam));
-			//EvtManager.ProcessEvent(pEvent);
+			if (m_mouseHandler != 0)
+			{
+				auto pos = getCursorPosition();
+				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::RightButton, false);
+			}
 		}
 		break;
 
 		case WM_RBUTTONDOWN:
 		{
-			//EvtMouseRButtonDownPtr pEvent = EvtMouseRButtonDownPtr(new EvtMouseRButtonDown(hwnd, wparam, lparam));
-			//EvtManager.ProcessEvent(pEvent);
+			if (m_mouseHandler != 0)
+			{
+				auto pos = getCursorPosition();
+				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::RightButton, true);
+			}
 		}
 		break;
 
 		case WM_MOUSEMOVE:
 		{
-			//EvtMouseMovePtr pEvent = EvtMouseMovePtr(new EvtMouseMove(hwnd, wparam, lparam));
-			//EvtManager.ProcessEvent(pEvent);
+			if (m_mouseHandler != 0)
+			{
+				auto pos = getCursorPosition();
+				m_mouseHandler(pos.first, pos.second, 0, -1, false);
+			}
 		}
 		break;
 
 		case WM_MOUSEWHEEL:
 		{
-			//EvtMouseWheelPtr pEvent = EvtMouseWheelPtr(new EvtMouseWheel(hwnd, wparam, lparam));
-			//EvtManager.ProcessEvent(pEvent);
+			if (m_mouseHandler != 0)
+			{
+				auto pos = getCursorPosition();
+				double zdelta = GET_WHEEL_DELTA_WPARAM(wparam);
+				m_mouseHandler(pos.first, pos.second, zdelta, -1, false);
+			}
 		}
 		break;
 
@@ -256,7 +281,7 @@ void Window::setKeyboardHandler(std::function<void(int key, int scancode, bool p
 	m_keyboardHandler = handler;
 }
 
-void Window::setMouseHandler(std::function<void(double xpos, double ypos, int button, bool pressed)> handler)
+void Window::setMouseHandler(std::function<void(double xpos, double ypos, double zdelta, int button, bool pressed)> handler)
 {
 	m_mouseHandler = handler;
 }
@@ -264,6 +289,20 @@ void Window::setMouseHandler(std::function<void(double xpos, double ypos, int bu
 void Window::setCharHandler(std::function<void(int codepoint)> handler)
 {
 	m_charHandler = handler;
+}
+
+std::pair<double, double> Window::getCursorPosition()
+{
+	POINT p;
+	GetCursorPos(&p);
+	ScreenToClient(m_handle, &p);
+
+	return std::make_pair(static_cast<double>(p.x), static_cast<double>(p.y));
+}
+
+void Window::setCursorVisibility(bool isVisible)
+{
+	ShowCursor(isVisible ? TRUE : FALSE);
 }
 
 LRESULT CALLBACK Window::_windowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)

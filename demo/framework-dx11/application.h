@@ -23,30 +23,28 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __APPLICATION_H__
-#define __APPLICATION_H__
+#pragma once
 
-#ifdef WIN32
-    #pragma once
-
-    #define WIN32_LEAN_AND_MEAN 1
-    #include <Windows.h>
-#endif
-
+#define WIN32_LEAN_AND_MEAN 1
+#include <Windows.h>
 #include <d3d11.h>
 #include <string>
 #include <list>
+
 #include "CEGUI/CEGUI.h"
 
+#include "matrix.h"
+#include "logger.h"
+#include "utils.h"
+#include "timer.h"
+
+#include "structs.h"
 #include "window.h"
 #include "autoreleasepool.h"
 #include "outputd3d11.h"
-
-#include "matrix.h"
-
 #include "destroyable.h"
-#include "logger.h"
-#include "utils.h"
+#include "pipelinestage.h"
+#include "rasterizerstage.h"
 //#include "geometry3D.h"
 //#include "line3D.h"
 //#include "texture.h"
@@ -62,6 +60,7 @@ namespace framework
 class Application
 {
 	friend class Destroyable;
+	friend class PipelineStage;
 
 public:
 	Application();
@@ -106,14 +105,19 @@ protected:
 	AppInfo m_info;
 	//LightManager m_lightManager;
 
+	void exit();
+
 	static std::string getGuiFullName(const std::string& name);
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
+	PipelineStageManager& getPipelineStageManager() { return m_pipelineManager; }
+	const Device& getDevice() const { return m_device; }
 
 	void resize();
 
 private:
 	static Application* m_self;
+	utils::Timer m_timer;
 	Window m_window;
 	bool m_isRunning;
 	double m_lastTime;
@@ -124,44 +128,41 @@ private:
 	double m_timeSinceLastFpsUpdate;
 	double m_averageFps;
 	size_t m_framesCounter;
+	PipelineStageManager m_pipelineManager;
 
-	struct Device
-	{
-		ID3D11Device* device;
-		ID3D11DeviceContext* context;
-		ID3D11Debug* debugger;
-		D3D_FEATURE_LEVEL featureLevel;
-		Device() : device(0), context(0), debugger(0) {}
-	};
-
+	IDXGIFactory* m_factory;
 	Device m_device;
 	D3D_DRIVER_TYPE m_driverType;
+	unsigned int m_multisamplingQuality;
 
 	std::list<std::weak_ptr<Destroyable> > m_destroyableList;
 	//std::shared_ptr<Line3D> m_axisX;
 	//std::shared_ptr<Line3D> m_axisY;
 	//std::shared_ptr<Line3D> m_axisZ;
 
+	std::shared_ptr<RasterizerStage> m_defaultRasterizer;
+
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	void destroyAllDestroyable();
 
 	bool initDevice(AuroreleasePool<IUnknown>& autorelease);
 	bool isFeatureLevelSupported(D3D_FEATURE_LEVEL level);
+	bool initSwapChain(Device& device, AuroreleasePool<IUnknown>& autorelease);
 
 	void initGui();
 	void destroyGui();
 	void initialiseResources();
-
 	void initInput();
 
 	//void initAxes();
+
+	void mainLoop();
 
 	void measureFps(double delta);
 
 	//static void _onMouse(GLFWwindow* window, int button, int action, int mods);
 	//static void _onCursor(GLFWwindow* window, double xpos, double ypos);
 	//static void _onScroll(GLFWwindow* window, double xoffset, double yoffset);
-	//static CEGUI::MouseButton glfwToCeguiMouseButton(int glfwButton);
 };
 
 }
@@ -177,17 +178,6 @@ int CALLBACK WinMain(HINSTANCE hInstance,           \
     delete app;                                     \
     return result;                                  \
 }
-#elif defined __APPLE__
-#define DECLARE_MAIN(a)                             \
-int main(int argc, const char ** argv)              \
-{                                                   \
-    A *app = new A();                               \
-    int result = app->run(app);                     \
-    delete app;                                     \
-    return result;                                  \
-}
 #else
 #error Undefined platform!
 #endif
-
-#endif // __APPLICATION_H__

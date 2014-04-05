@@ -21,20 +21,20 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
+#pragma once
+#include <d3d11.h>
 
-namespace utils
+namespace framework
 {
 
-class Utils
+struct Device
 {
-public:
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
+	ID3D11Device* device;
+	ID3D11DeviceContext* context;
+	ID3D11Debug* debugger;
+	IDXGISwapChain* swapChain;
+	D3D_FEATURE_LEVEL featureLevel;
+	Device() : device(0), context(0), debugger(0), swapChain(0) {}
 };
 
 }
-
-#endif

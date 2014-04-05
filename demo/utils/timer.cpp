@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014 Roman Kuznetsov 
+ * Implementation is borrowed from GLFW
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,20 +22,75 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
+#include "timer.h"
+
+#if defined _WIN32
+
+#define WIN32_LEAN_AND_MEAN 1
+#include <Windows.h>
+
+#elif defined __APPLE__
+
+#include <mach/mach_time.h>
+
+#endif
 
 namespace utils
 {
 
-class Utils
-{
-public:
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
-};
+#if defined _WIN32
 
+unsigned __int64 getRawTime()
+{
+	unsigned __int64 time;
+	QueryPerformanceCounter((LARGE_INTEGER*)&time);
+	return time;
+}
+
+bool Timer::init()
+{
+	unsigned __int64 frequency;
+	if (QueryPerformanceFrequency((LARGE_INTEGER*)&frequency))
+	{
+		m_resolution = 1.0 / (double)frequency;
+	}
+	else
+	{
+		return false;
+	}
+
+	m_base = getRawTime();
+	return true;
+}
+
+double Timer::getTime()
+{
+	return (double)(getRawTime() - m_base) * m_resolution;
+}
+
+#elif defined __APPLE__
+
+uint64_t getRawTime()
+{
+	return mach_absolute_time();
+}
+
+bool Timer::init()
+{
+	mach_timebase_info_data_t info;
+	mach_timebase_info(&info);
+
+	m_resolution = (double)info.numer / (info.denom * 1.0e9);
+	
+	m_base = getRawTime();
+	return true;
+}
+
+double Timer::getTime()
+{
+	return (double)(getRawTime() - m_base) * m_resolution;
 }
 
 #endif
+
+}

@@ -21,20 +21,43 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
+#pragma once
+#include "pipelinestage.h"
 
-namespace utils
+namespace framework
 {
 
-class Utils
+class RasterizerStage : public PipelineStage
 {
 public:
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
+	RasterizerStage();
+	virtual ~RasterizerStage();
+	virtual PipelineStageType GetType() const { return RasterizerStageType; }
+	virtual bool isValid();
+	virtual void destroy();
+
+	void initWithDescription(const Device& device, const D3D11_RASTERIZER_DESC& desc);
+	
+	void addViewport(const D3D11_VIEWPORT& viewport);
+	void clearViewports();
+	int getViewportsCount() const;
+	void addScissorRect(const D3D11_RECT& rect);
+	void clearScissorRects();
+	int getScissorRectsCount() const;
+
+	static const D3D11_RASTERIZER_DESC& getDefault();
+	static D3D11_VIEWPORT getDefaultViewport(int width, int height);
+	static D3D11_RECT getDefaultScissorRect(int x, int y, int width, int height);
+
+protected:
+	virtual void onInit(const Device& device);
+	virtual void onApply(const Device& device);
+
+private:
+	D3D11_RASTERIZER_DESC m_description;
+	ID3D11RasterizerState* m_state;
+	std::vector<D3D11_VIEWPORT> m_viewports;
+	std::vector<D3D11_RECT> m_scissorRects;
 };
 
 }
-
-#endif

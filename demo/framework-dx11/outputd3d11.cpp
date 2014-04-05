@@ -22,6 +22,7 @@
  */
 
 #include "outputd3d11.h"
+#include <sstream>
 
 namespace framework
 {
@@ -45,6 +46,51 @@ std::string toString(D3D_FEATURE_LEVEL featureLevel)
 	default:
 		return "Direct 3D Unknown";
 	}
+}
+
+std::string toString(D3D11_FILL_MODE fillMode)
+{
+	switch (fillMode)
+	{
+	case D3D11_FILL_SOLID:
+		return "Solid";
+	case D3D11_FILL_WIREFRAME:
+		return "Wireframe";
+	default:
+		return "Unknown";
+	}
+}
+
+std::string toString(D3D11_CULL_MODE cullMode)
+{
+	switch (cullMode)
+	{
+	case D3D11_CULL_NONE:
+		return "None";
+	case D3D11_CULL_FRONT:
+		return "Front";
+	case D3D11_CULL_BACK:
+		return "Back";
+	default:
+		return "Unknown";
+	}
+}
+
+std::string toString(D3D11_RASTERIZER_DESC desc)
+{
+	std::stringstream ss;
+	ss << "{ fill mode = " << toString(desc.FillMode)
+	   << "; cull mode = " << toString(desc.CullMode)
+	   << "; poligon order = " << (desc.FrontCounterClockwise ? "CCW" : "CW")
+	   << "; depth bias = " << desc.DepthBias
+	   << "; slope scaled depth bias = " << desc.SlopeScaledDepthBias
+	   << "; depth bias clamp = " << desc.DepthBiasClamp
+	   << "; depth clip enable = " << (desc.DepthClipEnable ? "Yes" : "No")
+	   << "; scissor enable = " << (desc.ScissorEnable ? "Yes" : "No")
+	   << "; multisample enable = " << (desc.MultisampleEnable ? "Yes" : "No")
+	   << "; antialiased line enable = " << (desc.AntialiasedLineEnable ? "Yes" : "No")
+	   << " }";
+	return ss.str();
 }
 
 }

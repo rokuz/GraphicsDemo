@@ -21,12 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __OUTPUT_D3D11_H__
-#define __OUTPUT_D3D11_H__
-#ifdef WIN32
-    #pragma once
-#endif
-
+#pragma once
 #include <d3d11.h>
 #include <string>
 
@@ -34,7 +29,8 @@ namespace framework
 {
 
 std::string toString(D3D_FEATURE_LEVEL featureLevel);
+std::string toString(D3D11_FILL_MODE fillMode);
+std::string toString(D3D11_CULL_MODE cullMode);
+std::string toString(D3D11_RASTERIZER_DESC desc);
 
 }
-
-#endif
