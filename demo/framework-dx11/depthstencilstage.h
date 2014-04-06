@@ -21,25 +21,36 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
-#include "vector.h"
-#include "quaternion.h"
+#pragma once
+#include "pipelinestage.h"
 
-namespace utils
+namespace framework
 {
 
-class Utils
+class DepthStencilStage : public PipelineStage
 {
 public:
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
-	static float* convert(const vector4& v);
-	static float* convert(const vector3& v);
-	static float* convert(const quaternion& q);
+	DepthStencilStage();
+	virtual ~DepthStencilStage();
+	virtual PipelineStageType GetType() const { return DepthStencilStageType; }
+	virtual bool isValid();
+	virtual void destroy();
+
+	void initWithDescription(const Device& device, const D3D11_DEPTH_STENCIL_DESC& desc);
+	
+	void setStencilRef(unsigned int stencilRef) { m_stencilRef = stencilRef; }
+	unsigned int getStencilRef() const { return m_stencilRef; }
+
+	static const D3D11_DEPTH_STENCIL_DESC& getDefault();
+
+protected:
+	virtual void onInit(const Device& device);
+	virtual void onApply(const Device& device);
+
+private:
+	D3D11_DEPTH_STENCIL_DESC m_description;
+	ID3D11DepthStencilState* m_state;
+	unsigned int m_stencilRef;
 };
 
 }
-
-#endif

@@ -23,6 +23,7 @@
 
 #include "pipelinestage.h"
 #include "application.h"
+#include "utils.h"
 #include <algorithm>
 
 namespace framework
@@ -30,6 +31,7 @@ namespace framework
 
 void PipelineStage::init(const Device& device)
 {
+	destroy();
 	onInit(device);
 	initDestroyable();
 }
@@ -100,9 +102,9 @@ void PipelineStageManager::popPipelineStage(std::shared_ptr<PipelineStage> stage
 	}
 }
 
-void PipelineStageManager::beginFrame()
+void PipelineStageManager::beginFrame(const Device& device, std::shared_ptr<RenderTarget> renderTarget)
 {
-
+	clearRenderTarget(device, std::move(renderTarget));
 }
 
 void PipelineStageManager::endFrame()
@@ -113,5 +115,35 @@ void PipelineStageManager::endFrame()
 		m_indices[i] = 0;
 	}
 }
+
+void PipelineStageManager::clearRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget, const vector4& color, float depth, unsigned int stencil)
+{
+	ID3D11RenderTargetView* renderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
+	ID3D11DepthStencilView* depthStencil = 0;
+	renderTargets[0] = renderTarget->getView().asRenderTargetView();
+
+	for (int i = 0; i < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; i++)
+	{
+		if (renderTargets[i] != 0)
+		{
+			device.context->ClearRenderTargetView(renderTargets[i], utils::Utils::convert(color));
+		}
+	}
+
+	if (depthStencil != 0)
+	{
+		device.context->ClearDepthStencilView(depthStencil, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, depth, stencil);
+	}
+}
+
+void PipelineStageManager::setRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget)
+{
+	ID3D11RenderTargetView* renderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
+	ID3D11DepthStencilView* depthStencil = 0;
+	renderTargets[0] = renderTarget->getView().asRenderTargetView();
+
+	device.context->OMSetRenderTargets(1, renderTargets, depthStencil);
+}
+
 
 }

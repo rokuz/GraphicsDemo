@@ -45,6 +45,8 @@
 #include "destroyable.h"
 #include "pipelinestage.h"
 #include "rasterizerstage.h"
+#include "depthstencilstage.h"
+#include "renderTarget.h"
 //#include "geometry3D.h"
 //#include "line3D.h"
 //#include "texture.h"
@@ -141,6 +143,8 @@ private:
 	//std::shared_ptr<Line3D> m_axisZ;
 
 	std::shared_ptr<RasterizerStage> m_defaultRasterizer;
+	std::shared_ptr<DepthStencilStage> m_defaultDepthStencil;
+	std::shared_ptr<RenderTarget> m_defaultRenderTarget;
 
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	void destroyAllDestroyable();
@@ -148,16 +152,15 @@ private:
 	bool initDevice(AuroreleasePool<IUnknown>& autorelease);
 	bool isFeatureLevelSupported(D3D_FEATURE_LEVEL level);
 	bool initSwapChain(Device& device, AuroreleasePool<IUnknown>& autorelease);
+	void present();
 
 	void initGui();
 	void destroyGui();
 	void initialiseResources();
 	void initInput();
-
 	//void initAxes();
 
 	void mainLoop();
-
 	void measureFps(double delta);
 
 	//static void _onMouse(GLFWwindow* window, int button, int action, int mods);

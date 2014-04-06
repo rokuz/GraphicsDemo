@@ -148,14 +148,16 @@ void Application::mainLoop()
 			m_isRunning = false;
 		}
 
-		//Texture::beginFrame();
-		m_pipelineManager.beginFrame();
+		// pre-render
+		m_pipelineManager.beginFrame(m_device, m_defaultRenderTarget);
 		m_defaultRasterizer->apply(m_device);
+		m_defaultDepthStencil->apply(m_device);
+
+		// render frame
 		if (fabs(m_lastTime) < 1e-7)
 		{
 			// the first frame
 			render(0);
-			//Texture::endFrame();
 			renderGui(0);
 
 			m_lastTime = m_timer.getTime();
@@ -170,11 +172,13 @@ void Application::mainLoop()
 
 			// rendering
 			render(delta);
-			//Texture::endFrame();
 			renderGui(delta);
 
 			m_lastTime = curTime;
 		}
+
+		// post-render
+		present();
 		m_pipelineManager.endFrame();
 	} 
 	while (m_isRunning);
@@ -295,13 +299,22 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 	m_defaultRasterizer.reset(new framework::RasterizerStage());
 	D3D11_RASTERIZER_DESC rastDesc = framework::RasterizerStage::getDefault();
 	rastDesc.MultisampleEnable = m_info.samples > 0 ? TRUE : FALSE;
-	m_defaultRasterizer->init(m_device);
+	m_defaultRasterizer->initWithDescription(m_device, rastDesc);
 	m_defaultRasterizer->addViewport(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
 	if (!m_defaultRasterizer->isValid())
 	{
 		return false;
 	}
 	m_defaultRasterizer->apply(m_device);
+
+	// init default depth-stencil
+	m_defaultDepthStencil.reset(new framework::DepthStencilStage());
+	D3D11_DEPTH_STENCIL_DESC dsDesc = framework::DepthStencilStage::getDefault();
+	m_defaultDepthStencil->initWithDescription(m_device, dsDesc);
+	if (!m_defaultDepthStencil->isValid())
+	{
+		return false;
+	}
 
 	return true;
 }
@@ -317,13 +330,29 @@ bool Application::initSwapChain(Device& device, AuroreleasePool<IUnknown>& autor
 	state.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	state.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	state.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	state.BufferDesc.RefreshRate.Numerator = 60;
-	state.BufferDesc.RefreshRate.Denominator = 1;
+	if ((bool)m_info.flags.vsync)
+	{
+		state.BufferDesc.RefreshRate.Numerator = 60;
+		state.BufferDesc.RefreshRate.Denominator = 1;
+	}
+	else
+	{
+		state.BufferDesc.RefreshRate.Numerator = 0;
+		state.BufferDesc.RefreshRate.Denominator = 1;
+	}
 
-	state.SampleDesc.Count = m_info.samples;
-	state.SampleDesc.Quality = m_multisamplingQuality;
+	if (m_info.samples > 0)
+	{
+		state.SampleDesc.Count = m_info.samples;
+		state.SampleDesc.Quality = m_multisamplingQuality;
+	}
+	else
+	{
+		state.SampleDesc.Count = 1;
+		state.SampleDesc.Quality = 0;
+	}
 
-	state.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	state.BufferUsage = DXGI_USAGE_SHADER_INPUT | DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	state.BufferCount = 2;
 	state.OutputWindow = m_window.getHandle();
 	state.Windowed = ((bool)m_info.flags.fullscreen == false);
@@ -341,7 +370,23 @@ bool Application::initSwapChain(Device& device, AuroreleasePool<IUnknown>& autor
 
 	autorelease.add(device.swapChain);
 
+	// default render target from swap chain
+	m_defaultRenderTarget.reset(new framework::RenderTarget());
+	m_defaultRenderTarget->initWithSwapChain(device);
+	if (!m_defaultRenderTarget->isValid())
+	{
+		return false;
+	}
+
 	return true;
+}
+
+void Application::present()
+{
+	if (m_device.swapChain != 0)
+	{
+		m_device.swapChain->Present(0, 0);
+	}
 }
 
 void Application::measureFps(double delta)
@@ -375,6 +420,8 @@ std::string Application::getGuiFullName(const std::string& name)
 
 void Application::renderGui(double elapsedTime)
 {
+	m_pipelineManager.setRenderTarget(m_device, m_defaultRenderTarget);
+
 	CEGUI::System& gui_system(CEGUI::System::getSingleton());
 	gui_system.injectTimePulse((float)elapsedTime);
 	m_guiRenderer->beginRendering();

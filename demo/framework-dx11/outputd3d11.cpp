@@ -93,4 +93,10 @@ std::string toString(D3D11_RASTERIZER_DESC desc)
 	return ss.str();
 }
 
+std::string toString(D3D11_DEPTH_STENCIL_DESC desc)
+{
+	// TODO: implement
+	return "{ undefined }";
+}
+
 }

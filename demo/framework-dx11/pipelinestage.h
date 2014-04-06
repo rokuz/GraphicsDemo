@@ -25,8 +25,10 @@
 #include <d3d11.h>
 #include <vector>
 
+#include "vector.h"
 #include "destroyable.h"
 #include "structs.h"
+#include "renderTarget.h"
 
 namespace framework
 {
@@ -36,6 +38,7 @@ class PipelineStageManager;
 enum PipelineStageType
 {
 	RasterizerStageType = 0,
+	DepthStencilStageType,
 	PipelineStageCount
 };
 
@@ -65,8 +68,11 @@ class PipelineStageManager
 
 public:
 	PipelineStageManager();
-	void beginFrame();
+	void beginFrame(const Device& device, std::shared_ptr<RenderTarget> renderTarget);
 	void endFrame();
+
+	void clearRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget, const vector4& color = vector4(0, 0, 0, 0), float depth = 1.0f, unsigned int stencil = 0);
+	void setRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget);
 
 private:
 	void pushPipelineStage(std::shared_ptr<PipelineStage> stagePtr);

@@ -1,0 +1,161 @@
+/*
+ * Copyright (c) 2014 Roman Kuznetsov 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
+#include "resourceview.h"
+#include "application.h"
+#include "logger.h"
+
+namespace framework
+{
+
+D3D11_SHADER_RESOURCE_VIEW_DESC ResourceView::getDefaultShaderDesc()
+{
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.ViewDimension = D3D11_SRV_DIMENSION_UNKNOWN;
+	return desc;
+}
+
+D3D11_RENDER_TARGET_VIEW_DESC ResourceView::getDefaultRenderTargetDesc()
+{
+	D3D11_RENDER_TARGET_VIEW_DESC desc;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.ViewDimension = D3D11_RTV_DIMENSION_UNKNOWN;
+	return desc;
+}
+
+D3D11_DEPTH_STENCIL_VIEW_DESC ResourceView::getDefaultDepthStencilDesc()
+{
+	D3D11_DEPTH_STENCIL_VIEW_DESC desc;
+	desc.Flags = 0;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.ViewDimension = D3D11_DSV_DIMENSION_UNKNOWN;
+	return desc;
+}
+
+ResourceView::ResourceView() :
+	m_shaderDesc(std::make_pair(D3D11_SHADER_RESOURCE_VIEW_DESC(), false)),
+	m_renderTargetDesc(std::make_pair(D3D11_RENDER_TARGET_VIEW_DESC(), false)),
+	m_depthStencilDesc(std::make_pair(D3D11_DEPTH_STENCIL_VIEW_DESC(), false)),
+	m_shaderView(0),
+	m_renderTargetView(0),
+	m_depthStencilView(0)
+{
+
+}
+
+ResourceView::~ResourceView()
+{
+	destroy();
+}
+
+void ResourceView::setShaderDesc(const D3D11_SHADER_RESOURCE_VIEW_DESC& desc)
+{
+	m_shaderDesc.first = desc;
+	m_shaderDesc.second = true;
+}
+void ResourceView::setRenderTargetDesc(const D3D11_RENDER_TARGET_VIEW_DESC& desc)
+{
+	m_renderTargetDesc.first = desc;
+	m_renderTargetDesc.second = true;
+}
+void ResourceView::setDepthStencilDesc(const D3D11_DEPTH_STENCIL_VIEW_DESC& desc)
+{
+	m_depthStencilDesc.first = desc;
+	m_depthStencilDesc.second = true;
+}
+
+void ResourceView::init(const Device& device, ID3D11Resource* resource, unsigned int bindFlags)
+{
+	destroy();
+
+	if ((bindFlags & D3D11_BIND_SHADER_RESOURCE) == D3D11_BIND_SHADER_RESOURCE)
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC* desc = m_shaderDesc.second ? &m_shaderDesc.first : nullptr;
+		HRESULT hr = device.device->CreateShaderResourceView(resource, desc, &m_shaderView);
+		if (hr != S_OK)
+		{
+			utils::Logger::toLog("Error: could not create shader resource view.\n");
+		}
+	}
+
+	if ((bindFlags & D3D11_BIND_RENDER_TARGET) == D3D11_BIND_RENDER_TARGET)
+	{
+		D3D11_RENDER_TARGET_VIEW_DESC* desc = m_renderTargetDesc.second ? &m_renderTargetDesc.first : nullptr;
+		HRESULT hr = device.device->CreateRenderTargetView(resource, desc, &m_renderTargetView);
+		if (hr != S_OK)
+		{
+			utils::Logger::toLog("Error: could not create render target view.\n");
+		}
+	}
+
+	if ((bindFlags & D3D11_BIND_DEPTH_STENCIL) == D3D11_BIND_DEPTH_STENCIL)
+	{
+		D3D11_DEPTH_STENCIL_VIEW_DESC* desc = m_depthStencilDesc.second ? &m_depthStencilDesc.first : nullptr;
+		HRESULT hr = device.device->CreateDepthStencilView(resource, desc, &m_depthStencilView);
+		if (hr != S_OK)
+		{
+			utils::Logger::toLog("Error: could not create depth stencil view.\n");
+		}
+	}
+
+	if ((bindFlags & D3D11_BIND_UNORDERED_ACCESS) == D3D11_BIND_UNORDERED_ACCESS)
+	{
+		// TODO: implement
+	}
+}
+
+bool ResourceView::isValid() const
+{
+	if (m_shaderDesc.second && !m_shaderView) return false;
+	if (m_renderTargetDesc.second && !m_renderTargetView) return false;
+	if (m_depthStencilDesc.second && !m_depthStencilView) return false;
+	return true;
+}
+
+void ResourceView::destroy()
+{
+	m_shaderDesc.second = false;
+	m_renderTargetDesc.second = false;
+	m_depthStencilDesc.second = false;
+
+	if (m_shaderView != 0)
+	{
+		m_shaderView->Release();
+		m_shaderView = 0;
+	}
+
+	if (m_renderTargetView != 0)
+	{
+		m_renderTargetView->Release();
+		m_renderTargetView = 0;
+	}
+
+	if (m_depthStencilView != 0)
+	{
+		m_depthStencilView->Release();
+		m_depthStencilView = 0;
+	}
+}
+
+}

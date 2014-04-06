@@ -13,6 +13,12 @@ set(SOURCE_LIB  application.h
 				pipelinestage.cpp
 				rasterizerstage.h
 				rasterizerstage.cpp
+				renderTarget.h
+				renderTarget.cpp
+				resourceview.h
+				resourceview.cpp
+				depthstencilstage.h
+				depthstencilstage.cpp
 )
 source_group(core FILES ${SOURCE_LIB})
 add_library(framework STATIC ${SOURCE_LIB})

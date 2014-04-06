@@ -64,4 +64,25 @@ bool Utils::readFileToString( const std::string& fileName, std::string& out )
 	return true;
 }
 
+float* Utils::convert(const vector4& v)
+{
+	static float arr[4];
+	arr[0] = v.x; arr[1] = v.y; arr[2] = v.z; arr[3] = v.w;
+	return arr;
+}
+
+float* Utils::convert(const vector3& v)
+{
+	static float arr[3];
+	arr[0] = v.x; arr[1] = v.y; arr[2] = v.z;
+	return arr;
+}
+
+float* Utils::convert(const quaternion& q)
+{
+	static float arr[4];
+	arr[0] = q.x; arr[1] = q.y; arr[2] = q.z; arr[3] = q.w;
+	return arr;
+}
+
 }

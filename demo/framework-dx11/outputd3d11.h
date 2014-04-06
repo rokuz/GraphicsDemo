@@ -32,5 +32,6 @@ std::string toString(D3D_FEATURE_LEVEL featureLevel);
 std::string toString(D3D11_FILL_MODE fillMode);
 std::string toString(D3D11_CULL_MODE cullMode);
 std::string toString(D3D11_RASTERIZER_DESC desc);
+std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
 
 }

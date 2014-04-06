@@ -21,25 +21,51 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
-#include "vector.h"
-#include "quaternion.h"
+#pragma once
+#include "structs.h"
+#include "destroyable.h"
+#include "resourceview.h"
 
-namespace utils
+namespace framework
 {
 
-class Utils
+class RenderTarget : public Destroyable
 {
+	friend class Application;
+
 public:
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
-	static float* convert(const vector4& v);
-	static float* convert(const vector3& v);
-	static float* convert(const quaternion& q);
+	RenderTarget();
+	virtual ~RenderTarget();
+
+	static D3D11_TEXTURE2D_DESC getDesc(int width, int height, DXGI_FORMAT format);
+
+	void initWithSwapChain(const Device& device);
+	
+	bool isValid() const;
+	const ResourceView& getView() const;
+
+	/*bool initWithColorBuffers(int width, int heigth, const std::vector<GLint>& formats);
+	bool initWithColorBuffersAndDepth(int width, int heigth, const std::vector<GLint>& formats, GLint depthFormat);
+
+	int getColorBuffer(int index = 0);
+	int getDepthBuffer();
+
+	void set();*/
+
+private:
+	virtual void destroy();
+	/*void initColorBuffers(int width, int heigth, const std::vector<GLint>& formats);
+	void initDepth(int width, int heigth, GLint depthFormat);
+	bool checkStatus();
+
+	GLuint m_framebufferObject;
+	std::vector<GLuint> m_colorBuffers;
+	GLuint m_depthBuffer;
+	bool m_isUsedDepth;*/
+
+	ID3D11Texture2D* m_colorBuffer;
+	D3D11_TEXTURE2D_DESC m_colorBufferDesc;
+	ResourceView m_view;
 };
 
 }
-
-#endif

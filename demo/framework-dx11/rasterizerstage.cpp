@@ -84,7 +84,7 @@ RasterizerStage::RasterizerStage():
 
 RasterizerStage::~RasterizerStage()
 {
-
+	destroy();
 }
 
 void RasterizerStage::initWithDescription(const Device& device, const D3D11_RASTERIZER_DESC& desc)

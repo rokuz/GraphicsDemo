@@ -8,8 +8,8 @@ public:
 
 	virtual void init()
 	{
-		m_info.title = "Test application (DX11)";
-		m_info.samples = 4;
+		m_info.title = "Template application (DX11)";
+		m_info.samples = 0;
 		m_info.flags.fullscreen = 0;
 	}
 
