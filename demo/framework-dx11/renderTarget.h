@@ -37,35 +37,28 @@ public:
 	RenderTarget();
 	virtual ~RenderTarget();
 
-	static D3D11_TEXTURE2D_DESC getDesc(int width, int height, DXGI_FORMAT format);
+	static D3D11_TEXTURE2D_DESC getDefaultDesc(int width, int height, DXGI_FORMAT format);
+	static D3D11_TEXTURE2D_DESC getDefaultDepthDesc(int width, int height);
 
 	void initWithSwapChain(const Device& device);
 	
 	bool isValid() const;
-	const ResourceView& getView() const;
+	const ResourceView& getView(int index) const;
+	int getViewCount() const;
 
-	/*bool initWithColorBuffers(int width, int heigth, const std::vector<GLint>& formats);
-	bool initWithColorBuffersAndDepth(int width, int heigth, const std::vector<GLint>& formats, GLint depthFormat);
-
-	int getColorBuffer(int index = 0);
-	int getDepthBuffer();
-
-	void set();*/
+	bool isDepthUsed() const;
+	const ResourceView& getDepthView() const;
 
 private:
 	virtual void destroy();
-	/*void initColorBuffers(int width, int heigth, const std::vector<GLint>& formats);
-	void initDepth(int width, int heigth, GLint depthFormat);
-	bool checkStatus();
-
-	GLuint m_framebufferObject;
-	std::vector<GLuint> m_colorBuffers;
-	GLuint m_depthBuffer;
-	bool m_isUsedDepth;*/
 
 	ID3D11Texture2D* m_colorBuffer;
 	D3D11_TEXTURE2D_DESC m_colorBufferDesc;
 	ResourceView m_view;
+	bool m_useDepth;
+	ID3D11Texture2D* m_depthBuffer;
+	D3D11_TEXTURE2D_DESC m_depthBufferDesc;
+	ResourceView m_depthView;
 };
 
 }

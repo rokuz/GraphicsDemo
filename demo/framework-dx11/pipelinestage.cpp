@@ -119,9 +119,13 @@ void PipelineStageManager::endFrame()
 void PipelineStageManager::clearRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget, const vector4& color, float depth, unsigned int stencil)
 {
 	ID3D11RenderTargetView* renderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
-	ID3D11DepthStencilView* depthStencil = 0;
-	renderTargets[0] = renderTarget->getView().asRenderTargetView();
-
+	int cnt = std::min(renderTarget->getViewCount(), D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT);
+	for (int i = 0; i < cnt; i++)
+	{
+		renderTargets[i] = renderTarget->getView(i).asRenderTargetView();
+	}
+	ID3D11DepthStencilView* depthStencil = renderTarget->isDepthUsed() ? renderTarget->getDepthView().asDepthStencilView() : 0;
+	
 	for (int i = 0; i < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; i++)
 	{
 		if (renderTargets[i] != 0)
@@ -139,8 +143,12 @@ void PipelineStageManager::clearRenderTarget(const Device& device, std::shared_p
 void PipelineStageManager::setRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget)
 {
 	ID3D11RenderTargetView* renderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
-	ID3D11DepthStencilView* depthStencil = 0;
-	renderTargets[0] = renderTarget->getView().asRenderTargetView();
+	int cnt = std::min(renderTarget->getViewCount(), D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT);
+	for (int i = 0; i < cnt; i++)
+	{
+		renderTargets[i] = renderTarget->getView(i).asRenderTargetView();
+	}
+	ID3D11DepthStencilView* depthStencil = renderTarget->isDepthUsed() ? renderTarget->getDepthView().asDepthStencilView() : 0;
 
 	device.context->OMSetRenderTargets(1, renderTargets, depthStencil);
 }

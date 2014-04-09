@@ -23,8 +23,6 @@
 
 #include "application.h"
 #include <algorithm>
-
-#pragma warning(disable:4005) // CEGUI uses some obsolete stuff
 #include "CEGUI/RendererModules/Direct3D11/Renderer.h"
 
 namespace framework

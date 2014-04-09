@@ -27,27 +27,44 @@
 namespace framework
 {
 
-D3D11_TEXTURE2D_DESC RenderTarget::getDesc(int width, int height, DXGI_FORMAT format)
+D3D11_TEXTURE2D_DESC RenderTarget::getDefaultDesc(int width, int height, DXGI_FORMAT format)
 {
 	D3D11_TEXTURE2D_DESC desc;
-	desc.Width = 1;
-	desc.Height = 1;
+	desc.Width = width;
+	desc.Height = height;
 	desc.MipLevels = 1;
 	desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	desc.Format = format;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	return desc;
+}
+
+D3D11_TEXTURE2D_DESC RenderTarget::getDefaultDepthDesc(int width, int height)
+{
+	D3D11_TEXTURE2D_DESC desc;
+	desc.Width = width;
+	desc.Height = height;
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_D32_FLOAT;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
 	return desc;
 }
 
 RenderTarget::RenderTarget() :
-	m_colorBuffer(0)//,
-	//m_depthBuffer(0),
-	//m_isUsedDepth(false)
+	m_colorBuffer(0),
+	m_depthBuffer(0),
+	m_useDepth(false)
 {
 
 }
@@ -61,11 +78,15 @@ void RenderTarget::initWithSwapChain(const Device& device)
 {
 	destroy();
 
+	// always use depth in this case
+	m_useDepth = true;
+
 	// get buffer from swap chain
 	HRESULT hr = device.swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&m_colorBuffer));
 	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not get buffer from swap chain.\n");
+		return;
 	}
 	m_colorBuffer->GetDesc(&m_colorBufferDesc);
 
@@ -74,175 +95,72 @@ void RenderTarget::initWithSwapChain(const Device& device)
 	if (!m_view.isValid())
 	{
 		destroy();
+		return;
+	}
+
+	// depth buffer
+	m_depthBufferDesc = getDefaultDepthDesc(m_colorBufferDesc.Width, m_colorBufferDesc.Height);
+	m_depthBufferDesc.SampleDesc.Count = m_colorBufferDesc.SampleDesc.Count;
+	m_depthBufferDesc.SampleDesc.Quality = m_colorBufferDesc.SampleDesc.Quality;
+
+	hr = device.device->CreateTexture2D(&m_depthBufferDesc, 0, &m_depthBuffer);
+	if (hr != S_OK)
+	{
+		destroy();
+		utils::Logger::toLog("Error: could not create depth buffer.\n");
+		return;
+	}
+
+	// initialize depth view
+	m_depthView.init(device, m_depthBuffer, m_depthBufferDesc.BindFlags);
+	if (!m_depthView.isValid())
+	{
+		destroy();
+		return;
 	}
 }
 
 bool RenderTarget::isValid() const
 {
-	return m_colorBuffer != 0;
+	return m_colorBuffer != 0 && (m_useDepth ? m_depthBuffer != 0 : true);
 }
 
-const ResourceView& RenderTarget::getView() const
+const ResourceView& RenderTarget::getView(int index) const
 {
 	return m_view;
 }
 
-/*bool RenderTarget::initWithColorBuffers(int width, int heigth, const std::vector<GLint>& formats)
+int RenderTarget::getViewCount() const
 {
-	if (width <= 0 || heigth <= 0 || formats.empty() || formats.size() > 16)
-	{
-		utils::Logger::toLog("RenderTarget: Cannot initialize, incorrect parameters.\n");
-		return false;
-	}
-
-	destroy();
-
-	glGenFramebuffers(1, &m_framebufferObject);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferObject);
-	initColorBuffers(width, heigth, formats);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	m_isInitialized = true;
-	if (!checkStatus()) destroy();
-
-	if (m_isInitialized) initDestroyable();
-	return m_isInitialized;
+	return 1;
 }
 
-bool RenderTarget::initWithColorBuffersAndDepth(int width, int heigth, const std::vector<GLint>& formats, GLint depthFormat)
+bool RenderTarget::isDepthUsed() const
 {
-	if (width <= 0 || heigth <= 0 || formats.empty() || formats.size() > 16)
-	{
-		utils::Logger::toLog("RenderTarget error: Cannot initialize, incorrect parameters.\n");
-		return false;
-	}
-
-	destroy();
-
-	glGenFramebuffers(1, &m_framebufferObject);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferObject);
-	initColorBuffers(width, heigth, formats);
-	initDepth(width, heigth, depthFormat);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	m_isInitialized = true;
-	if (!checkStatus()) destroy();
-
-	if (m_isInitialized) initDestroyable();
-	return m_isInitialized;
+	return m_useDepth;
 }
 
-void RenderTarget::initColorBuffers(int width, int heigth, const std::vector<GLint>& formats)
+const ResourceView& RenderTarget::getDepthView() const
 {
-	m_colorBuffers.resize(formats.size());
-	glGenTextures(formats.size(), m_colorBuffers.data());
-
-	destroy();
-
-	for (size_t i = 0; i < formats.size(); i++)
-	{
-		glBindTexture(GL_TEXTURE_2D, m_colorBuffers[i]);
-		glTexStorage2D(GL_TEXTURE_2D, 1, formats[i], width, heigth);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	for (size_t i = 0; i < formats.size(); i++)
-	{
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, m_colorBuffers[i], 0);
-	}
+	return m_depthView;
 }
-
-void RenderTarget::initDepth(int width, int heigth, GLint depthFormat)
-{
-	m_isUsedDepth = true;
-	glGenTextures(depthFormat, &m_depthBuffer);
-	glBindTexture(GL_TEXTURE_2D, m_depthBuffer);
-	glTexStorage2D(GL_TEXTURE_2D, 1, depthFormat, width, heigth);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_depthBuffer, 0);
-}*/
 
 void RenderTarget::destroy()
 {
 	m_view.destroy();
-
 	if (m_colorBuffer != 0)
 	{
-		//glDeleteTextures(m_colorBuffers.size(), m_colorBuffers.data());
-		//glDeleteTextures(1, &m_depthBuffer);
-		//glDeleteFramebuffers(1, &m_framebufferObject);
-		//m_isUsedDepth = false;
 		m_colorBuffer->Release();
 		m_colorBuffer = 0;
 	}
-}
 
-/*int RenderTarget::getColorBuffer(int index)
-{
-	if (!m_isInitialized) return -1;
-	if (index < 0 || index >= (int)m_colorBuffers.size()) return -1;
-	return m_colorBuffers[index];
-}
-
-int RenderTarget::getDepthBuffer()
-{
-	if (!m_isInitialized) return -1;
-	if (!m_isUsedDepth) return -1;
-	return m_depthBuffer;
-}
-
-void RenderTarget::set()
-{
-	if (!m_isInitialized)
+	m_useDepth = false;
+	m_depthView.destroy();
+	if (m_depthBuffer != 0)
 	{
-		utils::Logger::toLog("RenderTarget error: Render target is not initialized\n");
-		return;
+		m_depthBuffer->Release();
+		m_depthBuffer = 0;
 	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferObject);
 }
-
-bool RenderTarget::checkStatus()
-{
-	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
-	{
-		switch (fboStatus)
-		{
-			case GL_FRAMEBUFFER_UNDEFINED: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer is undefined.\n");
-				return false;
-			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer has incomplete attachments.\n");
-				return false;
-			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer has missing attachments.\n");
-				return false;
-			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer has incomplete draw buffer.\n");
-				return false;
-			case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer has incomplete read buffer.\n");
-				return false;
-			case GL_FRAMEBUFFER_UNSUPPORTED: 
-				utils::Logger::toLog("RenderTarget error: Formats combination is unsupported.\n");
-				return false;
-			case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-				utils::Logger::toLog("RenderTarget error: The number of samples for each attachment must be the same.\n");
-				return false;
-			case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS: 
-				utils::Logger::toLog("RenderTarget error: The number of layers for each attachment must be the same.\n");
-				return false;
-			default:
-				utils::Logger::toLog("RenderTarget error: Unknown error.\n");
-				return false;
-		}
-	}
-	return true;
-}*/
 
 }
