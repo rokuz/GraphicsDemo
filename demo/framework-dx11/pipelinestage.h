@@ -40,6 +40,7 @@ enum PipelineStageType
 {
 	RasterizerStageType = 0,
 	DepthStencilStageType,
+	BlendStageType,
 	PipelineStageCount
 };
 

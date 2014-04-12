@@ -22,18 +22,35 @@
  */
 
 #pragma once
-#pragma warning(disable:4005)
-#include <d3d11.h>
-#include <string>
+#include "camera.h"
 
 namespace framework
 {
 
-std::string toString(D3D_FEATURE_LEVEL featureLevel);
-std::string toString(D3D11_FILL_MODE fillMode);
-std::string toString(D3D11_CULL_MODE cullMode);
-std::string toString(D3D11_RASTERIZER_DESC desc);
-std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
-std::string toString(D3D11_BLEND_DESC desc);
+class FreeCamera : public Camera
+{
+public:
+	FreeCamera();
+	virtual ~FreeCamera(){}
+
+	void initWithPositionDirection(int width, int height, const vector3& from, const vector3& to);
+	
+	void onKeyButton(int key, int scancode, bool pressed);
+	void onMouseButton(double xpos, double ypos, int button, bool pressed);
+	void onMouseMove(double xpos, double ypos);
+
+	void update(double elapsedTime);
+
+private:
+	bool m_moveForward;
+	bool m_moveBackward;
+	bool m_moveLeft;
+	bool m_moveRight;
+	bool m_rotationMode;
+	float m_speed;
+	vector2 m_lastMousePosition;
+	vector2 m_currentMousePosition;
+	vector2 m_angles;
+};
 
 }

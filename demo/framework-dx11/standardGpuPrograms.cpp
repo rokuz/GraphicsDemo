@@ -21,19 +21,40 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma once
-#pragma warning(disable:4005)
-#include <d3d11.h>
-#include <string>
+#include "standardGpuPrograms.h"
 
 namespace framework
 {
 
-std::string toString(D3D_FEATURE_LEVEL featureLevel);
-std::string toString(D3D11_FILL_MODE fillMode);
-std::string toString(D3D11_CULL_MODE cullMode);
-std::string toString(D3D11_RASTERIZER_DESC desc);
-std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
-std::string toString(D3D11_BLEND_DESC desc);
+std::shared_ptr<GpuProgram> StandardGpuPrograms::m_lineRenderer;
+std::shared_ptr<GpuProgram> StandardGpuPrograms::m_arrowRenderer;
+
+bool StandardGpuPrograms::init()
+{
+	bool result = true;
+	std::string shadersPath = "data/shaders/dx11/win32/standard/";
+
+	m_lineRenderer.reset(new GpuProgram());
+	//result &= m_lineRenderer->initWithVFShaders(shadersPath + "line.vsh", shadersPath + "line.fsh");
+	//if (!result) return false;
+	m_lineRenderer->bindUniform<StandardUniforms>(STD_UF::LINE_RENDERER_DATA, "lineData");
+
+	m_arrowRenderer.reset(new GpuProgram());
+	//result &= m_arrowRenderer->initWithVGFShaders(shadersPath + "arrow.vsh", shadersPath + "arrow.gsh", shadersPath + "arrow.fsh");
+	//if (!result) return false;
+	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, "arrowData");
+
+	return result;
+}
+
+std::shared_ptr<GpuProgram> StandardGpuPrograms::getLineRenderer()
+{
+	return m_lineRenderer;
+}
+
+std::shared_ptr<GpuProgram> StandardGpuPrograms::getArrowRenderer()
+{
+	return m_arrowRenderer;
+}
 
 }

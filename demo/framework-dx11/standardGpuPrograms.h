@@ -22,18 +22,51 @@
  */
 
 #pragma once
-#pragma warning(disable:4005)
-#include <d3d11.h>
-#include <string>
+
+#include <memory>
+#include "gpuprogram.h"
 
 namespace framework
 {
 
-std::string toString(D3D_FEATURE_LEVEL featureLevel);
-std::string toString(D3D11_FILL_MODE fillMode);
-std::string toString(D3D11_CULL_MODE cullMode);
-std::string toString(D3D11_RASTERIZER_DESC desc);
-std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
-std::string toString(D3D11_BLEND_DESC desc);
+DECLARE_UNIFORMS_BEGIN(StandardUniforms)
+	LINE_RENDERER_DATA,
+	ARROW_RENDERER_DATA,
+DECLARE_UNIFORMS_END()
+
+#pragma pack (push, 1)
+struct LineRendererData
+{
+	matrix44 modelViewProjection;
+	vector4 color;
+};
+#pragma pack (pop)
+
+#pragma pack (push, 1)
+struct ArrowRendererData
+{
+	matrix44 modelViewProjection;
+	vector3 position;
+	unsigned int : 32;
+	quaternion orientation;
+	vector4 color;
+};
+#pragma pack (pop)
+
+class StandardGpuPrograms
+{
+public:
+
+	static bool init();
+
+	static std::shared_ptr<GpuProgram> getLineRenderer();
+	static std::shared_ptr<GpuProgram> getArrowRenderer();
+
+private:
+	static std::shared_ptr<GpuProgram> m_lineRenderer;
+	static std::shared_ptr<GpuProgram> m_arrowRenderer;
+};
 
 }
+
+#define STD_UF framework::UniformBase<framework::StandardUniforms>::Uniform

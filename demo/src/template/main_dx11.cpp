@@ -1,5 +1,14 @@
 #include "application.h"
 
+DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
+	SPACE_DATA,
+	TEXTURES_DATA,
+	LIGHTS_DATA
+DECLARE_UNIFORMS_END()
+#define UF framework::UniformBase<TestAppUniforms>::Uniform
+
+const int MAX_LIGHTS_COUNT = 16;
+
 class TestApp : public framework::Application
 {
 public:
@@ -15,11 +24,11 @@ public:
 
 	virtual void startup(CEGUI::DefaultWindow* root)
 	{
-		/*m_rotation = 0.0f;
+		m_rotation = 0.0f;
 
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
-		m_geometry.reset(new framework::Geometry3D());
+		/*m_geometry.reset(new framework::Geometry3D());
 		m_geometry->init("data/media/spaceship/spaceship.geom");
 
 		m_texture.reset(new framework::Texture());
@@ -29,17 +38,13 @@ public:
 		m_specularTexture->initWithKtx("data/media/spaceship/spaceship_specular.ktx");
 
 		m_normalTexture.reset(new framework::Texture());
-		m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx");
+		m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx");*/
 
 		m_program.reset(new framework::GpuProgram());
-		m_program->initWithVFShaders("data/shaders/gl/win32/shader.vsh", "data/shaders/gl/win32/shader.fsh");
-		m_program->bindUniform<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
-		m_program->bindUniform<TestAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
-		m_program->bindUniform<TestAppUniforms>(UF::DIFFUSE_MAP, "diffuseSampler");
-		m_program->bindUniform<TestAppUniforms>(UF::NORMAL_MAP, "normalSampler");
-		m_program->bindUniform<TestAppUniforms>(UF::SPECULAR_MAP, "specularSampler");
-		m_program->bindUniform<TestAppUniforms>(UF::VIEW_DIRECTION, "viewDirection");
-		m_program->bindUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");
+		//m_program->initWithVFShaders("data/shaders/gl/win32/shader.vsh", "data/shaders/gl/win32/shader.fsh");
+		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
+		m_program->bindUniform<TestAppUniforms>(UF::TEXTURES_DATA, "texturesData");
+		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
 
 		// lights
 		framework::LightSource source;
@@ -48,19 +53,16 @@ public:
 		vector3 dir(1, -1, 1);
 		dir.norm();
 		source.orientation.set_from_axes(vector3(0, 0, 1), dir);
-		m_lightManager.addLightSource(source);
+		m_lightManager.addLightSource(getDevice(), source);
 
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT);
+		m_lightsBuffer->initDefaultStructured<framework::LightRawData>(getDevice(), (size_t)MAX_LIGHTS_COUNT);
 
 		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
 		for (int i = 0; i < lightsCount; i++)
 		{
 			m_lightsBuffer->setElement(i, m_lightManager.getRawLightData(i));
 		}
-
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);*/
 	}
 
 	virtual void shutdown()
@@ -69,14 +71,12 @@ public:
 
 	virtual void onResize(int width, int height)
 	{
-		//m_camera.updateResolution(width, height);
+		m_camera.updateResolution(width, height);
 	}
 
 	virtual void render(double elapsedTime)
 	{
-		/*m_camera.update(elapsedTime);
-
-		float aspect = fabsf((float)m_info.windowWidth / (float)m_info.windowHeight);
+		m_camera.update(elapsedTime);
 
 		quaternion quat;
 		quat.set_rotate_x(n_deg2rad(-90.0f));
@@ -91,58 +91,52 @@ public:
 
 		m_rotation += (float)elapsedTime * 70.0f;
 
-		const GLfloat color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		GLfloat depth = 1.0f;
-		glClearBufferfv(GL_COLOR, 0, color);
-		glClearBufferfv(GL_DEPTH, 0, &depth);
-
+		
 		if (m_program->use())
 		{
-			m_program->setMatrix<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);
-			m_program->setMatrix<TestAppUniforms>(UF::MODEL_MATRIX, model);
-			m_program->setVector<TestAppUniforms>(UF::VIEW_DIRECTION, m_camera.getOrientation().z_direction());
-			m_program->setUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, *m_lightsBuffer, 0);
+			//m_program->setMatrix<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);
+			//m_program->setMatrix<TestAppUniforms>(UF::MODEL_MATRIX, model);
+			//m_program->setVector<TestAppUniforms>(UF::VIEW_DIRECTION, m_camera.getOrientation().z_direction());
+			m_program->setUniform<TestAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
 
-			m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));
-			m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));
-			m_specularTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::SPECULAR_MAP));
+			//m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));
+			//m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));
+			//m_specularTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::SPECULAR_MAP));
 
-			m_geometry->renderAllMeshes();
+			//m_geometry->renderAllMeshes();
 		}
 
 		//m_geometry->renderBoundingBox(m_mvp);
 
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
-		renderAxes(vp);
-		m_lightManager.renderDebugVisualization(vp);*/
+		renderAxes(getDevice(), vp);
+		m_lightManager.renderDebugVisualization(getDevice(), vp);
 	}
 
-	virtual void onKeyButton(int key, int scancode, int action, int mods)
+	virtual void onKeyButton(int key, int scancode, bool pressed)
 	{
-		//m_camera.onKeyButton(key, scancode, action, mods);
+		m_camera.onKeyButton(key, scancode, pressed);
 	}
 
-	virtual void onMouseButton(double xpos, double ypos, int button, int action, int mods)
+	virtual void onMouseButton(double xpos, double ypos, int button, bool pressed)
 	{
-		//m_camera.onMouseButton(xpos, ypos, button, action, mods);
+		m_camera.onMouseButton(xpos, ypos, button, pressed);
 	}
 
 	virtual void onMouseMove(double xpos, double ypos)
 	{
-		//m_camera.onMouseMove(xpos, ypos);
+		m_camera.onMouseMove(xpos, ypos);
 	}
 
 private:
-	//std::shared_ptr<framework::GpuProgram> m_program;
+	std::shared_ptr<framework::GpuProgram> m_program;
 	//std::shared_ptr<framework::Geometry3D> m_geometry;
 	//std::shared_ptr<framework::Texture> m_texture;
 	//std::shared_ptr<framework::Texture> m_normalTexture;
 	//std::shared_ptr<framework::Texture> m_specularTexture;
-	//std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
+	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 
-	std::shared_ptr<framework::RasterizerStage> m_rasterizer;
-
-	//framework::FreeCamera m_camera;
+	framework::FreeCamera m_camera;
 	matrix44 m_mvp;
 
 	float m_rotation;

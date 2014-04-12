@@ -21,19 +21,45 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma once
-#pragma warning(disable:4005)
-#include <d3d11.h>
-#include <string>
+#include "camera.h"
 
 namespace framework
 {
 
-std::string toString(D3D_FEATURE_LEVEL featureLevel);
-std::string toString(D3D11_FILL_MODE fillMode);
-std::string toString(D3D11_CULL_MODE cullMode);
-std::string toString(D3D11_RASTERIZER_DESC desc);
-std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
-std::string toString(D3D11_BLEND_DESC desc);
+Camera::Camera()
+{
+}
+
+Camera::~Camera()
+{
+}
+
+void Camera::init( int width, int height )
+{
+	m_camera.SetPerspective(65.0f, (float)width/(float)height, 0.1f, 1000.0f);
+	m_orientation.ident();
+	m_position = vector3(0, 0, 0);
+}
+
+const matrix44& Camera::getView()
+{
+	m_view.set_translation(m_position);
+	vector3 dir = vector3(0, 0, 1);
+	dir = m_orientation.rotate(dir);
+	m_view.lookatLh(m_position + dir, vector3(0, 1, 0));
+	m_view.invert_simple();
+
+	return m_view;
+}
+
+void Camera::updateResolution( int width, int height )
+{
+	m_camera.SetAspectRatio((float)width/(float)height);
+}
+
+const matrix44& Camera::getProjection()
+{
+	return m_camera.GetProjection();
+}
 
 }

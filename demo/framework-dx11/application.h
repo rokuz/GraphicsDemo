@@ -47,15 +47,16 @@
 #include "pipelinestage.h"
 #include "rasterizerstage.h"
 #include "depthstencilstage.h"
+#include "blendstage.h"
 #include "renderTarget.h"
 //#include "geometry3D.h"
-//#include "line3D.h"
+#include "line3D.h"
 //#include "texture.h"
-//#include "gpuprogram.h"
-//#include "standardGpuPrograms.h"
-//#include "freeCamera.h"
-//#include "lightManager.h"
-//#include "uniformBuffer.h"
+#include "gpuprogram.h"
+#include "standardGpuPrograms.h"
+#include "freeCamera.h"
+#include "lightManager.h"
+#include "uniformBuffer.h"
 
 namespace framework
 {
@@ -106,13 +107,13 @@ protected:
     };
 
 	AppInfo m_info;
-	//LightManager m_lightManager;
+	LightManager m_lightManager;
 
 	void exit();
 
 	static std::string getGuiFullName(const std::string& name);
 	void renderGui(double elapsedTime);
-	void renderAxes(const matrix44& viewProjection);
+	void renderAxes(const Device& device, const matrix44& viewProjection);
 	PipelineStageManager& getPipelineStageManager() { return m_pipelineManager; }
 	const Device& getDevice() const { return m_device; }
 
@@ -139,12 +140,13 @@ private:
 	unsigned int m_multisamplingQuality;
 
 	std::list<std::weak_ptr<Destroyable> > m_destroyableList;
-	//std::shared_ptr<Line3D> m_axisX;
-	//std::shared_ptr<Line3D> m_axisY;
-	//std::shared_ptr<Line3D> m_axisZ;
+	std::shared_ptr<Line3D> m_axisX;
+	std::shared_ptr<Line3D> m_axisY;
+	std::shared_ptr<Line3D> m_axisZ;
 
 	std::shared_ptr<RasterizerStage> m_defaultRasterizer;
 	std::shared_ptr<DepthStencilStage> m_defaultDepthStencil;
+	std::shared_ptr<BlendStage> m_defaultBlending;
 	std::shared_ptr<RenderTarget> m_defaultRenderTarget;
 
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
@@ -159,14 +161,10 @@ private:
 	void destroyGui();
 	void initialiseResources();
 	void initInput();
-	//void initAxes();
+	void initAxes(const Device& device);
 
 	void mainLoop();
 	void measureFps(double delta);
-
-	//static void _onMouse(GLFWwindow* window, int button, int action, int mods);
-	//static void _onCursor(GLFWwindow* window, double xpos, double ypos);
-	//static void _onScroll(GLFWwindow* window, double xoffset, double yoffset);
 };
 
 }

@@ -22,18 +22,39 @@
  */
 
 #pragma once
-#pragma warning(disable:4005)
-#include <d3d11.h>
-#include <string>
+#include "pipelinestage.h"
+#include "vector.h"
 
 namespace framework
 {
 
-std::string toString(D3D_FEATURE_LEVEL featureLevel);
-std::string toString(D3D11_FILL_MODE fillMode);
-std::string toString(D3D11_CULL_MODE cullMode);
-std::string toString(D3D11_RASTERIZER_DESC desc);
-std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
-std::string toString(D3D11_BLEND_DESC desc);
+class BlendStage : public PipelineStage
+{
+public:
+	BlendStage();
+	virtual ~BlendStage();
+	virtual PipelineStageType GetType() const { return BlendStageType; }
+	virtual bool isValid();
+	virtual void destroy();
+
+	void initWithDescription(const Device& device, const D3D11_BLEND_DESC& desc);
+	
+	static const D3D11_BLEND_DESC& getDefault();
+
+	const vector4& getBlendFactor() const { return m_blendFactor; }
+	unsigned int getSampleMask() const { return m_sampleMask; }
+	void setBlendFactor(const vector4& factor) { m_blendFactor = factor; }
+	void setSampleMask(unsigned int mask) { m_sampleMask = mask; }
+
+protected:
+	virtual void onInit(const Device& device);
+	virtual void onApply(const Device& device);
+
+private:
+	D3D11_BLEND_DESC m_description;
+	ID3D11BlendState* m_state;
+	vector4 m_blendFactor;
+	unsigned int m_sampleMask;
+};
 
 }

@@ -22,18 +22,51 @@
  */
 
 #pragma once
-#pragma warning(disable:4005)
-#include <d3d11.h>
-#include <string>
+#include "ncamera2.h"
+#include "quaternion.h"
 
 namespace framework
 {
 
-std::string toString(D3D_FEATURE_LEVEL featureLevel);
-std::string toString(D3D11_FILL_MODE fillMode);
-std::string toString(D3D11_CULL_MODE cullMode);
-std::string toString(D3D11_RASTERIZER_DESC desc);
-std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
-std::string toString(D3D11_BLEND_DESC desc);
+class Camera
+{
+public:
+	Camera();
+	virtual ~Camera();
+
+	void init(int width, int height);
+	void updateResolution(int width, int height);
+
+	const matrix44& getView();
+	const matrix44& getProjection();
+	nCamera2& getInternalCamera() { return m_camera; }
+
+	void setPosition(const vector3& position)
+	{
+		m_position = position;
+	}
+
+	const vector3& getPosition() const
+	{
+		return m_position;
+	}
+
+	void setOrientation(const quaternion& orientation)
+	{
+		m_orientation = orientation;
+	}
+
+	const quaternion& getOrientation() const
+	{
+		return m_orientation;
+	}
+
+protected:
+	nCamera2 m_camera;
+	quaternion m_orientation;
+	vector3 m_position;
+
+	matrix44 m_view;
+};
 
 }

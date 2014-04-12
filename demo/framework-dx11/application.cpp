@@ -63,9 +63,6 @@ Application::Application() :
 	m_factory(0),
 	m_driverType(D3D_DRIVER_TYPE_HARDWARE),
 	m_multisamplingQuality(0)
-	//m_axisX(0), 
-	//m_axisY(0), 
-	//m_axisZ(0) 
 {
 }
 
@@ -111,14 +108,17 @@ int Application::run(Application* self)
 		return EXIT_FAILURE;
 	}
 
+	// init other subsystems
 	initGui();
+	if (!StandardGpuPrograms::init())
+	{
+		destroyAllDestroyable();
+		return EXIT_FAILURE;
+	}
+	initAxes(m_device);
+	m_lightManager.init(m_device);
 
-	//if (!StandardGpuPrograms::init())
-	//{
-	//	return EXIT_FAILURE;
-	//}
-	//initAxes();
-
+	// user-defined initialization
 	startup(m_rootWindow);
 
 	mainLoop();
@@ -150,6 +150,7 @@ void Application::mainLoop()
 		m_pipelineManager.beginFrame(m_device, m_defaultRenderTarget);
 		m_defaultRasterizer->apply(m_device);
 		m_defaultDepthStencil->apply(m_device);
+		m_defaultBlending->apply(m_device);
 
 		// render frame
 		if (fabs(m_lastTime) < 1e-7)
@@ -314,6 +315,15 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 		return false;
 	}
 
+	// init default blending
+	m_defaultBlending.reset(new framework::BlendStage());
+	D3D11_BLEND_DESC blendDesc = framework::BlendStage::getDefault();
+	m_defaultBlending->initWithDescription(m_device, blendDesc);
+	if (!m_defaultBlending->isValid())
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -428,11 +438,11 @@ void Application::renderGui(double elapsedTime)
 	CEGUI::WindowManager::getSingleton().cleanDeadPool();
 }
 
-void Application::renderAxes(const matrix44& viewProjection)
+void Application::renderAxes(const Device& device, const matrix44& viewProjection)
 {
-	//m_axisX->renderWithStandardGpuProgram(viewProjection, vector4(1, 0, 0, 1), false);
-	//m_axisY->renderWithStandardGpuProgram(viewProjection, vector4(0, 1, 0, 1), false);
-	//m_axisZ->renderWithStandardGpuProgram(viewProjection, vector4(0, 0, 1, 1), false);
+	m_axisX->renderWithStandardGpuProgram(device, viewProjection, vector4(1, 0, 0, 1), false);
+	m_axisY->renderWithStandardGpuProgram(device, viewProjection, vector4(0, 1, 0, 1), false);
+	m_axisZ->renderWithStandardGpuProgram(device, viewProjection, vector4(0, 0, 1, 1), false);
 }
 
 void Application::registerDestroyable(std::weak_ptr<Destroyable> ptr)
@@ -574,7 +584,7 @@ void Application::initInput()
 	});
 }
 
-/*void Application::initAxes()
+void Application::initAxes(const Device& device)
 {	
 	#define INIT_POINTS(name, point) std::vector<vector3> name; name.push_back(vector3()); name.push_back(point);
 	INIT_POINTS(points_x, vector3(20, 0, 0));
@@ -583,14 +593,14 @@ void Application::initInput()
 	#undef INIT_POINTS
 
 	m_axisX.reset(new Line3D());
-	m_axisX->initWithArray(points_x);
+	m_axisX->initWithArray(device, points_x);
 		
 	m_axisY.reset(new Line3D());
-	m_axisY->initWithArray(points_y);
+	m_axisY->initWithArray(device, points_y);
 
 	m_axisZ.reset(new Line3D());
-	m_axisZ->initWithArray(points_z);
-}*/
+	m_axisZ->initWithArray(device, points_z);
+}
 
 void Application::initialiseResources()
 {

@@ -22,18 +22,39 @@
  */
 
 #pragma once
-#pragma warning(disable:4005)
-#include <d3d11.h>
-#include <string>
+#include "structs.h"
+#include "destroyable.h"
+#include "matrix.h"
+#include "vector.h"
+#include <vector>
 
 namespace framework
 {
 
-std::string toString(D3D_FEATURE_LEVEL featureLevel);
-std::string toString(D3D11_FILL_MODE fillMode);
-std::string toString(D3D11_CULL_MODE cullMode);
-std::string toString(D3D11_RASTERIZER_DESC desc);
-std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
-std::string toString(D3D11_BLEND_DESC desc);
+class UniformBuffer;
+
+class Line3D : public Destroyable
+{
+	friend class Application;
+
+public:
+	Line3D();
+	virtual  ~Line3D();
+
+	bool initWithArray(const Device& device, const std::vector<vector3>& points);
+	
+	void renderWithStandardGpuProgram(const Device& device, const matrix44& mvp, const vector4& color, bool closed);
+	void render(bool closed);
+
+private:
+	std::vector<vector3> m_points;
+	bool m_isInitialized;
+	//GLuint m_vertexArray;
+    //GLuint m_vertexBuffer;
+
+	std::shared_ptr<UniformBuffer> m_lineDataBuffer;
+
+	virtual void destroy();
+};
 
 }

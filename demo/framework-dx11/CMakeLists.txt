@@ -1,5 +1,5 @@
 #sources
-set(SOURCE_LIB  application.h 
+set(SOURCE_CORE application.h 
 				application.cpp
 				structs.h
 				window.h
@@ -9,7 +9,8 @@ set(SOURCE_LIB  application.h
 				outputd3d11.cpp
 				destroyable.h
 				destroyable.cpp
-				pipelinestage.h
+)
+set(SOURCE_PIP  pipelinestage.h
 				pipelinestage.cpp
 				rasterizerstage.h
 				rasterizerstage.cpp
@@ -19,9 +20,28 @@ set(SOURCE_LIB  application.h
 				resourceview.cpp
 				depthstencilstage.h
 				depthstencilstage.cpp
+				blendstage.h
+				blendstage.cpp
+				uniformbuffer.h
+				uniformbuffer.cpp
+				gpuprogram.h
+				gpuprogram.cpp
+				standardGpuPrograms.h
+				standardGpuPrograms.cpp
 )
-source_group(core FILES ${SOURCE_LIB})
-add_library(framework STATIC ${SOURCE_LIB})
+set(SOURCE_ENT  camera.h
+				camera.cpp
+				freeCamera.h
+				freeCamera.cpp
+				line3D.h
+				line3D.cpp
+				lightManager.h
+				lightManager.cpp
+)
+source_group(core FILES ${SOURCE_CORE})
+source_group(pipeline FILES ${SOURCE_PIP})
+source_group(entities FILES ${SOURCE_ENT})
+add_library(framework STATIC ${SOURCE_CORE} ${SOURCE_PIP} ${SOURCE_ENT})
 
 #preprocessor
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)

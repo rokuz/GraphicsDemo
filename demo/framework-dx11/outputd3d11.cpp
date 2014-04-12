@@ -99,4 +99,10 @@ std::string toString(D3D11_DEPTH_STENCIL_DESC desc)
 	return "{ undefined }";
 }
 
+std::string toString(D3D11_BLEND_DESC desc)
+{
+	// TODO: implement
+	return "{ undefined }";
+}
+
 }
