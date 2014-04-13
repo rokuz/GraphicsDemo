@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <algorithm>
 #endif
+#include <locale>
 
 namespace utils
 {
@@ -62,6 +63,23 @@ bool Utils::readFileToString( const std::string& fileName, std::string& out )
 	fclose(fp);
 
 	return true;
+}
+
+std::string Utils::getExtention(const std::string& fileName)
+{
+	size_t p = fileName.find_last_of('.');
+	if (p == std::string::npos || (p + 1 >= fileName.size()))
+	{
+		return "";
+	}
+
+	std::string ext = fileName.substr(p + 1, fileName.size() - p - 1);
+	std::locale loc;
+	for (std::string::size_type i = 0; i < ext.length(); ++i)
+	{
+		ext[i] = std::tolower(ext[i], loc);
+	}
+	return ext;
 }
 
 float* Utils::convert(const vector4& v)

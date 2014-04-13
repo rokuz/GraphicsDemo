@@ -23,17 +23,100 @@
 
 #include "gpuprogram.h"
 
+#include <d3dcompiler.h>
+#include <algorithm>
 #include "utils.h"
+#include "outputd3d11.h"
+
+static const char* VS_MODEL = "vs_5_0";
+static const char* PS_MODEL = "ps_5_0";
+static const char* GS_MODEL = "gs_5_0";
+static const char* HS_MODEL = "hs_5_0";
+static const char* DS_MODEL = "ds_5_0";
+static const char* CS_MODEL = "cs_5_0";
+static const char* DEF_FUNC = "main";
 
 namespace framework
 {
 
-GpuProgram::GpuProgram() : m_isLoaded(false)//, m_program(0)
+const char* getModelByType(ShaderType shaderType)
 {
-	for (size_t i = 0; i < MAX_UNIFORMS; i++)
+	switch (shaderType)
 	{
-		m_uniforms[i] = -1;
+		case VERTEX_SHADER: return VS_MODEL;
+		case HULL_SHADER: return HS_MODEL;
+		case DOMAIN_SHADER: return DS_MODEL;
+		case GEOMETRY_SHADER: return GS_MODEL;
+		case PIXEL_SHADER: return PS_MODEL;
+		case COMPUTE_SHADER: return CS_MODEL;
 	}
+	return 0;
+}
+
+int getTypeByExt(const std::string& ext)
+{
+	if (ext == "vs" || ext == "vsh") return VERTEX_SHADER;
+	if (ext == "hs" || ext == "hsh") return HULL_SHADER;
+	if (ext == "ds" || ext == "dsh") return DOMAIN_SHADER;
+	if (ext == "gs" || ext == "gsh") return GEOMETRY_SHADER;
+	if (ext == "ps" || ext == "psh") return PIXEL_SHADER;
+	if (ext == "cs" || ext == "csh") return COMPUTE_SHADER;
+	return -1;
+}
+
+template<typename T>
+unsigned int sizeByMask(unsigned char mask)
+{
+	if (mask == 1) return sizeof(T);
+	else if (mask == 3) return sizeof(T) * 2;
+	else if (mask == 7) return sizeof(T) * 3;
+	else if (mask == 15) return sizeof(T) * 4;
+	else if (mask == 31) return sizeof(T) * 5;
+	else if (mask == 63) return sizeof(T) * 6;
+	else if (mask == 127) return sizeof(T) * 7;
+	else if (mask == 255) return sizeof(T) * 8;
+	return 0;
+}
+
+DXGI_FORMAT getComponentFormat(D3D_REGISTER_COMPONENT_TYPE type, unsigned char mask)
+{
+	if (type == D3D_REGISTER_COMPONENT_UINT32)
+	{
+		unsigned int sz = sizeByMask<unsigned int>(mask);
+		if (sz == 4) return DXGI_FORMAT_R32_UINT;
+		else if (sz == 8) return DXGI_FORMAT_R32G32_UINT;
+		else if (sz == 12) return DXGI_FORMAT_R32G32B32_UINT;
+		else if (sz == 16) return DXGI_FORMAT_R32G32B32A32_UINT;
+	}
+	else if (type == D3D_REGISTER_COMPONENT_SINT32)
+	{
+		unsigned int sz = sizeByMask<int>(mask);
+		if (sz == 4) return DXGI_FORMAT_R32_SINT;
+		else if (sz == 8) return DXGI_FORMAT_R32G32_SINT;
+		else if (sz == 12) return DXGI_FORMAT_R32G32B32_SINT;
+		else if (sz == 16) return DXGI_FORMAT_R32G32B32A32_SINT;
+	}
+	else if (type == D3D_REGISTER_COMPONENT_FLOAT32)
+	{
+		unsigned int sz = sizeByMask<float>(mask);
+		if (sz == 4) return DXGI_FORMAT_R32_FLOAT;
+		else if (sz == 8) return DXGI_FORMAT_R32G32_FLOAT;
+		else if (sz == 12) return DXGI_FORMAT_R32G32B32_FLOAT;
+		else if (sz == 16) return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	}
+	return DXGI_FORMAT_UNKNOWN;
+}
+
+GpuProgram::GpuProgram() : 
+	m_vertexShader(0),
+	m_hullShader(0),
+	m_domainShader(0),
+	m_geometryShader(0),
+	m_pixelShader(0),
+	m_computeShader(0),
+	m_inputLayout(0)
+{
+	m_data.resize(SHADERS_COUNT);
 }
 
 GpuProgram::~GpuProgram()
@@ -43,256 +126,462 @@ GpuProgram::~GpuProgram()
 
 void GpuProgram::destroy()
 {
-	if (m_isLoaded)
+	m_inputLayoutInfo.clear();
+	for (size_t i = 0; i < m_data.size(); i++)
 	{
-		//if (m_program)
-		//{
-		//	glDeleteProgram(m_program);
-		//	m_program = 0;
-		//}
-
-		m_isLoaded = false;
+		if (m_data[i].compiledShader != 0)
+		{
+			m_data[i].compiledShader->Release();
+			m_data[i].compiledShader = 0;
+		}
+		m_data[i].m_constantBuffers.clear();
 	}
+
+	if (m_inputLayout != 0) { m_inputLayout->Release(); m_inputLayout = 0; }
+
+	if (m_vertexShader != 0) { m_vertexShader->Release();  m_vertexShader = 0; }
+	if (m_hullShader != 0) { m_hullShader->Release();  m_hullShader = 0; }
+	if (m_domainShader != 0) { m_domainShader->Release();  m_domainShader = 0; }
+	if (m_geometryShader != 0) { m_geometryShader->Release();  m_geometryShader = 0; }
+	if (m_pixelShader != 0) { m_pixelShader->Release();  m_pixelShader = 0; }
+	if (m_computeShader != 0) { m_computeShader->Release();  m_computeShader = 0; }
 }
 
-/*bool GpuProgram::initWithVFShaders(const std::string& vsFileName, const std::string& fsFileName)
+void GpuProgram::addShader(const std::string& fileName, const std::string& mainFunc)
+{
+	int shaderType = getTypeByExt(utils::Utils::getExtention(fileName));
+	if (shaderType < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: could not add shader '%s'. The reason: shader type is undefined.\n", fileName.c_str());
+		return;
+	}
+	m_data[shaderType].filename = fileName;
+	m_data[shaderType].mainFunction = mainFunc;
+}
+
+bool GpuProgram::init(const Device& device)
 {
 	destroy();
 
-	GLuint vertShader, fragShader;
-
-	m_program = glCreateProgram();
-
-	if (!compileShader(&vertShader, GL_VERTEX_SHADER, vsFileName.c_str()))
+	bool noShaders = true;
+	std::for_each(m_data.begin(), m_data.end(), [&](const ShaderData& dat)
 	{
-		utils::Logger::toLogWithFormat("Failed to compile vertex shader '%s'.\n", vsFileName.c_str());
+		if (dat.filename.empty()) noShaders = false;
+	});
+	if (noShaders)
+	{
+		utils::Logger::toLog("Error: could not initialize gpu program. The reason: no any shader added.\n");
 		return false;
 	}
 
-	if (!compileShader(&fragShader, GL_FRAGMENT_SHADER, fsFileName.c_str()))
+	// compile
+	bool result = true;
+	for (size_t i = 0; i < m_data.size(); i++)
 	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to compile fragment shader '%s'.\n", fsFileName.c_str());
+		if (!m_data[i].filename.empty())
+		{
+			auto compiledShader = compileShader((ShaderType)i, m_data[i].filename, m_data[i].mainFunction);
+			result &= (compiledShader != 0);
+			if (result)
+			{
+				result &= createShaderByType(device, (ShaderType)i, compiledShader);
+				m_data[i].compiledShader = compiledShader;
+			}
+			if (!result) break;
+		}
+	}
+	if (!result)
+	{
+		destroy();
 		return false;
 	}
 
-	glAttachShader(m_program, vertShader);
-	glAttachShader(m_program, fragShader);
-
-	if (!linkProgram(m_program) || !validateProgram(m_program))
+	// reflection
+	if (!reflectShaders(device))
 	{
-		utils::Logger::toLog("GpuProgram error: Failed to link/validate program.\n");
-
-		if (vertShader)
-		{
-			glDeleteShader(vertShader);
-			vertShader = 0;
-		}
-		if (fragShader)
-		{
-			glDeleteShader(fragShader);
-			fragShader = 0;
-		}
-		if (m_program)
-		{
-			glDeleteProgram(m_program);
-			m_program = 0;
-		}
-
+		utils::Logger::toLog("Error: could not execute shaders reflection.\n");
+		destroy();
 		return false;
 	}
 
-	if (vertShader)
-	{
-		glDetachShader(m_program, vertShader);
-		glDeleteShader(vertShader);
-	}
-	if (fragShader)
-	{
-		glDetachShader(m_program, fragShader);
-		glDeleteShader(fragShader);
-	}
-
-	m_isLoaded = true;
-
-	if (m_isLoaded) initDestroyable();
-	return m_isLoaded;
+	if (isValid()) initDestroyable();
+	return isValid();
 }
 
-bool GpuProgram::initWithVGFShaders(const std::string& vsFileName, const std::string& gsFileName, const std::string& fsFileName)
+bool GpuProgram::isValid() const
 {
-	destroy();
-
-	GLuint vertShader, fragShader, geomShader;
-
-	m_program = glCreateProgram();
-
-	if (!compileShader(&vertShader, GL_VERTEX_SHADER, vsFileName.c_str()))
-	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to compile vertex shader '%s'.\n", vsFileName.c_str());
-		return false;
-	}
-
-	if (!compileShader(&fragShader, GL_FRAGMENT_SHADER, fsFileName.c_str()))
-	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to compile fragment shader '%s'.\n", fsFileName.c_str());
-		return false;
-	}
-
-	if (!compileShader(&geomShader, GL_GEOMETRY_SHADER, gsFileName.c_str()))
-	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to compile geometry shader '%s'.\n", gsFileName.c_str());
-		return false;
-	}
-
-	glAttachShader(m_program, vertShader);
-	glAttachShader(m_program, fragShader);
-	glAttachShader(m_program, geomShader);
-
-	if (!linkProgram(m_program) || !validateProgram(m_program))
-	{
-		utils::Logger::toLog("Failed to link/validate program.\n");
-
-		if (vertShader)
-		{
-			glDeleteShader(vertShader);
-			vertShader = 0;
-		}
-		if (fragShader)
-		{
-			glDeleteShader(fragShader);
-			fragShader = 0;
-		}
-		if (geomShader)
-		{
-			glDeleteShader(geomShader);
-			geomShader = 0;
-		}
-		if (m_program)
-		{
-			glDeleteProgram(m_program);
-			m_program = 0;
-		}
-
-		return false;
-	}
-
-	if (vertShader)
-	{
-		glDetachShader(m_program, vertShader);
-		glDeleteShader(vertShader);
-	}
-	if (fragShader)
-	{
-		glDetachShader(m_program, fragShader);
-		glDeleteShader(fragShader);
-	}
-	if (geomShader)
-	{
-		glDetachShader(m_program, geomShader);
-		glDeleteShader(geomShader);
-	}
-
-	m_isLoaded = true;
-
-	if (m_isLoaded) initDestroyable();
-	return m_isLoaded;
+	return m_vertexShader != 0 || m_hullShader != 0 || m_domainShader != 0 || 
+		   m_geometryShader != 0 || m_pixelShader != 0 || m_computeShader != 0;
 }
 
-bool GpuProgram::compileShader( GLuint* shader, GLenum type, const std::string& fileName )
+ID3DBlob* GpuProgram::compileShader(ShaderType shaderType, const std::string& filename, const std::string& function, const D3D_SHADER_MACRO* defines)
 {
+	if (!utils::Utils::exists(filename))
+	{
+		utils::Logger::toLogWithFormat("Error: could not find file '%s'.\n", filename.c_str());
+		return 0;
+	}
+
 	std::string sourceStr;
-	utils::Utils::readFileToString(fileName, sourceStr);
+	utils::Utils::readFileToString(filename, sourceStr);
 	if (sourceStr.empty())
 	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to load shader '%s'.\n", fileName.c_str());
+		utils::Logger::toLogWithFormat("Error: could not read file '%s'.\n", filename.c_str());
 		return false;
 	}
 
-	GLint status;
-	const GLchar *source = sourceStr.c_str();
-
-	*shader = glCreateShader(type);
-	glShaderSource(*shader, 1, &source, NULL);
-	glCompileShader(*shader);
-
-#if defined(_DEBUG)
-	GLint logLength;
-	glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logLength);
-	if (logLength > 0)
+	std::string mainFunc = function;
+	if (mainFunc.empty())
 	{
-		GLchar *log = new GLchar[logLength];
-		glGetShaderInfoLog(*shader, logLength, &logLength, log);
-		utils::Logger::toLogWithFormat("Shader compile log:\n%s\n", log);
-		delete [] log;
+		mainFunc = DEF_FUNC;
 	}
+	
+	HRESULT hr = S_OK;
+	ID3DBlob* compiledShader = 0;
+	ID3DBlob* errorMessages = 0;
+
+	UINT flags = D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
+#ifdef _DEBUG
+	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
-	glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
-	if (status == 0)
+	hr = D3DCompile(sourceStr.c_str(), sourceStr.length(), nullptr, defines, nullptr,
+		mainFunc.c_str(), getModelByType(shaderType), flags, 0,
+		&compiledShader, &errorMessages);
+
+	if (hr != S_OK)
 	{
-		glDeleteShader(*shader);
+		utils::Logger::toLogWithFormat("Error: could not compile shader '%s'. The reason: ", filename.c_str());
+		if (errorMessages != nullptr)
+		{
+			LPVOID compileErrors = errorMessages->GetBufferPointer();
+			const char* message = (const char*)compileErrors;
+			utils::Logger::toLogWithFormat("%s.\n", message);
+		}
+		else
+		{
+			utils::Logger::toLog("undefined.\n");
+		}
+
+		if (compiledShader != 0) { compiledShader->Release(); }
+		if (errorMessages != 0) { errorMessages->Release(); }
+
+		return 0;
+	}
+
+	if (errorMessages != 0) { errorMessages->Release(); }
+
+	return compiledShader;
+}
+
+bool GpuProgram::createShaderByType(const Device& device, ShaderType shaderType, ID3DBlob* compiledShader)
+{
+	HRESULT hr = S_OK;
+	switch (shaderType)
+	{
+		case VERTEX_SHADER:
+		{
+			hr = device.device->CreateVertexShader(compiledShader->GetBufferPointer(), 
+												   compiledShader->GetBufferSize(), 
+												   0, &m_vertexShader);
+			break;
+		}
+
+		case HULL_SHADER:
+		{
+			hr = device.device->CreateHullShader(compiledShader->GetBufferPointer(),
+												 compiledShader->GetBufferSize(),
+												 0, &m_hullShader);
+			break;
+		}
+
+		case DOMAIN_SHADER:
+		{
+			hr = device.device->CreateDomainShader(compiledShader->GetBufferPointer(),
+												   compiledShader->GetBufferSize(),
+												   0, &m_domainShader);
+			break;
+		}
+
+		case GEOMETRY_SHADER:
+		{
+			hr = device.device->CreateGeometryShader(compiledShader->GetBufferPointer(),
+													 compiledShader->GetBufferSize(),
+													 0, &m_geometryShader);
+			break;
+		}
+
+		case PIXEL_SHADER:
+		{
+			hr = device.device->CreatePixelShader(compiledShader->GetBufferPointer(),
+												  compiledShader->GetBufferSize(),
+												  0, &m_pixelShader);
+			break;
+		}
+
+		case COMPUTE_SHADER:
+		{
+			hr = device.device->CreateComputeShader(compiledShader->GetBufferPointer(),
+													compiledShader->GetBufferSize(),
+													0, &m_computeShader);
+			break;
+		}
+	}
+
+	if (hr != S_OK)
+	{
+		utils::Logger::toLogWithFormat("Error: could not create %s.\n", toString(shaderType));
 		return false;
 	}
 
 	return true;
 }
 
-bool GpuProgram::linkProgram( GLuint prog )
+bool GpuProgram::reflectShaders(const Device& device)
 {
-	GLint status;
-	glLinkProgram(prog);
-
-#if defined(_DEBUG)
-	GLint logLength;
-	glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
-	if (logLength > 0)
+	HRESULT hr = S_OK;
+	bool reflectionFailed = false;
+	for (size_t i = 0; i < m_data.size(); i++)
 	{
-		GLchar *log = new GLchar[logLength];
-		glGetProgramInfoLog(prog, logLength, &logLength, log);
-		utils::Logger::toLogWithFormat("Shader link log:\n%s\n", log);
-		delete [] log;
+		if (m_data[i].compiledShader != 0)
+		{
+			ID3D11ShaderReflection* reflector = 0;
+			hr = D3DReflect(m_data[i].compiledShader->GetBufferPointer(),
+							m_data[i].compiledShader->GetBufferSize(),
+							IID_ID3D11ShaderReflection, reinterpret_cast<void**>(&reflector));
+			if (hr != S_OK)
+			{
+				reflectionFailed = true;
+				reflector->Release();
+				break;
+			}
+
+			// shader desc
+			D3D11_SHADER_DESC desc;
+			hr = reflector->GetDesc(&desc);
+			if (hr != S_OK)
+			{
+				reflectionFailed = true;
+				reflector->Release();
+				break;
+			}
+
+			// create input layout
+			if (i == VERTEX_SHADER)
+			{
+				m_inputLayoutInfo.resize(desc.InputParameters);
+				unsigned int byteOffset = 0;
+				for (UINT j = 0; j < desc.InputParameters; j++)
+				{
+					D3D11_SIGNATURE_PARAMETER_DESC input_desc;
+					hr = reflector->GetInputParameterDesc(j, &input_desc);
+					if (hr != S_OK) { reflectionFailed = true; break; }
+
+					m_inputLayoutInfo[j].SemanticName = input_desc.SemanticName;
+					m_inputLayoutInfo[j].SemanticIndex = input_desc.SemanticIndex;
+					unsigned int sz = sizeByMask<float>(input_desc.Mask);
+					if (sz == 0) { reflectionFailed = true; break; }
+					DXGI_FORMAT format = getComponentFormat(input_desc.ComponentType, input_desc.Mask);
+					if (format == DXGI_FORMAT_UNKNOWN) { reflectionFailed = true; break; }
+					m_inputLayoutInfo[j].Format = format;
+					m_inputLayoutInfo[j].InputSlot = 0;
+					m_inputLayoutInfo[j].AlignedByteOffset = byteOffset;
+					byteOffset += sz;
+					m_inputLayoutInfo[j].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+					m_inputLayoutInfo[j].InstanceDataStepRate = 0;
+				}
+				if (reflectionFailed)
+				{
+					m_inputLayoutInfo.clear();
+					reflector->Release();
+					break;
+				}
+
+				hr = device.device->CreateInputLayout(m_inputLayoutInfo.data(), m_inputLayoutInfo.size(),
+													  m_data[i].compiledShader->GetBufferPointer(),
+													  m_data[i].compiledShader->GetBufferSize(),
+													  &m_inputLayout);
+				if (hr != S_OK)
+				{
+					utils::Logger::toLog("Error: could not create an input layout.\n");
+					m_inputLayoutInfo.clear();
+					reflector->Release();
+					break;
+				}
+			}
+
+			m_data[i].m_constantBuffers.reserve(16);
+			for (UINT j = 0; j < desc.ConstantBuffers; j++)
+			{
+				std::shared_ptr<ConstantBufferData> cbdata(new ConstantBufferData);
+
+				// buffer info
+				ID3D11ShaderReflectionConstantBuffer* constBuffer = reflector->GetConstantBufferByIndex(j);
+				D3D11_SHADER_BUFFER_DESC bufferDesc;
+				constBuffer->GetDesc(&bufferDesc);
+				cbdata->name = bufferDesc.Name;
+				cbdata->sizeInBytes = bufferDesc.Size;
+				
+				// binding info
+				D3D11_SHADER_INPUT_BIND_DESC bindDesc;
+				hr = reflector->GetResourceBindingDescByName(bufferDesc.Name, &bindDesc);
+				if (hr != S_OK)
+				{
+					reflectionFailed = true;
+					reflector->Release();
+					break;
+				}
+				cbdata->bindingPoint = bindDesc.BindPoint;
+				cbdata->bindingCount = bindDesc.BindCount;
+
+				m_data[i].m_constantBuffers.push_back(cbdata);
+			}
+			if (reflectionFailed) break;
+
+			// release all
+			reflector->Release();
+			m_data[i].compiledShader->Release();
+			m_data[i].compiledShader = 0;
+		}
 	}
-#endif
 
-	glGetProgramiv(prog, GL_LINK_STATUS, &status);
-	if (status == 0)
+	return !reflectionFailed;
+}
+
+bool GpuProgram::use(const Device& device)
+{
+	if (!isValid()) return false;
+
+	// set shader
+	if (m_vertexShader != 0)
 	{
-		return false;
+		device.context->VSSetShader(m_vertexShader, 0, 0);
+	}
+	if (m_hullShader != 0)
+	{
+		device.context->HSSetShader(m_hullShader, 0, 0);
+	}
+	if (m_domainShader != 0)
+	{
+		device.context->DSSetShader(m_domainShader, 0, 0);
+	}
+	if (m_geometryShader != 0)
+	{
+		device.context->GSSetShader(m_geometryShader, 0, 0);
+	}
+	if (m_pixelShader != 0)
+	{
+		device.context->PSSetShader(m_pixelShader, 0, 0);
+	}
+	if (m_computeShader != 0)
+	{
+		device.context->CSSetShader(m_computeShader, 0, 0);
+	}
+
+	if (m_inputLayout != 0)
+	{
+		device.context->IASetInputLayout(m_inputLayout);
 	}
 
 	return true;
 }
 
-bool GpuProgram::validateProgram( GLuint prog )
+void GpuProgram::bindUniformByIndex(int index, const std::string& name)
 {
-	GLint logLength, status;
-
-	glValidateProgram(prog);
-	glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
-	if (logLength > 0)
+	bool found = false;
+	for (size_t i = 0; i < m_data.size(); i++)
 	{
-		GLchar *log = new GLchar[logLength];
-		glGetProgramInfoLog(prog, logLength, &logLength, log);
-		utils::Logger::toLogWithFormat("Shader validate log:\n%s\n", log);
-		delete [] log;
+		std::for_each(m_data[i].m_constantBuffers.begin(), 
+					  m_data[i].m_constantBuffers.end(), [&](const std::shared_ptr<ConstantBufferData>& cb)
+		{
+			if (cb->name == name)
+			{
+				m_uniforms[i][index] = cb;
+				found = true;
+			}
+		});
+	}
+	if (!found)
+	{
+		utils::Logger::toLogWithFormat("Error: Uniform '%s' has not been found to bind.\n", name.c_str());
+		return;
 	}
 
-	glGetProgramiv(prog, GL_VALIDATE_STATUS, &status);
-	if (status == 0)
+	// check size
+	unsigned int sz = 0;
+	bool failed = false;
+	for (size_t i = 0; i < m_data.size(); i++)
 	{
-		return false;
+		if (!m_uniforms[i][index].expired())
+		{
+			auto ptr = m_uniforms[i][index].lock();
+			if (sz == 0) sz = ptr->sizeInBytes;
+			else if (sz != ptr->sizeInBytes)
+			{
+				utils::Logger::toLogWithFormat("Error: could not bind an uniform '%s'. The reason: the uniform has different size in shaders.\n", name.c_str());
+				failed = true;
+				break;
+			}
+		}
+	}
+	if (failed)
+	{
+		for (size_t i = 0; i < m_data.size(); i++) m_uniforms[i][index].reset();
+	}
+}
+
+void GpuProgram::setUniformByIndex(const Device& device, int index, std::shared_ptr<UniformBuffer> buffer)
+{
+	// check size
+	for (size_t i = 0; i < m_data.size(); i++)
+	{
+		if (!m_uniforms[i][index].expired())
+		{
+			auto ptr = m_uniforms[i][index].lock();
+			if (ptr->sizeInBytes != buffer->sizeInBytes())
+			{
+				utils::Logger::toLogWithFormat("Error: could not set an uniform. The reason: the uniform buffer's size does not match the expected size.\n");
+				return;
+			}
+		}
 	}
 
-	return true;
-}*/
-
-bool GpuProgram::use()
-{
-	if (!m_isLoaded) return false;
-
-	//glUseProgram(m_program);
-
-	return true;
+	if (m_vertexShader != 0 && !m_uniforms[VERTEX_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[VERTEX_SHADER][index].lock();
+		ID3D11Buffer* buf = buffer->getBuffer();
+		device.context->VSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
+	}
+	if (m_hullShader != 0 && !m_uniforms[HULL_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[HULL_SHADER][index].lock();
+		ID3D11Buffer* buf = buffer->getBuffer();
+		device.context->HSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
+	}
+	if (m_domainShader != 0 && !m_uniforms[DOMAIN_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[DOMAIN_SHADER][index].lock();
+		ID3D11Buffer* buf = buffer->getBuffer();
+		device.context->DSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
+	}
+	if (m_geometryShader != 0 && !m_uniforms[GEOMETRY_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[GEOMETRY_SHADER][index].lock();
+		ID3D11Buffer* buf = buffer->getBuffer();
+		device.context->GSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
+	}
+	if (m_pixelShader != 0 && !m_uniforms[PIXEL_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[PIXEL_SHADER][index].lock();
+		ID3D11Buffer* buf = buffer->getBuffer();
+		device.context->PSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
+	}
+	if (m_computeShader != 0 && !m_uniforms[COMPUTE_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[COMPUTE_SHADER][index].lock();
+		ID3D11Buffer* buf = buffer->getBuffer();
+		device.context->CSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
+	}
 }
 
 }

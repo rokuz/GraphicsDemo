@@ -26,10 +26,10 @@ ENDIF(USE_FBX)
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 #headers search
-include_directories(../mathlib)
+include_directories(../mathlib ../utils)
 
 #dependences
-set (LINKED_PROJECTS mathlib)
+set (LINKED_PROJECTS mathlib utils)
 
 #link FBX SDK
 IF (USE_FBX)

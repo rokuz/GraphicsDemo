@@ -105,4 +105,18 @@ std::string toString(D3D11_BLEND_DESC desc)
 	return "{ undefined }";
 }
 
+std::string toString(ShaderType shaderType)
+{
+	switch (shaderType)
+	{
+		case VERTEX_SHADER: return "vertex shader";
+		case HULL_SHADER: return "hull shader";
+		case DOMAIN_SHADER: return "domain shader";
+		case GEOMETRY_SHADER: return "geometry shader";
+		case PIXEL_SHADER: return "pixel shader";
+		case COMPUTE_SHADER: return "compute shader";
+	}
+	return "";
+}
+
 }

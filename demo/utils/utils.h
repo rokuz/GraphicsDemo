@@ -35,6 +35,7 @@ class Utils
 public:
 	static bool exists(const std::string& fileName);
 	static bool readFileToString(const std::string& fileName, std::string& out);
+	static std::string getExtention(const std::string& fileName);
 	static float* convert(const vector4& v);
 	static float* convert(const vector3& v);
 	static float* convert(const quaternion& q);

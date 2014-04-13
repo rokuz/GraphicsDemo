@@ -78,7 +78,7 @@ void LightManager::renderDebugVisualization(const Device& device, const matrix44
 			if (m_arrowDataBuffer.get() != 0)
 			{
 				auto program = framework::StandardGpuPrograms::getArrowRenderer();
-				if (program->use())
+				if (program->use(device))
 				{
 					ArrowRendererData data;
 					data.modelViewProjection = viewProjection;
@@ -88,9 +88,10 @@ void LightManager::renderDebugVisualization(const Device& device, const matrix44
 					m_arrowDataBuffer->setData(data);
 					m_arrowDataBuffer->applyChanges(device);
 
-					program->setUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, m_arrowDataBuffer);
+					program->setUniform<StandardUniforms>(device, STD_UF::ARROW_RENDERER_DATA, m_arrowDataBuffer);
 
-					//glDrawArrays(GL_POINTS, 0, 1);
+					device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+					device.context->Draw(1, 0);
 				}
 			}
 		}

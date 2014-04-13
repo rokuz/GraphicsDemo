@@ -22,8 +22,7 @@
  */
 
 #pragma once
-#pragma warning(disable:4005)
-#include <d3d11.h>
+#include "structs.h"
 #include <string>
 
 namespace framework
@@ -35,5 +34,7 @@ std::string toString(D3D11_CULL_MODE cullMode);
 std::string toString(D3D11_RASTERIZER_DESC desc);
 std::string toString(D3D11_DEPTH_STENCIL_DESC desc);
 std::string toString(D3D11_BLEND_DESC desc);
+
+std::string toString(ShaderType shaderType);
 
 }

@@ -34,7 +34,7 @@
 namespace framework
 {
 
-const int MAX_UNIFORMS = 256;
+const int MAX_UNIFORMS = 16;
 
 template<typename UniformType>
 class UniformBase
@@ -58,47 +58,66 @@ public:
 	GpuProgram();
 	virtual ~GpuProgram();
 
-	//bool initWithVFShaders(const std::string& vsFileName, const std::string& fsFileName);
-	//bool initWithVGFShaders(const std::string& vsFileName, const std::string& gsFileName, const std::string& fsFileName);
+	void addShader(const std::string& fileName, const std::string& mainFunc = "");
+	bool init(const Device& device);
+	bool isValid() const;
 
 	template<typename UniformType>
 	void bindUniform(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
 	{
-		if (!m_isLoaded) return;
-		if (uniform >= MAX_UNIFORMS) return;
-
-		/*m_uniforms[uniform] = glGetUniformBlockIndex(m_program, name.c_str());
-		if (m_uniforms[uniform] < 0)
+		if (!isValid()) return;
+		if (uniform >= MAX_UNIFORMS)
 		{
-			utils::Logger::toLogWithFormat("GpuProgram error: Uniform buffer '%s' has not been found to bind.\n", name.c_str());
-		}*/
+			utils::Logger::toLog("Error: uniform index is out of bound.\n");
+			return;
+		}
+
+		bindUniformByIndex((int)uniform, name);
 	}
 
 	template<typename UniformType>
-	int getUniform(typename UniformBase<UniformType>::Uniform uniform)
+	void setUniform(const Device& device, typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer)
 	{
-		return m_uniforms[uniform];
+		setUniformByIndex(device, (int)uniform, std::move(buffer));
 	}
 
-	template<typename UniformType>
-	void setUniform(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer)
-	{
-		//GLint uf = getUniformBuffer<UniformType>(uniform);
-		//if (uf < 0) return;
-		//buffer.bind(index);
-		//glUniformBlockBinding(m_program, uf, index);
-	}
-
-	bool use();
+	bool use(const Device& device);
 
 private:
-	bool m_isLoaded;
-	//GLuint m_program;
-	int m_uniforms[MAX_UNIFORMS];
+	struct ConstantBufferData
+	{
+		std::string name;
+		unsigned int sizeInBytes;
+		unsigned int bindingPoint;
+		unsigned int bindingCount;
+		ConstantBufferData() : sizeInBytes(0), bindingPoint(0), bindingCount(0){}
+	};
+	struct ShaderData
+	{
+		std::string filename;
+		std::string mainFunction;
+		ID3DBlob* compiledShader;
+		std::vector<std::shared_ptr<ConstantBufferData> > m_constantBuffers;
+		ShaderData() : compiledShader(0){}
+	};
+	std::vector<ShaderData> m_data;
+	std::weak_ptr<ConstantBufferData> m_uniforms[SHADERS_COUNT][MAX_UNIFORMS];
 
-	//bool compileShader(GLuint* shader, GLenum type, const std::string& fileName);
-	//bool linkProgram(GLuint prog);
-	//bool validateProgram(GLuint prog);
+	ID3D11VertexShader* m_vertexShader;
+	ID3D11HullShader* m_hullShader;
+	ID3D11DomainShader* m_domainShader;
+	ID3D11GeometryShader* m_geometryShader;
+	ID3D11PixelShader* m_pixelShader;
+	ID3D11ComputeShader* m_computeShader;
+
+	ID3D11InputLayout* m_inputLayout;
+	std::vector<D3D11_INPUT_ELEMENT_DESC> m_inputLayoutInfo;
+
+	ID3DBlob* compileShader(ShaderType shaderType, const std::string& filename, const std::string& function, const D3D_SHADER_MACRO* defines = 0);
+	bool createShaderByType(const Device& device, ShaderType shaderType, ID3DBlob* compiledShader);
+	bool reflectShaders(const Device& device);
+	void bindUniformByIndex(int index, const std::string& name);
+	void setUniformByIndex(const Device& device, int index, std::shared_ptr<UniformBuffer> buffer);
 
 	virtual void destroy();
 };

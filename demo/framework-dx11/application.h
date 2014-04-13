@@ -24,11 +24,10 @@
  */
 
 #pragma once
-#pragma warning(disable:4005)
 
 #define WIN32_LEAN_AND_MEAN 1
-#include <Windows.h>
-#include <d3d11.h>
+#include <windows.h>
+#include "structs.h"
 #include <string>
 #include <list>
 
@@ -39,7 +38,6 @@
 #include "utils.h"
 #include "timer.h"
 
-#include "structs.h"
 #include "window.h"
 #include "autoreleasepool.h"
 #include "outputd3d11.h"
@@ -116,6 +114,7 @@ protected:
 	void renderAxes(const Device& device, const matrix44& viewProjection);
 	PipelineStageManager& getPipelineStageManager() { return m_pipelineManager; }
 	const Device& getDevice() const { return m_device; }
+	void useDefaultRenderTarget();
 
 	void resize();
 

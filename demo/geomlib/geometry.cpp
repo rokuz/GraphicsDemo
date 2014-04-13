@@ -29,7 +29,7 @@
 #include "fbxloader.h"
 #endif
 
-#include <locale>
+#include "utils.h"
 
 namespace geom
 {
@@ -58,33 +58,23 @@ std::shared_ptr<GeometrySaver> Geometry::getSaver(const std::string& extention) 
 
 Data Geometry::load(const std::string& filepath)
 {
-	size_t p = filepath.find_last_of('.');
-	if (p == std::string::npos || (p + 1 >= filepath.size()))
+	std::string ext = utils::Utils::getExtention(filepath);
+	if (ext.empty())
 	{
 		GeometryLoader loader;
 		return loader.load(filepath);
 	}
-
-	std::string ext = filepath.substr(p + 1, filepath.size() - p - 1);
-	std::locale loc;
-	for (std::string::size_type i = 0; i < ext.length(); ++i)
-	{
-		ext[i] = std::tolower(ext[i], loc);
-	}
-
 	return getLoader(ext)->load(filepath);
 }
 
 bool Geometry::save(const Data& data, const std::string& filepath)
 {
-	size_t p = filepath.find_last_of('.');
-	if (p == std::string::npos || (p + 1 >= filepath.size()))
+	std::string ext = utils::Utils::getExtention(filepath);
+	if (ext.empty())
 	{
 		GeometrySaver saver;
 		return saver.save(data, filepath);
 	}
-
-	std::string ext = filepath.substr(p + 1, filepath.size() - p - 1);
 	return getSaver(ext)->save(data, filepath);
 }
 

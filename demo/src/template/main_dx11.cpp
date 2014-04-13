@@ -42,9 +42,9 @@ public:
 
 		m_program.reset(new framework::GpuProgram());
 		//m_program->initWithVFShaders("data/shaders/gl/win32/shader.vsh", "data/shaders/gl/win32/shader.fsh");
-		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
-		m_program->bindUniform<TestAppUniforms>(UF::TEXTURES_DATA, "texturesData");
-		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		//m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
+		//m_program->bindUniform<TestAppUniforms>(UF::TEXTURES_DATA, "texturesData");
+		//m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
 
 		// lights
 		framework::LightSource source;
@@ -91,13 +91,14 @@ public:
 
 		m_rotation += (float)elapsedTime * 70.0f;
 
-		
-		if (m_program->use())
+		useDefaultRenderTarget();
+
+		if (m_program->use(getDevice()))
 		{
 			//m_program->setMatrix<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);
 			//m_program->setMatrix<TestAppUniforms>(UF::MODEL_MATRIX, model);
 			//m_program->setVector<TestAppUniforms>(UF::VIEW_DIRECTION, m_camera.getOrientation().z_direction());
-			m_program->setUniform<TestAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+			m_program->setUniform<TestAppUniforms>(getDevice(), UF::LIGHTS_DATA, m_lightsBuffer);
 
 			//m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));
 			//m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));

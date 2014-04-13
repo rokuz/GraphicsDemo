@@ -99,9 +99,19 @@ public:
 		m_isChanged = true;
 	}
 
-	template<typename DataType> int size()
+	template<typename DataType> int size() const
 	{
 		return m_bufferInMemory.size() / sizeof(DataType);
+	}
+
+	unsigned int sizeInBytes() const
+	{
+		return (unsigned int)m_bufferInMemory.size();
+	}
+
+	ID3D11Buffer* getBuffer()
+	{
+		return m_buffer;
 	}
 
 	void applyChanges(const Device& device);

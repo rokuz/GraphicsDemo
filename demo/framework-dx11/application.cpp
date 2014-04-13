@@ -109,12 +109,12 @@ int Application::run(Application* self)
 	}
 
 	// init other subsystems
-	initGui();
-	if (!StandardGpuPrograms::init())
+	if (!StandardGpuPrograms::init(m_device))
 	{
 		destroyAllDestroyable();
 		return EXIT_FAILURE;
 	}
+	initGui();
 	initAxes(m_device);
 	m_lightManager.init(m_device);
 
@@ -421,6 +421,11 @@ void Application::measureFps(double delta)
 	}
 }
 
+void Application::useDefaultRenderTarget()
+{
+	m_pipelineManager.setRenderTarget(m_device, m_defaultRenderTarget);
+}
+
 std::string Application::getGuiFullName(const std::string& name)
 {
 	return GUI_SKIN + name;
@@ -428,7 +433,7 @@ std::string Application::getGuiFullName(const std::string& name)
 
 void Application::renderGui(double elapsedTime)
 {
-	m_pipelineManager.setRenderTarget(m_device, m_defaultRenderTarget);
+	useDefaultRenderTarget();
 
 	CEGUI::System& gui_system(CEGUI::System::getSingleton());
 	gui_system.injectTimePulse((float)elapsedTime);

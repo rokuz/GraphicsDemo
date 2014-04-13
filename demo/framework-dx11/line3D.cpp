@@ -84,7 +84,7 @@ void Line3D::renderWithStandardGpuProgram(const Device& device, const matrix44& 
 	if (m_lineDataBuffer.get() == 0) return;
 
 	auto program = StandardGpuPrograms::getLineRenderer();
-	if (program->use())
+	if (program->use(device))
 	{
 		LineRendererData data;
 		data.modelViewProjection = mvp;
@@ -92,7 +92,7 @@ void Line3D::renderWithStandardGpuProgram(const Device& device, const matrix44& 
 		m_lineDataBuffer->setData(data);
 		m_lineDataBuffer->applyChanges(device);
 
-		program->setUniform<StandardUniforms>(STD_UF::LINE_RENDERER_DATA, m_lineDataBuffer);
+		program->setUniform<StandardUniforms>(device, STD_UF::LINE_RENDERER_DATA, m_lineDataBuffer);
 		
 		render(closed);
 	}

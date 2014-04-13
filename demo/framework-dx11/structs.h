@@ -38,4 +38,17 @@ struct Device
 	Device() : device(0), context(0), debugger(0), swapChain(0) {}
 };
 
+enum ShaderType
+{
+	VERTEX_SHADER = 0,
+	HULL_SHADER,
+	DOMAIN_SHADER,
+	GEOMETRY_SHADER,
+	PIXEL_SHADER,
+	COMPUTE_SHADER,
+
+	SHADERS_COUNT
+};
+
+
 }
