@@ -445,9 +445,9 @@ void Application::renderGui(double elapsedTime)
 
 void Application::renderAxes(const Device& device, const matrix44& viewProjection)
 {
-	m_axisX->renderWithStandardGpuProgram(device, viewProjection, vector4(1, 0, 0, 1), false);
-	m_axisY->renderWithStandardGpuProgram(device, viewProjection, vector4(0, 1, 0, 1), false);
-	m_axisZ->renderWithStandardGpuProgram(device, viewProjection, vector4(0, 0, 1, 1), false);
+	m_axisX->renderWithStandardGpuProgram(device, viewProjection, vector4(1, 0, 0, 1));
+	m_axisY->renderWithStandardGpuProgram(device, viewProjection, vector4(0, 1, 0, 1));
+	m_axisZ->renderWithStandardGpuProgram(device, viewProjection, vector4(0, 0, 1, 1));
 }
 
 void Application::registerDestroyable(std::weak_ptr<Destroyable> ptr)

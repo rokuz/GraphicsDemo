@@ -111,7 +111,7 @@ public:
 
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
 		renderAxes(getDevice(), vp);
-		m_lightManager.renderDebugVisualization(getDevice(), vp);
+		//m_lightManager.renderDebugVisualization(getDevice(), vp);
 	}
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)

@@ -25,13 +25,13 @@
 #include "gpuprogram.h"
 #include "standardGpuPrograms.h"
 #include "uniformBuffer.h"
+#include "geometry3D.h"
 
 namespace framework
 {
 
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
-
 Line3D::Line3D() :
+	m_vertexBuffer(0),
 	m_isInitialized(false)
 {
 }
@@ -51,35 +51,28 @@ bool Line3D::initWithArray(const Device& device, const std::vector<vector3>& poi
 	if (!m_lineDataBuffer->initDefaultConstant<LineRendererData>(device))
 	{
 		m_lineDataBuffer.reset();
+		return m_isInitialized;
 	}
 
-	/*glGenBuffers(1, &m_vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
-	
-	glGenVertexArrays(1, &m_vertexArray);
-	glBindVertexArray(m_vertexArray);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), BUFFER_OFFSET(0));
-	glEnableVertexAttribArray(0);
-	glBindVertexArray(0);
-
-	glBufferData(GL_ARRAY_BUFFER, m_points.size() * sizeof(vector3), 0, GL_STATIC_DRAW);
-	float* vbuf = (float*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-	for (size_t i = 0; i < m_points.size(); i++)
+	D3D11_BUFFER_DESC vbdesc = Geometry3D::getDefaultVertexBuffer(m_points.size() * sizeof(vector3));
+	D3D11_SUBRESOURCE_DATA vbdata;
+	vbdata.pSysMem = points.data();
+	vbdata.SysMemPitch = 0;
+	vbdata.SysMemSlicePitch = 0;
+	HRESULT hr = device.device->CreateBuffer(&vbdesc, &vbdata, &m_vertexBuffer);
+	if (hr != S_OK)
 	{
-		vbuf[i * 3] =  m_points[i].x;
-		vbuf[i * 3 + 1] =  m_points[i].y;
-		vbuf[i * 3 + 2] =  m_points[i].z;
+		utils::Logger::toLog("Error: couuld not initialize a 3d line. The reason: could not create a vertex buffer.\n");
+		return m_isInitialized;
 	}
-	glUnmapBuffer(GL_ARRAY_BUFFER);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	m_isInitialized = true;*/
+	m_isInitialized = true;
 
 	if (m_isInitialized) initDestroyable();
 	return m_isInitialized;
 }
 
-void Line3D::renderWithStandardGpuProgram(const Device& device, const matrix44& mvp, const vector4& color, bool closed)
+void Line3D::renderWithStandardGpuProgram(const Device& device, const matrix44& mvp, const vector4& color)
 {
 	if (m_lineDataBuffer.get() == 0) return;
 
@@ -94,26 +87,28 @@ void Line3D::renderWithStandardGpuProgram(const Device& device, const matrix44& 
 
 		program->setUniform<StandardUniforms>(device, STD_UF::LINE_RENDERER_DATA, m_lineDataBuffer);
 		
-		render(closed);
+		render(device);
 	}
 }
 
-void Line3D::render(bool closed)
+void Line3D::render(const Device& device)
 {
 	if (!m_isInitialized || m_points.empty()) return;
 
-	//glBindVertexArray(m_vertexArray);
-    //glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
-	//glDrawArrays(closed ? GL_LINE_LOOP : GL_LINE_STRIP, 0, m_points.size());
+	UINT vertexStride = sizeof(vector3);
+	UINT vertexOffset = 0;
+	device.context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &vertexStride, &vertexOffset);
+	device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
+	device.context->Draw(m_points.size(), 0);
 }
 	
 void Line3D::destroy()
 {
-	if (m_isInitialized)
+	m_isInitialized = false;
+	if (m_vertexBuffer != 0)
 	{
-		//glDeleteBuffers(1, &m_vertexBuffer);
-		//glDeleteVertexArrays(1, &m_vertexArray);
-		m_isInitialized = false;
+		m_vertexBuffer->Release();
+		m_vertexBuffer = 0;
 	}
 }
 

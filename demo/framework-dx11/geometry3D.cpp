@@ -247,7 +247,7 @@ void Geometry3D::renderBoundingBox(const Device& device, const matrix44& mvp)
 
 	if (m_boundingBoxLine.get() != 0)
 	{
-		m_boundingBoxLine->renderWithStandardGpuProgram(device, mvp, vector4(1, 1, 0, 1), false);
+		m_boundingBoxLine->renderWithStandardGpuProgram(device, mvp, vector4(1, 1, 0, 1));
 	}
 }
 

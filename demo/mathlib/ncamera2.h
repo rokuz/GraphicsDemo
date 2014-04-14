@@ -93,6 +93,10 @@ public:
     void GetViewVolume(float& minx, float& maxx, float& miny, float& maxy, float& minz, float& maxz) const;
     /// check if 2 view volumes intersect
     ClipStatus GetClipStatus(const matrix44& myTransform, const matrix44& otherViewProjection);
+	/// set left-handed or right-handed coordinate system
+	void SetLeftHanded(bool lh);
+	/// check if coordinate system is left-handed
+	bool GetLeftHanded() const;
 
 private:
     /// update the internal projection and inverse projection matrices
@@ -113,6 +117,7 @@ private:
     matrix44 shadowProj;
     float shadowOffset;
     bbox3 box;
+	bool leftHanded;
 };
 
 //------------------------------------------------------------------------------
@@ -129,7 +134,8 @@ nCamera2::nCamera2() :
     farPlane(5000.0f),
     projDirty(true),
     boxDirty(true),
-    shadowOffset(0.00007f)
+    shadowOffset(0.00007f),
+	leftHanded(false)
 {
     // empty
 }
@@ -148,7 +154,8 @@ nCamera2::nCamera2(float aov, float aspect, float nearp, float farp) :
     farPlane(farp),
     projDirty(true),
     boxDirty(true),
-    shadowOffset(0.00007f)
+	shadowOffset(0.00007f),
+	leftHanded(false)
 {
     // empty
 }
@@ -377,6 +384,24 @@ nCamera2::GetShadowOffset() const
 
 //------------------------------------------------------------------------------
 /**
+*/
+inline void nCamera2::SetLeftHanded(bool lh)
+{
+	this->leftHanded = lh;
+	this->projDirty = true;
+	this->boxDirty = true;
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
+inline bool nCamera2::GetLeftHanded() const
+{
+	return this->leftHanded;
+}
+
+//------------------------------------------------------------------------------
+/**
     @brief Get the view volume.
 
     @param  minx    the left x coord where view volume cuts near plane
@@ -411,13 +436,29 @@ nCamera2::UpdateProjInvProj()
     this->projDirty = false;
     if (Perspective == this->type)
     {
-        this->proj.perspFovRh(this->angleOfView, this->aspectRatio, this->nearPlane, this->farPlane);
-        this->shadowProj.perspFovRh(this->angleOfView, this->aspectRatio, this->nearPlane - this->shadowOffset, this->farPlane - this->shadowOffset);
+		if (leftHanded)
+		{
+			this->proj.perspFovLh(this->angleOfView, this->aspectRatio, this->nearPlane, this->farPlane);
+			this->shadowProj.perspFovLh(this->angleOfView, this->aspectRatio, this->nearPlane - this->shadowOffset, this->farPlane - this->shadowOffset);
+		}
+		else
+		{
+			this->proj.perspFovRh(this->angleOfView, this->aspectRatio, this->nearPlane, this->farPlane);
+			this->shadowProj.perspFovRh(this->angleOfView, this->aspectRatio, this->nearPlane - this->shadowOffset, this->farPlane - this->shadowOffset);
+		}  
     }
     else if (Orthogonal == this->type)
     {
-        this->proj.orthoRh(this->width, this->height, this->nearPlane, this->farPlane);
-        this->shadowProj.orthoRh(this->width, this->height, this->nearPlane - this->shadowOffset, this->farPlane - this->shadowOffset);
+		if (leftHanded)
+		{
+			this->proj.orthoLh(this->width, this->height, this->nearPlane, this->farPlane);
+			this->shadowProj.orthoLh(this->width, this->height, this->nearPlane - this->shadowOffset, this->farPlane - this->shadowOffset);
+		}
+		else
+		{
+			this->proj.orthoRh(this->width, this->height, this->nearPlane, this->farPlane);
+			this->shadowProj.orthoRh(this->width, this->height, this->nearPlane - this->shadowOffset, this->farPlane - this->shadowOffset);
+		}   
     }
     this->invProj = proj;
     this->invProj.invert();
@@ -426,9 +467,7 @@ nCamera2::UpdateProjInvProj()
 //------------------------------------------------------------------------------
 /**
     Get the projection matrix representing the camera. This will only
-    recompute the matrix if it is marked as dirty. The returned matrixed
-    is identical to the result of D3DXMatrixPerspectiveFovRH() (see DX9
-    docs for details).
+    recompute the matrix if it is marked as dirty.
 */
 inline
 const matrix44&

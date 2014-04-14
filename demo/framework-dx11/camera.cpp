@@ -36,6 +36,7 @@ Camera::~Camera()
 
 void Camera::init( int width, int height )
 {
+	m_camera.SetLeftHanded(true);
 	m_camera.SetPerspective(65.0f, (float)width/(float)height, 0.1f, 1000.0f);
 	m_orientation.ident();
 	m_position = vector3(0, 0, 0);

@@ -67,13 +67,13 @@ void LightManager::renderDebugVisualization(const Device& device, const matrix44
 		{
 			matrix44 model;
 			model.set_translation(m_lightSources[i].lightSource.position);
-			m_lightSources[i].lineDebugVis->renderWithStandardGpuProgram(device, model * viewProjection, m_lightSources[i].lightSource.diffuseColor, false);
+			m_lightSources[i].lineDebugVis->renderWithStandardGpuProgram(device, model * viewProjection, m_lightSources[i].lightSource.diffuseColor);
 		}
 		else
 		{
 			matrix44 model(m_lightSources[i].lightSource.orientation);
 			model.set_translation(m_lightSources[i].lightSource.position);
-			m_lightSources[i].lineDebugVis->renderWithStandardGpuProgram(device, model * viewProjection, m_lightSources[i].lightSource.diffuseColor, true);
+			m_lightSources[i].lineDebugVis->renderWithStandardGpuProgram(device, model * viewProjection, m_lightSources[i].lightSource.diffuseColor);
 
 			if (m_arrowDataBuffer.get() != 0)
 			{
@@ -101,11 +101,12 @@ void LightManager::renderDebugVisualization(const Device& device, const matrix44
 void LightManager::createDirectLightDebugVisualization(const Device& device, const std::shared_ptr<Line3D>& line)
 {
 	std::vector<vector3> points;
-	points.reserve(4);
+	points.reserve(5);
 	points.push_back(vector3(-3, 3, 0));
 	points.push_back(vector3(3, 3, 0));
 	points.push_back(vector3(3, -3, 0));
 	points.push_back(vector3(-3, -3, 0));
+	points.push_back(vector3(-3, 3, 0));
 	line->initWithArray(device, points);
 }
 
@@ -143,13 +144,14 @@ void LightManager::createOmniLightDebugVisualization(const Device& device, const
 void LightManager::createSpotLightDebugVisualization(const Device& device, const std::shared_ptr<Line3D>& line)
 {
 	std::vector<vector3> points;
-	points.reserve(12);
+	points.reserve(13);
 	for (int i = 0; i < 12; i++)
 	{
 		float x = n_cos(2.0f * N_PI * i / 12.0f);
 		float y = n_sin(2.0f * N_PI * i / 12.0f);
 		points.push_back(vector3(x, y, 0));
 	}
+	points.push_back(vector3(points[0].x, points[0].y, 0));
 	line->initWithArray(device, points);
 }
 

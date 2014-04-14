@@ -17,6 +17,6 @@ struct VS_OUTPUT
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
-    output.position = mul(modelViewProjection, float4(input.position, 1));
+    output.position = mul(float4(input.position, 1), modelViewProjection);
     return output;    
 }

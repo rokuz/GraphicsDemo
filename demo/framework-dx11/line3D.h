@@ -43,15 +43,13 @@ public:
 
 	bool initWithArray(const Device& device, const std::vector<vector3>& points);
 	
-	void renderWithStandardGpuProgram(const Device& device, const matrix44& mvp, const vector4& color, bool closed);
-	void render(bool closed);
+	void renderWithStandardGpuProgram(const Device& device, const matrix44& mvp, const vector4& color);
+	void render(const Device& device);
 
 private:
 	std::vector<vector3> m_points;
 	bool m_isInitialized;
-	//GLuint m_vertexArray;
-    //GLuint m_vertexBuffer;
-
+	ID3D11Buffer* m_vertexBuffer;
 	std::shared_ptr<UniformBuffer> m_lineDataBuffer;
 
 	virtual void destroy();
