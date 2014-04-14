@@ -25,6 +25,7 @@
 #include "structs.h"
 #include "destroyable.h"
 #include <string>
+#include <list>
 #include "vector.h"
 #include "quaternion.h"
 #include "matrix.h"
@@ -59,7 +60,7 @@ public:
 	virtual ~GpuProgram();
 
 	void addShader(const std::string& fileName, const std::string& mainFunc = "");
-	bool init(const Device& device);
+	bool init(const Device& device, bool autoInputLayout = false);
 	bool isValid() const;
 
 	template<typename UniformType>
@@ -81,7 +82,9 @@ public:
 		setUniformByIndex(device, (int)uniform, std::move(buffer));
 	}
 
-	bool use(const Device& device);
+	int bindInputLayoutInfo(const Device& device, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info);
+
+	bool use(const Device& device, int inputLayoutIndex = -1);
 
 private:
 	struct ConstantBufferData
@@ -110,14 +113,29 @@ private:
 	ID3D11PixelShader* m_pixelShader;
 	ID3D11ComputeShader* m_computeShader;
 
-	ID3D11InputLayout* m_inputLayout;
-	std::vector<D3D11_INPUT_ELEMENT_DESC> m_inputLayoutInfo;
+	struct InputLayoutData
+	{
+		ID3D11InputLayout* inputLayout;
+		std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayoutInfo;
+		InputLayoutData() : inputLayout(0) {}
+		~InputLayoutData() { clear(); }
+		void clear()
+		{
+			inputLayoutInfo.clear();
+			if (inputLayout) { inputLayout->Release(); inputLayout = 0; }
+		}
+	};
+	InputLayoutData m_inputLayout;
+	std::list<std::string> m_inputLayoutStringsPool;
+	std::vector<InputLayoutData> m_inputLayoutInfoBase;
 
 	ID3DBlob* compileShader(ShaderType shaderType, const std::string& filename, const std::string& function, const D3D_SHADER_MACRO* defines = 0);
 	bool createShaderByType(const Device& device, ShaderType shaderType, ID3DBlob* compiledShader);
-	bool reflectShaders(const Device& device);
+	bool reflectShaders(const Device& device, bool autoInputLayout);
 	void bindUniformByIndex(int index, const std::string& name);
 	void setUniformByIndex(const Device& device, int index, std::shared_ptr<UniformBuffer> buffer);
+	const char* stringInPool(const char* str);
+	bool compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info1, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info2);
 
 	virtual void destroy();
 };

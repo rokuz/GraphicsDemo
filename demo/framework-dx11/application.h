@@ -47,7 +47,7 @@
 #include "depthstencilstage.h"
 #include "blendstage.h"
 #include "renderTarget.h"
-//#include "geometry3D.h"
+#include "geometry3D.h"
 #include "line3D.h"
 //#include "texture.h"
 #include "gpuprogram.h"

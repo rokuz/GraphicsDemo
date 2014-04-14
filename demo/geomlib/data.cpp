@@ -26,6 +26,12 @@
 namespace geom
 {
 
+const char* POSITION_SEMANTIC = "POSITION";
+const char* NORMAL_SEMANTIC = "NORMAL";
+const char* TEXCOORD_SEMANTIC = "TEXCOORD";
+const char* TANGENT_SEMANTIC = "TANGENT";
+const char* BINORMAL_SEMANTIC = "BINORMAL";
+
 Data::Data() :
 	m_additionalUVsCount(0),
 	m_verticesCount(0)
@@ -84,6 +90,22 @@ size_t Data::getVertexComponentOffset(size_t index) const
 size_t Data::getVertexSize() const
 {
 	return sizeof(Vertex) + m_additionalUVsCount * sizeof(vector2);
+}
+
+const char* Data::getSemanticName(size_t index) const
+{
+	if (index == 0) return POSITION_SEMANTIC;
+	else if (index == 1) return NORMAL_SEMANTIC;
+	else if (index == 2) return TEXCOORD_SEMANTIC;
+	else if (index == 3) return TANGENT_SEMANTIC;
+	else if (index == 4) return BINORMAL_SEMANTIC;
+	else if (index >= 5 && index < getVertexComponentsCount()) return TEXCOORD_SEMANTIC;
+	return "";
+}
+size_t Data::getSemanticIndex(size_t index) const
+{
+	if (index < 5) return 0;
+	return index - 4;
 }
 
 Data& Data::operator=(const Data& data)

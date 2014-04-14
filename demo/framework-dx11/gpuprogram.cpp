@@ -113,10 +113,10 @@ GpuProgram::GpuProgram() :
 	m_domainShader(0),
 	m_geometryShader(0),
 	m_pixelShader(0),
-	m_computeShader(0),
-	m_inputLayout(0)
+	m_computeShader(0)
 {
 	m_data.resize(SHADERS_COUNT);
+	m_inputLayoutInfoBase.reserve(16);
 }
 
 GpuProgram::~GpuProgram()
@@ -126,7 +126,10 @@ GpuProgram::~GpuProgram()
 
 void GpuProgram::destroy()
 {
-	m_inputLayoutInfo.clear();
+	m_inputLayout.clear();
+	m_inputLayoutStringsPool.clear();
+	m_inputLayoutInfoBase.clear();
+
 	for (size_t i = 0; i < m_data.size(); i++)
 	{
 		if (m_data[i].compiledShader != 0)
@@ -136,8 +139,6 @@ void GpuProgram::destroy()
 		}
 		m_data[i].m_constantBuffers.clear();
 	}
-
-	if (m_inputLayout != 0) { m_inputLayout->Release(); m_inputLayout = 0; }
 
 	if (m_vertexShader != 0) { m_vertexShader->Release();  m_vertexShader = 0; }
 	if (m_hullShader != 0) { m_hullShader->Release();  m_hullShader = 0; }
@@ -159,7 +160,7 @@ void GpuProgram::addShader(const std::string& fileName, const std::string& mainF
 	m_data[shaderType].mainFunction = mainFunc;
 }
 
-bool GpuProgram::init(const Device& device)
+bool GpuProgram::init(const Device& device, bool autoInputLayout)
 {
 	destroy();
 
@@ -197,7 +198,7 @@ bool GpuProgram::init(const Device& device)
 	}
 
 	// reflection
-	if (!reflectShaders(device))
+	if (!reflectShaders(device, autoInputLayout))
 	{
 		utils::Logger::toLog("Error: could not execute shaders reflection.\n");
 		destroy();
@@ -337,7 +338,7 @@ bool GpuProgram::createShaderByType(const Device& device, ShaderType shaderType,
 	return true;
 }
 
-bool GpuProgram::reflectShaders(const Device& device)
+bool GpuProgram::reflectShaders(const Device& device, bool autoInputLayout)
 {
 	HRESULT hr = S_OK;
 	bool reflectionFailed = false;
@@ -367,9 +368,9 @@ bool GpuProgram::reflectShaders(const Device& device)
 			}
 
 			// create input layout
-			if (i == VERTEX_SHADER)
+			if (autoInputLayout && i == VERTEX_SHADER)
 			{
-				m_inputLayoutInfo.resize(desc.InputParameters);
+				m_inputLayout.inputLayoutInfo.resize(desc.InputParameters);
 				unsigned int byteOffset = 0;
 				for (UINT j = 0; j < desc.InputParameters; j++)
 				{
@@ -377,34 +378,34 @@ bool GpuProgram::reflectShaders(const Device& device)
 					hr = reflector->GetInputParameterDesc(j, &input_desc);
 					if (hr != S_OK) { reflectionFailed = true; break; }
 
-					m_inputLayoutInfo[j].SemanticName = input_desc.SemanticName;
-					m_inputLayoutInfo[j].SemanticIndex = input_desc.SemanticIndex;
+					m_inputLayout.inputLayoutInfo[j].SemanticName = stringInPool(input_desc.SemanticName);
+					m_inputLayout.inputLayoutInfo[j].SemanticIndex = input_desc.SemanticIndex;
 					unsigned int sz = sizeByMask<float>(input_desc.Mask);
 					if (sz == 0) { reflectionFailed = true; break; }
 					DXGI_FORMAT format = getComponentFormat(input_desc.ComponentType, input_desc.Mask);
 					if (format == DXGI_FORMAT_UNKNOWN) { reflectionFailed = true; break; }
-					m_inputLayoutInfo[j].Format = format;
-					m_inputLayoutInfo[j].InputSlot = 0;
-					m_inputLayoutInfo[j].AlignedByteOffset = byteOffset;
+					m_inputLayout.inputLayoutInfo[j].Format = format;
+					m_inputLayout.inputLayoutInfo[j].InputSlot = 0;
+					m_inputLayout.inputLayoutInfo[j].AlignedByteOffset = byteOffset;
 					byteOffset += sz;
-					m_inputLayoutInfo[j].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-					m_inputLayoutInfo[j].InstanceDataStepRate = 0;
+					m_inputLayout.inputLayoutInfo[j].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+					m_inputLayout.inputLayoutInfo[j].InstanceDataStepRate = 0;
 				}
 				if (reflectionFailed)
 				{
-					m_inputLayoutInfo.clear();
+					m_inputLayout.clear();
 					reflector->Release();
 					break;
 				}
 
-				hr = device.device->CreateInputLayout(m_inputLayoutInfo.data(), m_inputLayoutInfo.size(),
+				hr = device.device->CreateInputLayout(m_inputLayout.inputLayoutInfo.data(), m_inputLayout.inputLayoutInfo.size(),
 													  m_data[i].compiledShader->GetBufferPointer(),
 													  m_data[i].compiledShader->GetBufferSize(),
-													  &m_inputLayout);
+													  &m_inputLayout.inputLayout);
 				if (hr != S_OK)
 				{
 					utils::Logger::toLog("Error: could not create an input layout.\n");
-					m_inputLayoutInfo.clear();
+					m_inputLayout.clear();
 					reflector->Release();
 					break;
 				}
@@ -440,15 +441,73 @@ bool GpuProgram::reflectShaders(const Device& device)
 
 			// release all
 			reflector->Release();
-			m_data[i].compiledShader->Release();
-			m_data[i].compiledShader = 0;
 		}
 	}
 
 	return !reflectionFailed;
 }
 
-bool GpuProgram::use(const Device& device)
+const char* GpuProgram::stringInPool(const char* str)
+{
+	std::string s = str;
+	m_inputLayoutStringsPool.insert(m_inputLayoutStringsPool.begin(), s);
+	return m_inputLayoutStringsPool.begin()->c_str();
+}
+
+int GpuProgram::bindInputLayoutInfo(const Device& device, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info)
+{
+	if (m_vertexShader == 0)
+	{
+		utils::Logger::toLog("Error: could not bind an input layout. The reason: there is no a vertex shader.\n");
+		return -1;
+	}
+
+	auto it = std::find_if(m_inputLayoutInfoBase.begin(), 
+						   m_inputLayoutInfoBase.end(), 
+						   [&](const InputLayoutData& layoutData)->bool
+	{
+		return compareInputLayoutInfos(layoutData.inputLayoutInfo, info);
+	});
+
+	if (it != m_inputLayoutInfoBase.end())
+	{
+		return (int)(it - m_inputLayoutInfoBase.begin());
+	}
+
+	InputLayoutData dat;
+	dat.inputLayoutInfo = info;
+	HRESULT hr = device.device->CreateInputLayout(dat.inputLayoutInfo.data(), dat.inputLayoutInfo.size(),
+												  m_data[VERTEX_SHADER].compiledShader->GetBufferPointer(),
+												  m_data[VERTEX_SHADER].compiledShader->GetBufferSize(),
+												  &dat.inputLayout);
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not create and bind an input layout.\n");
+		dat.clear();
+		return -1;
+	}
+	m_inputLayoutInfoBase.push_back(dat);
+
+	return ((int)m_inputLayoutInfoBase.size()) - 1;
+}
+
+bool GpuProgram::compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info1, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info2)
+{
+	if (info1.size() != info2.size()) return false;
+	for (size_t i = 0; i < info1.size(); i++)
+	{
+		if (strcmp(info1[i].SemanticName, info2[i].SemanticName) != 0) return false;
+		if (info1[i].SemanticIndex != info2[i].SemanticIndex) return false;
+		if (info1[i].Format != info2[i].Format) return false;
+		if (info1[i].InputSlot != info2[i].InputSlot) return false;
+		if (info1[i].AlignedByteOffset != info2[i].AlignedByteOffset) return false;
+		if (info1[i].InputSlotClass != info2[i].InputSlotClass) return false;
+		if (info1[i].InstanceDataStepRate != info2[i].InstanceDataStepRate) return false;
+	}
+	return true;
+}
+
+bool GpuProgram::use(const Device& device, int inputLayoutIndex)
 {
 	if (!isValid()) return false;
 
@@ -478,9 +537,14 @@ bool GpuProgram::use(const Device& device)
 		device.context->CSSetShader(m_computeShader, 0, 0);
 	}
 
-	if (m_inputLayout != 0)
+	// input layout
+	if (m_inputLayout.inputLayout != 0 && inputLayoutIndex < 0)
 	{
-		device.context->IASetInputLayout(m_inputLayout);
+		device.context->IASetInputLayout(m_inputLayout.inputLayout);
+	}
+	if (inputLayoutIndex >= 0 && inputLayoutIndex < (int)m_inputLayoutInfoBase.size() && m_inputLayoutInfoBase[inputLayoutIndex].inputLayout != 0)
+	{
+		device.context->IASetInputLayout(m_inputLayoutInfoBase[inputLayoutIndex].inputLayout);
 	}
 
 	return true;

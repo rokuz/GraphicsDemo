@@ -78,6 +78,8 @@ public:
 	size_t getVertexComponentSize(size_t index) const;
 	size_t getVertexComponentOffset(size_t index) const;
 	size_t getVertexSize() const;
+	const char* getSemanticName(size_t index) const;
+	size_t getSemanticIndex(size_t index) const;
 
 	Data& operator=(const Data& data);
 	Data& operator=(Data&& data);

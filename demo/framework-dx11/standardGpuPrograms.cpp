@@ -37,7 +37,7 @@ bool StandardGpuPrograms::init(const Device& device)
 	m_lineRenderer.reset(new GpuProgram());
 	m_lineRenderer->addShader(shadersPath + "line.vsh");
 	m_lineRenderer->addShader(shadersPath + "line.psh");
-	result &= m_lineRenderer->init(device);
+	result &= m_lineRenderer->init(device, true);
 	if (!result) return false;
 	m_lineRenderer->bindUniform<StandardUniforms>(STD_UF::LINE_RENDERER_DATA, "lineData");
 
@@ -45,7 +45,7 @@ bool StandardGpuPrograms::init(const Device& device)
 	m_arrowRenderer->addShader(shadersPath + "arrow.vsh");
 	m_arrowRenderer->addShader(shadersPath + "arrow.psh");
 	m_arrowRenderer->addShader(shadersPath + "arrow.gsh");
-	result &= m_arrowRenderer->init(device);
+	result &= m_arrowRenderer->init(device, true);
 	if (!result) return false;
 	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, "arrowData");
 

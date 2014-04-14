@@ -35,6 +35,8 @@ set(SOURCE_ENT  camera.h
 				freeCamera.cpp
 				line3D.h
 				line3D.cpp
+				geometry3D.h
+				geometry3D.cpp
 				lightManager.h
 				lightManager.cpp
 )

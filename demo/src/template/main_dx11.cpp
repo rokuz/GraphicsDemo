@@ -28,10 +28,10 @@ public:
 
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
-		/*m_geometry.reset(new framework::Geometry3D());
-		m_geometry->init("data/media/spaceship/spaceship.geom");
+		m_geometry.reset(new framework::Geometry3D());
+		m_geometry->init(getDevice(), "data/media/spaceship/spaceship.geom");
 
-		m_texture.reset(new framework::Texture());
+		/*m_texture.reset(new framework::Texture());
 		m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx");
 
 		m_specularTexture.reset(new framework::Texture());
@@ -131,7 +131,7 @@ public:
 
 private:
 	std::shared_ptr<framework::GpuProgram> m_program;
-	//std::shared_ptr<framework::Geometry3D> m_geometry;
+	std::shared_ptr<framework::Geometry3D> m_geometry;
 	//std::shared_ptr<framework::Texture> m_texture;
 	//std::shared_ptr<framework::Texture> m_normalTexture;
 	//std::shared_ptr<framework::Texture> m_specularTexture;
