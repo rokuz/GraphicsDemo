@@ -46,7 +46,7 @@ const D3D11_RASTERIZER_DESC& RasterizerStage::getDefault()
 		desc.DepthClipEnable = true;
 		desc.ScissorEnable = false;
 		desc.MultisampleEnable = false;
-		desc.AntialiasedLineEnable = true;
+		desc.AntialiasedLineEnable = false;
 		isInitialized = true;
 	}
 	return desc;

@@ -29,11 +29,13 @@
 #include "bbox.h"
 #include <string>
 #include <vector>
+#include <list>
 
 namespace framework
 {
 
 class Line3D;
+class GpuProgram;
 
 class Geometry3D : public Destroyable
 {
@@ -49,9 +51,13 @@ class Geometry3D : public Destroyable
 	std::vector<D3D11_INPUT_ELEMENT_DESC> m_inputLayoutInfo;
 	ID3D11Buffer* m_vertexBuffer;
 	ID3D11Buffer* m_indexBuffer;
+	typedef std::pair<std::weak_ptr<GpuProgram>, int> InputLayoutPair_T;
+	std::list<InputLayoutPair_T> m_inputLayoutCache;
 
 	bool m_isLoaded;
 	std::shared_ptr<Line3D> m_boundingBoxLine;
+
+	int getInputLayoutBindingIndex(const std::shared_ptr<GpuProgram>& program) const;
     
 	virtual void destroy();
     
@@ -63,11 +69,11 @@ public:
 	static D3D11_BUFFER_DESC getDefaultIndexBuffer(unsigned int size);
 	
 	bool init(const Device& device, const std::string& fileName);
-	const std::vector<D3D11_INPUT_ELEMENT_DESC>& getInputLayoutInfo() const;
+	void bindToGpuProgram(const Device& device, const std::shared_ptr<GpuProgram>& program);
     
     size_t getMeshesCount() const;
-    void renderMesh(const Device& device, size_t index);
-	void renderAllMeshes(const Device& device);
+	void renderMesh(const Device& device, const std::shared_ptr<GpuProgram>& program, size_t index);
+	void renderAllMeshes(const Device& device, const std::shared_ptr<GpuProgram>& program);
 	void renderBoundingBox(const Device& device, const matrix44& mvp);
 };
 

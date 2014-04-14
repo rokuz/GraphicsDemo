@@ -29,6 +29,7 @@
 #include "logger.h"
 #include "utils.h"
 #include "line3D.h"
+#include "gpuprogram.h"
 
 namespace framework
 {
@@ -110,6 +111,7 @@ void Geometry3D::destroy()
 {
 	m_isLoaded = false;
     m_inputLayoutInfo.clear();
+	m_inputLayoutCache.clear();
 	
 	if (m_vertexBuffer != 0)
 	{
@@ -193,14 +195,41 @@ bool Geometry3D::init(const Device& device, const std::string& fileName)
 	return m_isLoaded;
 }
 
+void Geometry3D::bindToGpuProgram(const Device& device, const std::shared_ptr<GpuProgram>& program)
+{
+	auto i = getInputLayoutBindingIndex(program);
+	if (i < 0)
+	{
+		int index = program->bindInputLayoutInfo(device, m_inputLayoutInfo);
+		m_inputLayoutCache.push_back(std::make_pair(program, index));
+	}
+}
+
+int Geometry3D::getInputLayoutBindingIndex(const std::shared_ptr<GpuProgram>& program) const
+{
+	auto it = std::find_if(m_inputLayoutCache.begin(),
+						   m_inputLayoutCache.end(),
+						   [&](const InputLayoutPair_T& p)->bool
+	{
+		if (p.first.expired()) return false;
+		return p.first.lock() == program;
+	});
+
+	if (it != m_inputLayoutCache.end()) return it->second;
+	return -1;
+}
+
 size_t Geometry3D::getMeshesCount() const
 {
     return m_meshes.size();
 }
 
-void Geometry3D::renderMesh(const Device& device, size_t index)
+void Geometry3D::renderMesh(const Device& device, const std::shared_ptr<GpuProgram>& program, size_t index)
 {
     if (index >= m_meshes.size()) return;
+
+	//auto i = getInputLayoutBindingIndex(program);
+	//program->applyInputLayout(device, i);
 
 	UINT vertexStride = m_vertexSize;
 	UINT vertexOffset = 0;
@@ -210,8 +239,11 @@ void Geometry3D::renderMesh(const Device& device, size_t index)
 	device.context->DrawIndexed(m_meshes[index].indicesCount, m_meshes[index].offsetInIB, 0);
 }
 
-void Geometry3D::renderAllMeshes(const Device& device)
+void Geometry3D::renderAllMeshes(const Device& device, const std::shared_ptr<GpuProgram>& program)
 {
+	//auto index = getInputLayoutBindingIndex(program);
+	//program->applyInputLayout(device, index);
+
 	UINT vertexStride = m_vertexSize;
 	UINT vertexOffset = 0;
 	device.context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &vertexStride, &vertexOffset);
@@ -249,11 +281,6 @@ void Geometry3D::renderBoundingBox(const Device& device, const matrix44& mvp)
 	{
 		m_boundingBoxLine->renderWithStandardGpuProgram(device, mvp, vector4(1, 1, 0, 1));
 	}
-}
-
-const std::vector<D3D11_INPUT_ELEMENT_DESC>& Geometry3D::getInputLayoutInfo() const
-{
-	return m_inputLayoutInfo;
 }
 
 }

@@ -7,6 +7,16 @@ DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<TestAppUniforms>::Uniform
 
+#pragma pack (push, 1)
+struct SpaceData
+{
+	matrix44 modelViewProjection;
+	matrix44 model;
+	vector3 viewDirection;
+	unsigned int : 32;
+};
+#pragma pack (pop)
+
 const int MAX_LIGHTS_COUNT = 16;
 
 class TestApp : public framework::Application
@@ -18,7 +28,7 @@ public:
 	virtual void init()
 	{
 		m_info.title = "Template application (DX11)";
-		m_info.samples = 0;
+		m_info.samples = 4;
 		m_info.flags.fullscreen = 0;
 	}
 
@@ -29,7 +39,7 @@ public:
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
 		m_geometry.reset(new framework::Geometry3D());
-		m_geometry->init(getDevice(), "data/media/spaceship/spaceship.geom");
+		if (!m_geometry->init(getDevice(), "data/media/spaceship/spaceship.geom")) exit();
 
 		/*m_texture.reset(new framework::Texture());
 		m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx");
@@ -41,10 +51,17 @@ public:
 		m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx");*/
 
 		m_program.reset(new framework::GpuProgram());
-		//m_program->initWithVFShaders("data/shaders/gl/win32/shader.vsh", "data/shaders/gl/win32/shader.fsh");
-		//m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
+		m_program->addShader("data/shaders/dx11/shader.vsh");
+		m_program->addShader("data/shaders/dx11/shader.psh");
+		if (!m_program->init(getDevice())) exit();
+		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
 		//m_program->bindUniform<TestAppUniforms>(UF::TEXTURES_DATA, "texturesData");
-		//m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+
+		m_geometry->bindToGpuProgram(getDevice(), m_program);
+
+		m_spaceBuffer.reset(new framework::UniformBuffer());
+		if (!m_spaceBuffer->initDefaultConstant<SpaceData>(getDevice())) exit();
 
 		// lights
 		framework::LightSource source;
@@ -56,7 +73,7 @@ public:
 		m_lightManager.addLightSource(getDevice(), source);
 
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		m_lightsBuffer->initDefaultStructured<framework::LightRawData>(getDevice(), (size_t)MAX_LIGHTS_COUNT);
+		if (!m_lightsBuffer->initDefaultStructured<framework::LightRawData>(getDevice(), (size_t)MAX_LIGHTS_COUNT)) exit();
 
 		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
 		for (int i = 0; i < lightsCount; i++)
@@ -95,23 +112,28 @@ public:
 
 		if (m_program->use(getDevice()))
 		{
-			//m_program->setMatrix<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);
-			//m_program->setMatrix<TestAppUniforms>(UF::MODEL_MATRIX, model);
-			//m_program->setVector<TestAppUniforms>(UF::VIEW_DIRECTION, m_camera.getOrientation().z_direction());
-			m_program->setUniform<TestAppUniforms>(getDevice(), UF::LIGHTS_DATA, m_lightsBuffer);
+			SpaceData spaceData;
+			spaceData.modelViewProjection = m_mvp;
+			spaceData.model = model;
+			spaceData.viewDirection = m_camera.getOrientation().z_direction();
+			m_spaceBuffer->setData(spaceData);
+			m_spaceBuffer->applyChanges(getDevice());
+
+			m_program->setUniform<TestAppUniforms>(getDevice(), UF::SPACE_DATA, m_spaceBuffer);
+			//m_program->setUniform<TestAppUniforms>(getDevice(), UF::LIGHTS_DATA, m_lightsBuffer);
 
 			//m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));
 			//m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));
 			//m_specularTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::SPECULAR_MAP));
 
-			//m_geometry->renderAllMeshes();
+			m_geometry->renderAllMeshes(getDevice(), m_program);
 		}
 
 		//m_geometry->renderBoundingBox(m_mvp);
 
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
 		renderAxes(getDevice(), vp);
-		//m_lightManager.renderDebugVisualization(getDevice(), vp);
+		m_lightManager.renderDebugVisualization(getDevice(), vp);
 	}
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)
@@ -135,6 +157,8 @@ private:
 	//std::shared_ptr<framework::Texture> m_texture;
 	//std::shared_ptr<framework::Texture> m_normalTexture;
 	//std::shared_ptr<framework::Texture> m_specularTexture;
+
+	std::shared_ptr<framework::UniformBuffer> m_spaceBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 
 	framework::FreeCamera m_camera;

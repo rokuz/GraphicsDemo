@@ -507,7 +507,7 @@ bool GpuProgram::compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_D
 	return true;
 }
 
-bool GpuProgram::use(const Device& device, int inputLayoutIndex)
+bool GpuProgram::use(const Device& device)
 {
 	if (!isValid()) return false;
 
@@ -537,17 +537,23 @@ bool GpuProgram::use(const Device& device, int inputLayoutIndex)
 		device.context->CSSetShader(m_computeShader, 0, 0);
 	}
 
-	// input layout
-	if (m_inputLayout.inputLayout != 0 && inputLayoutIndex < 0)
+	// auto input layout
+	if (m_inputLayout.inputLayout != 0)
 	{
 		device.context->IASetInputLayout(m_inputLayout.inputLayout);
 	}
-	if (inputLayoutIndex >= 0 && inputLayoutIndex < (int)m_inputLayoutInfoBase.size() && m_inputLayoutInfoBase[inputLayoutIndex].inputLayout != 0)
+
+	return true;
+}
+
+void GpuProgram::applyInputLayout(const Device& device, int inputLayoutIndex)
+{
+	if (!isValid()) return;
+	if (inputLayoutIndex >= 0 && inputLayoutIndex < (int)m_inputLayoutInfoBase.size() && 
+		m_inputLayoutInfoBase[inputLayoutIndex].inputLayout != 0)
 	{
 		device.context->IASetInputLayout(m_inputLayoutInfoBase[inputLayoutIndex].inputLayout);
 	}
-
-	return true;
 }
 
 void GpuProgram::bindUniformByIndex(int index, const std::string& name)
@@ -602,7 +608,7 @@ void GpuProgram::setUniformByIndex(const Device& device, int index, std::shared_
 		if (!m_uniforms[i][index].expired())
 		{
 			auto ptr = m_uniforms[i][index].lock();
-			if (ptr->sizeInBytes != buffer->sizeInBytes())
+			if (ptr->sizeInBytes != buffer->getElementByteSize())
 			{
 				utils::Logger::toLogWithFormat("Error: could not set an uniform. The reason: the uniform buffer's size does not match the expected size.\n");
 				return;

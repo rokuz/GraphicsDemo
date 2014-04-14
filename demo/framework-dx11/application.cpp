@@ -298,6 +298,7 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 	m_defaultRasterizer.reset(new framework::RasterizerStage());
 	D3D11_RASTERIZER_DESC rastDesc = framework::RasterizerStage::getDefault();
 	rastDesc.MultisampleEnable = m_info.samples > 0 ? TRUE : FALSE;
+	rastDesc.AntialiasedLineEnable = m_info.samples > 0 ? TRUE : FALSE;
 	m_defaultRasterizer->initWithDescription(m_device, rastDesc);
 	m_defaultRasterizer->addViewport(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
 	if (!m_defaultRasterizer->isValid())

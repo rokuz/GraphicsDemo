@@ -104,9 +104,11 @@ public:
 		return m_bufferInMemory.size() / sizeof(DataType);
 	}
 
-	unsigned int sizeInBytes() const
+	unsigned int getElementByteSize() const;
+
+	const D3D11_BUFFER_DESC& getDesc() const
 	{
-		return (unsigned int)m_bufferInMemory.size();
+		return m_desc;
 	}
 
 	ID3D11Buffer* getBuffer()

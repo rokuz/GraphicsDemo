@@ -36,7 +36,6 @@ Camera::~Camera()
 
 void Camera::init( int width, int height )
 {
-	m_camera.SetLeftHanded(true);
 	m_camera.SetPerspective(65.0f, (float)width/(float)height, 0.1f, 1000.0f);
 	m_orientation.ident();
 	m_position = vector3(0, 0, 0);
@@ -47,7 +46,7 @@ const matrix44& Camera::getView()
 	m_view.set_translation(m_position);
 	vector3 dir = vector3(0, 0, 1);
 	dir = m_orientation.rotate(dir);
-	m_view.lookatLh(m_position + dir, vector3(0, 1, 0));
+	m_view.lookatRh(m_position + dir, vector3(0, 1, 0));
 	m_view.invert_simple();
 
 	return m_view;

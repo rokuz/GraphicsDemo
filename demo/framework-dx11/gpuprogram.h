@@ -84,7 +84,8 @@ public:
 
 	int bindInputLayoutInfo(const Device& device, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info);
 
-	bool use(const Device& device, int inputLayoutIndex = -1);
+	bool use(const Device& device);
+	void applyInputLayout(const Device& device, int inputLayoutIndex);
 
 private:
 	struct ConstantBufferData

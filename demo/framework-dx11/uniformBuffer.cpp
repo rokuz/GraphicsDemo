@@ -121,4 +121,10 @@ void UniformBuffer::applyChanges(const Device& device)
 	}
 }
 
+unsigned int UniformBuffer::getElementByteSize() const
+{
+	if ((m_desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED) != 0) return m_desc.StructureByteStride;
+	return m_desc.ByteWidth;
+}
+
 }

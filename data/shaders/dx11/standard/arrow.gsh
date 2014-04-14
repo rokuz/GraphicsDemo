@@ -36,45 +36,45 @@ float3 y_direction(float4 q)
 void main(point VS_OUTPUT pnt[1], inout LineStream<VS_OUTPUT> lineStream )
 {
 	VS_OUTPUT v1;
-    v1.position = mul(modelViewProjection, float4(position, 1));
+    v1.position = mul(float4(position, 1), modelViewProjection);
 	lineStream.Append(v1);
 	
 	VS_OUTPUT v2;
 	float3 zdir = z_direction(orientation);
-	v2.position = mul(modelViewProjection, float4(position + zdir * 3.0, 1));
+	v2.position = mul(float4(position + zdir * 3.0, 1), modelViewProjection);
 	lineStream.Append(v2);
 	
 	VS_OUTPUT v3;
 	float3 xdir = x_direction(orientation);
-	v3.position = mul(modelViewProjection, float4(position + zdir * 2.5 + xdir * 0.3, 1));
+	v3.position = mul(float4(position + zdir * 2.5 + xdir * 0.3, 1), modelViewProjection);
 	lineStream.Append(v3);
 	
 	VS_OUTPUT v4;
-	v4.position = mul(modelViewProjection, float4(position + zdir * 2.75, 1));
+	v4.position = mul(float4(position + zdir * 2.75, 1), modelViewProjection);
 	lineStream.Append(v4);
 	
 	VS_OUTPUT v5;
-	v5.position = mul(modelViewProjection, float4(position + zdir * 2.5 - xdir * 0.3, 1));
+	v5.position = mul(float4(position + zdir * 2.5 - xdir * 0.3, 1), modelViewProjection);
 	lineStream.Append(v5);
 	
 	VS_OUTPUT v6;
-	v6.position = mul(modelViewProjection, float4(position + zdir * 3.0, 1));
+	v6.position = mul(float4(position + zdir * 3.0, 1), modelViewProjection);
 	lineStream.Append(v6);
 	
 	VS_OUTPUT v7;
 	float3 ydir = y_direction(orientation);
-	v7.position = mul(modelViewProjection, float4(position + zdir * 2.5 + ydir * 0.3, 1));
+	v7.position = mul(float4(position + zdir * 2.5 + ydir * 0.3, 1), modelViewProjection);
 	lineStream.Append(v7);
 	
 	VS_OUTPUT v8;
-	v8.position = mul(modelViewProjection, float4(position + zdir * 2.75, 1));
+	v8.position = mul(float4(position + zdir * 2.75, 1), modelViewProjection);
 	lineStream.Append(v8);
 	
 	VS_OUTPUT v9;
-	v9.position = mul(modelViewProjection, float4(position + zdir * 2.5 - ydir * 0.3, 1));
+	v9.position = mul(float4(position + zdir * 2.5 - ydir * 0.3, 1), modelViewProjection);
 	lineStream.Append(v9);
 	
 	VS_OUTPUT v10;
-	v10.position = mul(modelViewProjection, float4(position + zdir * 3.0, 1));
+	v10.position = mul(float4(position + zdir * 3.0, 1), modelViewProjection);
 	lineStream.Append(v10);
 }
