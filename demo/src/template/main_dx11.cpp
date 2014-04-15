@@ -80,6 +80,7 @@ public:
 		{
 			m_lightsBuffer->setElement(i, m_lightManager.getRawLightData(i));
 		}
+		m_lightsBuffer->applyChanges(getDevice());
 	}
 
 	virtual void shutdown()
@@ -120,7 +121,7 @@ public:
 			m_spaceBuffer->applyChanges(getDevice());
 
 			m_program->setUniform<TestAppUniforms>(getDevice(), UF::SPACE_DATA, m_spaceBuffer);
-			//m_program->setUniform<TestAppUniforms>(getDevice(), UF::LIGHTS_DATA, m_lightsBuffer);
+			m_program->setUniform<TestAppUniforms>(getDevice(), UF::LIGHTS_DATA, m_lightsBuffer);
 
 			//m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));
 			//m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));

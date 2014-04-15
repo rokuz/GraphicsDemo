@@ -24,6 +24,7 @@
 #pragma once
 #include "structs.h"
 #include "destroyable.h"
+#include "resourceview.h"
 #include <vector>
 
 namespace framework
@@ -106,15 +107,11 @@ public:
 
 	unsigned int getElementByteSize() const;
 
-	const D3D11_BUFFER_DESC& getDesc() const
-	{
-		return m_desc;
-	}
+	const D3D11_BUFFER_DESC& getDesc() const { return m_desc; }
+	ID3D11Buffer* getBuffer() { return m_buffer; }
+	ResourceView& getView() { return m_view; }
 
-	ID3D11Buffer* getBuffer()
-	{
-		return m_buffer;
-	}
+	bool isStructured() const;
 
 	void applyChanges(const Device& device);
 
@@ -125,6 +122,7 @@ private:
 
 	ID3D11Buffer* m_buffer;
 	D3D11_BUFFER_DESC m_desc;
+	ResourceView m_view;
 
 	std::vector<unsigned char> m_bufferInMemory;
 	bool m_isChanged;

@@ -30,10 +30,10 @@ VS_OUTPUT main(VS_INPUT input)
 	
 	float3 normalWS = mul(normalize(input.normal), (float3x3)model);
 	float3 tangentWS = mul(normalize(input.tangent), (float3x3)model);
-	float3 binormalWS = mul(normalize(input.binormal), (float3x3)model);
-	float3x3 ts = float3x3(tangentWS, binormalWS, normalWS);
-	output.ts0 = ts[0];
-	output.ts1 = ts[2];
+	//float3 binormalWS = mul(normalize(input.binormal), (float3x3)model);
+	//float3x3 ts = float3x3(tangentWS, binormalWS, normalWS);
+	output.ts0 = tangentWS;//ts[0];
+	output.ts1 = normalWS;//ts[2];
 	
 	return output;
 }

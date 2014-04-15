@@ -39,7 +39,7 @@ const D3D11_RASTERIZER_DESC& RasterizerStage::getDefault()
 	{
 		desc.FillMode = D3D11_FILL_SOLID;
 		desc.CullMode = D3D11_CULL_BACK;
-		desc.FrontCounterClockwise = false;
+		desc.FrontCounterClockwise = true;
 		desc.DepthBias = 0;
 		desc.SlopeScaledDepthBias = 0.0f;
 		desc.DepthBiasClamp = 0.0f;

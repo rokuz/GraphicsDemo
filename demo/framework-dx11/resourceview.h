@@ -29,10 +29,12 @@ namespace framework
 {
 
 class RenderTarget;
+class UniformBuffer;
 
 class ResourceView
 {
 	friend class RenderTarget;
+	friend class UniformBuffer;
 
 	static D3D11_SHADER_RESOURCE_VIEW_DESC getDefaultShaderDesc();
 	static D3D11_RENDER_TARGET_VIEW_DESC getDefaultRenderTargetDesc();

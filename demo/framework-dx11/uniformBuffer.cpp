@@ -72,6 +72,18 @@ void UniformBuffer::initBuffer(const Device& device, size_t elemSize, size_t cou
 	}
 	m_bufferInMemory.resize(elemSize * count);
 	memset(m_bufferInMemory.data(), 0, m_bufferInMemory.size());
+
+	if (isStructured())
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC desc = ResourceView::getDefaultShaderDesc();
+		desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+		desc.Buffer.FirstElement = 0;
+		desc.Buffer.NumElements = count;
+		desc.Buffer.ElementOffset = 0;
+		desc.Buffer.ElementWidth = elemSize;
+		m_view.setShaderDesc(desc);
+		m_view.init(device, m_buffer, m_desc.BindFlags);
+	}
 }
 
 void UniformBuffer::initBufferImmutable(const Device& device, unsigned char* dataPtr, size_t elemSize, size_t count)
@@ -91,6 +103,8 @@ void UniformBuffer::initBufferImmutable(const Device& device, unsigned char* dat
 
 void UniformBuffer::destroy()
 {
+	m_view.destroy();
+
 	if (m_buffer != 0)
 	{
 		m_buffer->Release();
@@ -123,8 +137,13 @@ void UniformBuffer::applyChanges(const Device& device)
 
 unsigned int UniformBuffer::getElementByteSize() const
 {
-	if ((m_desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED) != 0) return m_desc.StructureByteStride;
+	if (isStructured()) return m_desc.StructureByteStride;
 	return m_desc.ByteWidth;
+}
+
+bool UniformBuffer::isStructured() const
+{
+	return (m_desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED) != 0;
 }
 
 }
