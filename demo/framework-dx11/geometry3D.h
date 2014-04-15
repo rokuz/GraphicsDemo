@@ -51,14 +51,14 @@ class Geometry3D : public Destroyable
 	std::vector<D3D11_INPUT_ELEMENT_DESC> m_inputLayoutInfo;
 	ID3D11Buffer* m_vertexBuffer;
 	ID3D11Buffer* m_indexBuffer;
-	typedef std::pair<std::weak_ptr<GpuProgram>, int> InputLayoutPair_T;
+	typedef std::pair<int, int> InputLayoutPair_T;
 	std::list<InputLayoutPair_T> m_inputLayoutCache;
 
 	bool m_isLoaded;
 	std::shared_ptr<Line3D> m_boundingBoxLine;
 
-	int getInputLayoutBindingIndex(const std::shared_ptr<GpuProgram>& program) const;
-    
+	int getInputLayoutBindingIndex(int programId) const;
+	void applyInputLayout(const Device& device);
 	virtual void destroy();
     
 public:
@@ -69,11 +69,13 @@ public:
 	static D3D11_BUFFER_DESC getDefaultIndexBuffer(unsigned int size);
 	
 	bool init(const Device& device, const std::string& fileName);
-	void bindToGpuProgram(const Device& device, const std::shared_ptr<GpuProgram>& program);
+	void bindToGpuProgram(const Device& device, std::shared_ptr<GpuProgram> program);
+
+	const std::vector<D3D11_INPUT_ELEMENT_DESC>& getInputLayoutInfo() const { return m_inputLayoutInfo; }
     
     size_t getMeshesCount() const;
-	void renderMesh(const Device& device, const std::shared_ptr<GpuProgram>& program, size_t index);
-	void renderAllMeshes(const Device& device, const std::shared_ptr<GpuProgram>& program);
+	void renderMesh(const Device& device, size_t index);
+	void renderAllMeshes(const Device& device);
 	void renderBoundingBox(const Device& device, const matrix44& mvp);
 };
 

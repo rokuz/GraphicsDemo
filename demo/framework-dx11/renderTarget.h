@@ -52,6 +52,7 @@ public:
 private:
 	virtual void destroy();
 
+	bool m_isSwapChain;
 	ID3D11Texture2D* m_colorBuffer;
 	D3D11_TEXTURE2D_DESC m_colorBufferDesc;
 	ResourceView m_view;

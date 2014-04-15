@@ -70,7 +70,7 @@ class PipelineStageManager
 public:
 	PipelineStageManager();
 	void beginFrame(const Device& device, std::shared_ptr<RenderTarget> renderTarget);
-	void endFrame();
+	void endFrame(const Device& device);
 
 	void clearRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget, const vector4& color = vector4(0, 0, 0, 0), float depth = 1.0f, unsigned int stencil = 0);
 	void setRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget);

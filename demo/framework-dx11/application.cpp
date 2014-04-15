@@ -61,6 +61,7 @@ Application::Application() :
 	m_averageFps(0), 
 	m_framesCounter(0),
 	m_factory(0),
+	m_adapter(0),
 	m_driverType(D3D_DRIVER_TYPE_HARDWARE),
 	m_multisamplingQuality(0)
 {
@@ -101,9 +102,9 @@ int Application::run(Application* self)
 	initInput();
 
 	// init D3D device
-	AuroreleasePool<IUnknown> autorelease;
-	if (!initDevice(autorelease))
+	if (!initDevice())
 	{
+		destroyDevice();
 		destroyAllDestroyable();
 		return EXIT_FAILURE;
 	}
@@ -111,6 +112,7 @@ int Application::run(Application* self)
 	// init other subsystems
 	if (!StandardGpuPrograms::init(m_device))
 	{
+		destroyDevice();
 		destroyAllDestroyable();
 		return EXIT_FAILURE;
 	}
@@ -127,7 +129,7 @@ int Application::run(Application* self)
 	shutdown();
 	destroyAllDestroyable();
 	destroyGui();
-	autorelease.perform();
+	destroyDevice();
 	m_window.destroy();
 	
 	return EXIT_SUCCESS;
@@ -178,7 +180,8 @@ void Application::mainLoop()
 
 		// post-render
 		present();
-		m_pipelineManager.endFrame();
+		m_usingGpuProgram.reset();
+		m_pipelineManager.endFrame(m_device);
 	} 
 	while (m_isRunning);
 }
@@ -204,7 +207,7 @@ void Application::resize()
 	onResize(m_info.windowWidth, m_info.windowHeight);
 }
 
-bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
+bool Application::initDevice()
 {
 	HRESULT hr = S_OK;
 
@@ -217,7 +220,6 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 		return false;
 	}
 	m_factory = factory;
-	autorelease.add(factory);
 
 	// adapter
 	IDXGIAdapter* adapter = 0;
@@ -226,7 +228,7 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 		utils::Logger::toLog("Error: could not find a graphics adapter.\n");
 		return false;
 	}
-	autorelease.add(adapter);
+	m_adapter = adapter;
 
 	// adapter description
 	DXGI_ADAPTER_DESC desc;
@@ -261,9 +263,6 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 	m_device.featureLevel = createdLevel;
 	utils::Logger::toLogWithFormat("Feature level: %s.\n", toString(m_info.featureLevel).c_str());
 
-	autorelease.add(m_device.device);
-	autorelease.add(m_device.context);
-	
 	if (m_info.flags.debug)
 	{
 		hr = m_device.device->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&m_device.debugger));
@@ -272,7 +271,6 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 			utils::Logger::toLog("Error: could not get D3D debugger interface.\n");
 			return false;
 		}
-		autorelease.add(m_device.debugger);
 	}
 
 	// check for multisampling level
@@ -289,7 +287,7 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 	}
 
 	// swap chain
-	if (!initSwapChain(m_device, autorelease))
+	if (!initSwapChain(m_device))
 	{
 		return false;
 	}
@@ -328,7 +326,7 @@ bool Application::initDevice(AuroreleasePool<IUnknown>& autorelease)
 	return true;
 }
 
-bool Application::initSwapChain(Device& device, AuroreleasePool<IUnknown>& autorelease)
+bool Application::initSwapChain(Device& device)
 {
 	HRESULT hr = S_OK;
 
@@ -377,8 +375,6 @@ bool Application::initSwapChain(Device& device, AuroreleasePool<IUnknown>& autor
 		return false;
 	}
 
-	autorelease.add(device.swapChain);
-
 	// default render target from swap chain
 	m_defaultRenderTarget.reset(new framework::RenderTarget());
 	m_defaultRenderTarget->initWithSwapChain(device);
@@ -388,6 +384,28 @@ bool Application::initSwapChain(Device& device, AuroreleasePool<IUnknown>& autor
 	}
 
 	return true;
+}
+
+void Application::destroyDevice()
+{
+	if (m_device.swapChain != 0) { m_device.swapChain->Release(); m_device.swapChain = 0; }
+	if (m_device.context != 0) 
+	{ 
+		m_device.context->ClearState();
+		m_device.context->Flush();
+		m_device.context->Release(); 
+		m_device.context = 0; 
+	}
+	if (m_device.debugger != 0) 
+	{ 
+		//m_device.debugger->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+		m_device.debugger->Release(); 
+		m_device.debugger = 0; 
+	}
+	
+	if (m_device.device != 0) { m_device.device->Release(); m_device.device = 0; }
+	if (m_adapter != 0) { m_adapter->Release(); m_adapter = 0; }
+	if (m_factory != 0) { m_factory->Release(); m_factory = 0; }
 }
 
 void Application::present()

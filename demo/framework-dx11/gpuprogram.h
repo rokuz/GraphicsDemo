@@ -59,6 +59,8 @@ public:
 	GpuProgram();
 	virtual ~GpuProgram();
 
+	int getId() const { return m_id; }
+
 	void addShader(const std::string& fileName, const std::string& mainFunc = "");
 	bool init(const Device& device, bool autoInputLayout = false);
 	bool isValid() const;
@@ -83,7 +85,6 @@ public:
 	}
 
 	int bindInputLayoutInfo(const Device& device, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info);
-
 	bool use(const Device& device);
 	void applyInputLayout(const Device& device, int inputLayoutIndex);
 
@@ -107,6 +108,7 @@ private:
 	std::vector<ShaderData> m_data;
 	std::weak_ptr<ConstantBufferData> m_uniforms[SHADERS_COUNT][MAX_UNIFORMS];
 
+	int m_id;
 	ID3D11VertexShader* m_vertexShader;
 	ID3D11HullShader* m_hullShader;
 	ID3D11DomainShader* m_domainShader;
@@ -119,12 +121,8 @@ private:
 		ID3D11InputLayout* inputLayout;
 		std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayoutInfo;
 		InputLayoutData() : inputLayout(0) {}
-		~InputLayoutData() { clear(); }
-		void clear()
-		{
-			inputLayoutInfo.clear();
-			if (inputLayout) { inputLayout->Release(); inputLayout = 0; }
-		}
+		~InputLayoutData();
+		void clear();
 	};
 	InputLayoutData m_inputLayout;
 	std::list<std::string> m_inputLayoutStringsPool;
@@ -139,6 +137,8 @@ private:
 	bool compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info1, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info2);
 
 	virtual void destroy();
+
+	static int generateId();
 };
 
 }

@@ -107,13 +107,15 @@ void PipelineStageManager::beginFrame(const Device& device, std::shared_ptr<Rend
 	clearRenderTarget(device, std::move(renderTarget));
 }
 
-void PipelineStageManager::endFrame()
+void PipelineStageManager::endFrame(const Device& device)
 {
 	for (size_t i = 0; i < PipelineStageCount; i++)
 	{
 		for (auto s : m_stages[i]) s.reset();
 		m_indices[i] = 0;
 	}
+
+	device.context->ClearState();
 }
 
 void PipelineStageManager::clearRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget, const vector4& color, float depth, unsigned int stencil)

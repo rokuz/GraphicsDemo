@@ -63,6 +63,7 @@ class Application
 {
 	friend class Destroyable;
 	friend class PipelineStage;
+	friend class GpuProgram;
 
 public:
 	Application();
@@ -78,8 +79,8 @@ public:
 	virtual void onMouseMove(double xpos, double ypos){}
 
 	static Application* Instance();
-
 	int run(Application* self);
+	std::weak_ptr<GpuProgram> getUsingGpuProgram() const { return m_usingGpuProgram; }
 
 protected:
 	struct AppInfo
@@ -132,8 +133,10 @@ private:
 	double m_averageFps;
 	size_t m_framesCounter;
 	PipelineStageManager m_pipelineManager;
+	std::weak_ptr<GpuProgram> m_usingGpuProgram;
 
 	IDXGIFactory* m_factory;
+	IDXGIAdapter* m_adapter;
 	Device m_device;
 	D3D_DRIVER_TYPE m_driverType;
 	unsigned int m_multisamplingQuality;
@@ -151,16 +154,19 @@ private:
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	void destroyAllDestroyable();
 
-	bool initDevice(AuroreleasePool<IUnknown>& autorelease);
+	bool initDevice();
 	bool isFeatureLevelSupported(D3D_FEATURE_LEVEL level);
-	bool initSwapChain(Device& device, AuroreleasePool<IUnknown>& autorelease);
+	bool initSwapChain(Device& device);
 	void present();
+	void destroyDevice();
 
 	void initGui();
 	void destroyGui();
 	void initialiseResources();
 	void initInput();
 	void initAxes(const Device& device);
+
+	void setUsingGpuProgram(std::weak_ptr<GpuProgram> program) { m_usingGpuProgram = program; }
 
 	void mainLoop();
 	void measureFps(double delta);

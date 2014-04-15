@@ -30,6 +30,7 @@
 #include "utils.h"
 #include "line3D.h"
 #include "gpuprogram.h"
+#include "application.h"
 
 namespace framework
 {
@@ -195,24 +196,23 @@ bool Geometry3D::init(const Device& device, const std::string& fileName)
 	return m_isLoaded;
 }
 
-void Geometry3D::bindToGpuProgram(const Device& device, const std::shared_ptr<GpuProgram>& program)
+void Geometry3D::bindToGpuProgram(const Device& device, std::shared_ptr<GpuProgram> program)
 {
-	auto i = getInputLayoutBindingIndex(program);
+	auto i = getInputLayoutBindingIndex(program->getId());
 	if (i < 0)
 	{
 		int index = program->bindInputLayoutInfo(device, m_inputLayoutInfo);
-		m_inputLayoutCache.push_back(std::make_pair(program, index));
+		m_inputLayoutCache.push_back(std::make_pair(program->getId(), index));
 	}
 }
 
-int Geometry3D::getInputLayoutBindingIndex(const std::shared_ptr<GpuProgram>& program) const
+int Geometry3D::getInputLayoutBindingIndex(int programId) const
 {
 	auto it = std::find_if(m_inputLayoutCache.begin(),
 						   m_inputLayoutCache.end(),
 						   [&](const InputLayoutPair_T& p)->bool
 	{
-		if (p.first.expired()) return false;
-		return p.first.lock() == program;
+		return p.first == programId;
 	});
 
 	if (it != m_inputLayoutCache.end()) return it->second;
@@ -224,13 +224,22 @@ size_t Geometry3D::getMeshesCount() const
     return m_meshes.size();
 }
 
-void Geometry3D::renderMesh(const Device& device, const std::shared_ptr<GpuProgram>& program, size_t index)
+void Geometry3D::applyInputLayout(const Device& device)
+{
+	auto gpuProgram = Application::Instance()->getUsingGpuProgram();
+	if (!gpuProgram.expired())
+	{
+		auto gpuProgramPtr = gpuProgram.lock();
+		int inputLayoutIndex = getInputLayoutBindingIndex(gpuProgramPtr->getId());
+		gpuProgramPtr->applyInputLayout(device, inputLayoutIndex);
+	}
+}
+
+void Geometry3D::renderMesh(const Device& device, size_t index)
 {
     if (index >= m_meshes.size()) return;
 
-	//auto i = getInputLayoutBindingIndex(program);
-	//program->applyInputLayout(device, i);
-
+	applyInputLayout(device);
 	UINT vertexStride = m_vertexSize;
 	UINT vertexOffset = 0;
 	device.context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &vertexStride, &vertexOffset);
@@ -239,11 +248,9 @@ void Geometry3D::renderMesh(const Device& device, const std::shared_ptr<GpuProgr
 	device.context->DrawIndexed(m_meshes[index].indicesCount, m_meshes[index].offsetInIB, 0);
 }
 
-void Geometry3D::renderAllMeshes(const Device& device, const std::shared_ptr<GpuProgram>& program)
+void Geometry3D::renderAllMeshes(const Device& device)
 {
-	//auto index = getInputLayoutBindingIndex(program);
-	//program->applyInputLayout(device, index);
-
+	applyInputLayout(device);
 	UINT vertexStride = m_vertexSize;
 	UINT vertexOffset = 0;
 	device.context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &vertexStride, &vertexOffset);

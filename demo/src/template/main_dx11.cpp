@@ -38,18 +38,6 @@ public:
 
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
-		m_geometry.reset(new framework::Geometry3D());
-		if (!m_geometry->init(getDevice(), "data/media/spaceship/spaceship.geom")) exit();
-
-		/*m_texture.reset(new framework::Texture());
-		m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx");
-
-		m_specularTexture.reset(new framework::Texture());
-		m_specularTexture->initWithKtx("data/media/spaceship/spaceship_specular.ktx");
-
-		m_normalTexture.reset(new framework::Texture());
-		m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx");*/
-
 		m_program.reset(new framework::GpuProgram());
 		m_program->addShader("data/shaders/dx11/shader.vsh");
 		m_program->addShader("data/shaders/dx11/shader.psh");
@@ -58,8 +46,20 @@ public:
 		//m_program->bindUniform<TestAppUniforms>(UF::TEXTURES_DATA, "texturesData");
 		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
 
+		m_geometry.reset(new framework::Geometry3D());
+		if (!m_geometry->init(getDevice(), "data/media/spaceship/spaceship.geom")) exit();
 		m_geometry->bindToGpuProgram(getDevice(), m_program);
 
+		//m_texture.reset(new framework::Texture());
+		//m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx");
+
+		//m_specularTexture.reset(new framework::Texture());
+		//m_specularTexture->initWithKtx("data/media/spaceship/spaceship_specular.ktx");
+
+		//m_normalTexture.reset(new framework::Texture());
+		//m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx");
+
+		// space info buffer
 		m_spaceBuffer.reset(new framework::UniformBuffer());
 		if (!m_spaceBuffer->initDefaultConstant<SpaceData>(getDevice())) exit();
 
@@ -126,7 +126,7 @@ public:
 			//m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));
 			//m_specularTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::SPECULAR_MAP));
 
-			m_geometry->renderAllMeshes(getDevice(), m_program);
+			m_geometry->renderAllMeshes(getDevice());
 		}
 
 		//m_geometry->renderBoundingBox(m_mvp);

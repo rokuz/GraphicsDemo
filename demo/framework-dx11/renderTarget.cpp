@@ -64,7 +64,8 @@ D3D11_TEXTURE2D_DESC RenderTarget::getDefaultDepthDesc(int width, int height)
 RenderTarget::RenderTarget() :
 	m_colorBuffer(0),
 	m_depthBuffer(0),
-	m_useDepth(false)
+	m_useDepth(false),
+	m_isSwapChain(false)
 {
 
 }
@@ -80,6 +81,7 @@ void RenderTarget::initWithSwapChain(const Device& device)
 
 	// always use depth in this case
 	m_useDepth = true;
+	m_isSwapChain = true;
 
 	// get buffer from swap chain
 	HRESULT hr = device.swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&m_colorBuffer));
@@ -118,6 +120,8 @@ void RenderTarget::initWithSwapChain(const Device& device)
 		destroy();
 		return;
 	}
+
+	if (isValid()) initDestroyable();
 }
 
 bool RenderTarget::isValid() const
@@ -153,6 +157,7 @@ void RenderTarget::destroy()
 		m_colorBuffer->Release();
 		m_colorBuffer = 0;
 	}
+	m_isSwapChain = false;
 
 	m_useDepth = false;
 	m_depthView.destroy();

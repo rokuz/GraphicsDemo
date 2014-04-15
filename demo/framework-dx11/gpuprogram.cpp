@@ -27,6 +27,7 @@
 #include <algorithm>
 #include "utils.h"
 #include "outputd3d11.h"
+#include "application.h"
 
 static const char* VS_MODEL = "vs_5_0";
 static const char* PS_MODEL = "ps_5_0";
@@ -113,7 +114,8 @@ GpuProgram::GpuProgram() :
 	m_domainShader(0),
 	m_geometryShader(0),
 	m_pixelShader(0),
-	m_computeShader(0)
+	m_computeShader(0),
+	m_id(-1)
 {
 	m_data.resize(SHADERS_COUNT);
 	m_inputLayoutInfoBase.reserve(16);
@@ -146,6 +148,8 @@ void GpuProgram::destroy()
 	if (m_geometryShader != 0) { m_geometryShader->Release();  m_geometryShader = 0; }
 	if (m_pixelShader != 0) { m_pixelShader->Release();  m_pixelShader = 0; }
 	if (m_computeShader != 0) { m_computeShader->Release();  m_computeShader = 0; }
+
+	m_id = -1;
 }
 
 void GpuProgram::addShader(const std::string& fileName, const std::string& mainFunc)
@@ -205,7 +209,11 @@ bool GpuProgram::init(const Device& device, bool autoInputLayout)
 		return false;
 	}
 
-	if (isValid()) initDestroyable();
+	if (isValid()) 
+	{
+		m_id = generateId();
+		initDestroyable();
+	}
 	return isValid();
 }
 
@@ -476,19 +484,24 @@ int GpuProgram::bindInputLayoutInfo(const Device& device, const std::vector<D3D1
 
 	InputLayoutData dat;
 	dat.inputLayoutInfo = info;
-	HRESULT hr = device.device->CreateInputLayout(dat.inputLayoutInfo.data(), dat.inputLayoutInfo.size(),
+	m_inputLayoutInfoBase.push_back(dat);
+	int newindex = ((int)m_inputLayoutInfoBase.size()) - 1;
+
+	HRESULT hr = device.device->CreateInputLayout(m_inputLayoutInfoBase[newindex].inputLayoutInfo.data(),
+												  m_inputLayoutInfoBase[newindex].inputLayoutInfo.size(),
 												  m_data[VERTEX_SHADER].compiledShader->GetBufferPointer(),
 												  m_data[VERTEX_SHADER].compiledShader->GetBufferSize(),
-												  &dat.inputLayout);
+												  &m_inputLayoutInfoBase[newindex].inputLayout);
 	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not create and bind an input layout.\n");
-		dat.clear();
+		auto it = m_inputLayoutInfoBase.end();
+		it--;
+		m_inputLayoutInfoBase.erase(it);
 		return -1;
 	}
-	m_inputLayoutInfoBase.push_back(dat);
-
-	return ((int)m_inputLayoutInfoBase.size()) - 1;
+	
+	return newindex;
 }
 
 bool GpuProgram::compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info1, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info2)
@@ -512,36 +525,21 @@ bool GpuProgram::use(const Device& device)
 	if (!isValid()) return false;
 
 	// set shader
-	if (m_vertexShader != 0)
-	{
-		device.context->VSSetShader(m_vertexShader, 0, 0);
-	}
-	if (m_hullShader != 0)
-	{
-		device.context->HSSetShader(m_hullShader, 0, 0);
-	}
-	if (m_domainShader != 0)
-	{
-		device.context->DSSetShader(m_domainShader, 0, 0);
-	}
-	if (m_geometryShader != 0)
-	{
-		device.context->GSSetShader(m_geometryShader, 0, 0);
-	}
-	if (m_pixelShader != 0)
-	{
-		device.context->PSSetShader(m_pixelShader, 0, 0);
-	}
-	if (m_computeShader != 0)
-	{
-		device.context->CSSetShader(m_computeShader, 0, 0);
-	}
+	device.context->VSSetShader(m_vertexShader, 0, 0);
+	device.context->HSSetShader(m_hullShader, 0, 0);
+	device.context->DSSetShader(m_domainShader, 0, 0);
+	device.context->GSSetShader(m_geometryShader, 0, 0);
+	device.context->PSSetShader(m_pixelShader, 0, 0);
+	device.context->CSSetShader(m_computeShader, 0, 0);
 
 	// auto input layout
 	if (m_inputLayout.inputLayout != 0)
 	{
 		device.context->IASetInputLayout(m_inputLayout.inputLayout);
 	}
+
+	// set using GPU-program
+	Application::Instance()->setUsingGpuProgram(std::static_pointer_cast<GpuProgram>(shared_from_this()));
 
 	return true;
 }
@@ -652,6 +650,24 @@ void GpuProgram::setUniformByIndex(const Device& device, int index, std::shared_
 		ID3D11Buffer* buf = buffer->getBuffer();
 		device.context->CSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
 	}
+}
+
+int GpuProgram::generateId()
+{
+	static int id = -1;
+	id++;
+	return id;
+}
+
+GpuProgram::InputLayoutData::~InputLayoutData()
+{
+	clear();
+}
+
+void GpuProgram::InputLayoutData::clear()
+{
+	if (inputLayout) { inputLayout->Release(); inputLayout = 0; }
+	inputLayoutInfo.clear();
 }
 
 }
