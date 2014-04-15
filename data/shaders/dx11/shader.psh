@@ -2,20 +2,20 @@ struct VS_OUTPUT
 {
     float4 position : SV_POSITION;
 	float2 uv0 : TEXCOORD0;
-	float3 ts0 : TEXCOORD1;
-	float3 ts1 : TEXCOORD2;
+	float3 tangent : TEXCOORD1;
+	float3 normal : TEXCOORD2;
 };
 
 //uniform sampler2D diffuseSampler;
 //uniform sampler2D normalSampler;
 //uniform sampler2D specularSampler;
 
-cbuffer spaceData
+/*cbuffer spaceData
 {
 	matrix modelViewProjection : packoffset(c0);
 	matrix model : packoffset(c4);
 	float3 viewDirection : packoffset(c8);
-};
+};*/
 
 struct LightData
 {
@@ -32,15 +32,12 @@ StructuredBuffer<LightData> lightsData;
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
-	float3 normalTS = (0, 0, 1);//normalize(texture(normalSampler, input.uv0).rgb * 2.0 - 1.0);
-	float3x3 ts = float3x3(input.ts0, cross(input.ts1, input.ts0), input.ts1);
+	float3 normalTS = float3(0, 0, 1);//normalize(texture(normalSampler, input.uv0).rgb * 2.0 - 1.0);
+	float3x3 ts = float3x3(input.tangent, cross(input.normal, input.tangent), input.normal);
 	float3 normal = mul(normalTS, ts);
-	//float ndol = max(0, dot(float3(0,1,0), normal));
-	float ndol = max(0, dot(-lightsData[0].positionOrDirection, input.ts1));
+	float ndol = max(0, dot(-lightsData[0].positionOrDirection, normal));
 	
-	return float4(ndol, ndol, ndol, 1);
-	
-	/*float3 textureColor = float3(1, 0, 0); //texture(diffuseSampler, input.uv0).rgb;
+	float3 textureColor = float3(1, 0, 0); //texture(diffuseSampler, input.uv0).rgb;
 	float3 diffuse = textureColor * ndol;
 	
 	//float3 reflectTS = reflect(lightDirTS, normalTS);
@@ -48,5 +45,5 @@ float4 main(VS_OUTPUT input) : SV_TARGET
 	
 	float3 ambient = float3(0.3, 0.3, 0.3) * textureColor;
 	
-    return float4(ambient + diffuse + specular, 1);*/
+    return float4(saturate(ambient + diffuse + specular), 1);
 }

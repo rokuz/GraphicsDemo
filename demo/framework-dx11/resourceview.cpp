@@ -53,13 +53,23 @@ D3D11_DEPTH_STENCIL_VIEW_DESC ResourceView::getDefaultDepthStencilDesc()
 	return desc;
 }
 
+D3D11_UNORDERED_ACCESS_VIEW_DESC ResourceView::getDefaultUAVDesc()
+{
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.ViewDimension = D3D11_UAV_DIMENSION_UNKNOWN;
+	return desc;
+}
+
 ResourceView::ResourceView() :
 	m_shaderDesc(std::make_pair(D3D11_SHADER_RESOURCE_VIEW_DESC(), false)),
 	m_renderTargetDesc(std::make_pair(D3D11_RENDER_TARGET_VIEW_DESC(), false)),
 	m_depthStencilDesc(std::make_pair(D3D11_DEPTH_STENCIL_VIEW_DESC(), false)),
+	m_uavDesc(std::make_pair(D3D11_UNORDERED_ACCESS_VIEW_DESC(), false)),
 	m_shaderView(0),
 	m_renderTargetView(0),
-	m_depthStencilView(0)
+	m_depthStencilView(0),
+	m_uaView(0)
 {
 
 }
@@ -83,6 +93,12 @@ void ResourceView::setDepthStencilDesc(const D3D11_DEPTH_STENCIL_VIEW_DESC& desc
 {
 	m_depthStencilDesc.first = desc;
 	m_depthStencilDesc.second = true;
+}
+
+void ResourceView::setUnorderedAccessDesc(const D3D11_UNORDERED_ACCESS_VIEW_DESC& desc)
+{
+	m_uavDesc.first = desc;
+	m_uavDesc.second = true;
 }
 
 void ResourceView::init(const Device& device, ID3D11Resource* resource, unsigned int bindFlags)
@@ -121,7 +137,12 @@ void ResourceView::init(const Device& device, ID3D11Resource* resource, unsigned
 
 	if ((bindFlags & D3D11_BIND_UNORDERED_ACCESS) == D3D11_BIND_UNORDERED_ACCESS)
 	{
-		// TODO: implement
+		D3D11_UNORDERED_ACCESS_VIEW_DESC* desc = m_uavDesc.second ? &m_uavDesc.first : nullptr;
+		HRESULT hr = device.device->CreateUnorderedAccessView(resource, desc, &m_uaView);
+		if (hr != S_OK)
+		{
+			utils::Logger::toLog("Error: could not create unordered access view.\n");
+		}
 	}
 }
 
@@ -130,6 +151,7 @@ bool ResourceView::isValid() const
 	if (m_shaderDesc.second && !m_shaderView) return false;
 	if (m_renderTargetDesc.second && !m_renderTargetView) return false;
 	if (m_depthStencilDesc.second && !m_depthStencilView) return false;
+	if (m_uavDesc.second && !m_uaView) return false;
 	return true;
 }
 
@@ -138,6 +160,7 @@ void ResourceView::destroy()
 	m_shaderDesc.second = false;
 	m_renderTargetDesc.second = false;
 	m_depthStencilDesc.second = false;
+	m_uavDesc.second = false;
 
 	if (m_shaderView != 0)
 	{
@@ -155,6 +178,12 @@ void ResourceView::destroy()
 	{
 		m_depthStencilView->Release();
 		m_depthStencilView = 0;
+	}
+
+	if (m_uaView != 0)
+	{
+		m_uaView->Release();
+		m_uaView = 0;
 	}
 }
 

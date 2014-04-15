@@ -619,38 +619,50 @@ void GpuProgram::setUniformByIndex(const Device& device, int index, std::shared_
 	if (m_vertexShader != 0 && !m_uniforms[VERTEX_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[VERTEX_SHADER][index].lock();
-		if (buffer->isStructured()) device.context->VSGetShaderResources(ptr->bindingPoint, 1, &view);
+		if (buffer->isStructured()) device.context->VSSetShaderResources(ptr->bindingPoint, 1, &view);
 		else device.context->VSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
 	}
 	if (m_hullShader != 0 && !m_uniforms[HULL_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[HULL_SHADER][index].lock();
-		if (buffer->isStructured()) device.context->HSGetShaderResources(ptr->bindingPoint, 1, &view);
+		if (buffer->isStructured()) device.context->HSSetShaderResources(ptr->bindingPoint, 1, &view);
 		else device.context->HSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
 	}
 	if (m_domainShader != 0 && !m_uniforms[DOMAIN_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[DOMAIN_SHADER][index].lock();
-		if (buffer->isStructured()) device.context->DSGetShaderResources(ptr->bindingPoint, 1, &view);
+		if (buffer->isStructured()) device.context->DSSetShaderResources(ptr->bindingPoint, 1, &view);
 		else device.context->DSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
 	}
 	if (m_geometryShader != 0 && !m_uniforms[GEOMETRY_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[GEOMETRY_SHADER][index].lock();
-		if (buffer->isStructured()) device.context->GSGetShaderResources(ptr->bindingPoint, 1, &view);
+		if (buffer->isStructured()) device.context->GSSetShaderResources(ptr->bindingPoint, 1, &view);
 		else device.context->GSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
 	}
 	if (m_pixelShader != 0 && !m_uniforms[PIXEL_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[PIXEL_SHADER][index].lock();
-		if (buffer->isStructured()) device.context->PSGetShaderResources(ptr->bindingPoint, 1, &view);
+		if (buffer->isStructured()) device.context->PSSetShaderResources(ptr->bindingPoint, 1, &view);
 		else device.context->PSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
 	}
 	if (m_computeShader != 0 && !m_uniforms[COMPUTE_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[COMPUTE_SHADER][index].lock();
-		if (buffer->isStructured()) device.context->CSGetShaderResources(ptr->bindingPoint, 1, &view);
-		else device.context->CSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
+		ID3D11UnorderedAccessView* uaview = buffer->getView().asUAView();
+		if (buffer->isStructured())
+		{
+			device.context->CSSetShaderResources(ptr->bindingPoint, 1, &view);
+			if (uaview != 0)
+			{
+				UINT UAVInitialCount = -1;
+				device.context->CSSetUnorderedAccessViews(ptr->bindingPoint, 1, &uaview, &UAVInitialCount);
+			}
+		}
+		else
+		{
+			device.context->CSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
+		}
 	}
 }
 

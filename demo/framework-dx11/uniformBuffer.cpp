@@ -75,13 +75,19 @@ void UniformBuffer::initBuffer(const Device& device, size_t elemSize, size_t cou
 
 	if (isStructured())
 	{
-		D3D11_SHADER_RESOURCE_VIEW_DESC desc = ResourceView::getDefaultShaderDesc();
-		desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-		desc.Buffer.FirstElement = 0;
-		desc.Buffer.NumElements = count;
-		desc.Buffer.ElementOffset = 0;
-		desc.Buffer.ElementWidth = elemSize;
-		m_view.setShaderDesc(desc);
+		D3D11_SHADER_RESOURCE_VIEW_DESC svdesc = ResourceView::getDefaultShaderDesc();
+		svdesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+		svdesc.Buffer.FirstElement = 0;
+		svdesc.Buffer.NumElements = count;
+		m_view.setShaderDesc(svdesc);
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uavdesc = ResourceView::getDefaultUAVDesc();
+		uavdesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+		uavdesc.Buffer.FirstElement = 0;
+		uavdesc.Buffer.Flags = 0;
+		uavdesc.Buffer.NumElements = count;
+		m_view.setUnorderedAccessDesc(uavdesc);
+
 		m_view.init(device, m_buffer, m_desc.BindFlags);
 	}
 }
@@ -122,7 +128,14 @@ void UniformBuffer::applyChanges(const Device& device)
 		D3D11_MAPPED_SUBRESOURCE data;
 		data.pData = NULL;
 		data.DepthPitch = data.RowPitch = 0;
-		HRESULT hr = device.context->Map(m_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &data);
+
+		D3D11_MAP mapType = D3D11_MAP_WRITE;
+		if ((m_desc.Usage & D3D11_USAGE_DYNAMIC) != 0 && (m_desc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) != 0)
+		{
+			mapType = D3D11_MAP_WRITE_DISCARD;
+		}
+
+		HRESULT hr = device.context->Map(m_buffer, 0, mapType, 0, &data);
 		if (hr != S_OK)
 		{
 			utils::Logger::toLog("Error: could not apply changes to an uniform buffer.\n");
