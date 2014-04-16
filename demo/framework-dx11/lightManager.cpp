@@ -26,59 +26,62 @@
 #include "gpuprogram.h"
 #include "standardGpuPrograms.h"
 #include "uniformBuffer.h"
+#include "application.h"
 
 namespace framework
 {
 
-void LightManager::init(const Device& device)
+void LightManager::init()
 {
 	m_arrowDataBuffer.reset(new UniformBuffer());
-	if (!m_arrowDataBuffer->initDefaultConstant<ArrowRendererData>(device))
+	if (!m_arrowDataBuffer->initDefaultConstant<ArrowRendererData>())
 	{
 		m_arrowDataBuffer.reset();
 	}
 }
 
-void LightManager::addLightSource(const Device& device, const LightSource& lightSource)
+void LightManager::addLightSource(const LightSource& lightSource)
 {
 	LightData data;
 	data.lightSource = lightSource;
 	data.lineDebugVis.reset(new Line3D());
 	if (data.lightSource.type == LightType::DirectLight)
 	{
-		createDirectLightDebugVisualization(device, data.lineDebugVis);
+		createDirectLightDebugVisualization(data.lineDebugVis);
 	}
 	else if (data.lightSource.type == LightType::OmniLight)
 	{
-		createOmniLightDebugVisualization(device, data.lineDebugVis);
+		createOmniLightDebugVisualization(data.lineDebugVis);
 	}
 	else if (data.lightSource.type == LightType::SpotLight)
 	{
-		createSpotLightDebugVisualization(device, data.lineDebugVis);
+		createSpotLightDebugVisualization(data.lineDebugVis);
 	}
 	m_lightSources.push_back(data);
 }
 
-void LightManager::renderDebugVisualization(const Device& device, const matrix44& viewProjection)
+void LightManager::renderDebugVisualization(const matrix44& viewProjection)
 {
+	const Device& device = Application::instance()->getDevice();
+
 	for (size_t i = 0; i < m_lightSources.size(); i++)
 	{
 		if (m_lightSources[i].lightSource.type == LightType::OmniLight)
 		{
 			matrix44 model;
 			model.set_translation(m_lightSources[i].lightSource.position);
-			m_lightSources[i].lineDebugVis->renderWithStandardGpuProgram(device, model * viewProjection, m_lightSources[i].lightSource.diffuseColor);
+			m_lightSources[i].lineDebugVis->renderWithStandardGpuProgram(model * viewProjection, m_lightSources[i].lightSource.diffuseColor);
 		}
 		else
 		{
 			matrix44 model(m_lightSources[i].lightSource.orientation);
 			model.set_translation(m_lightSources[i].lightSource.position);
-			m_lightSources[i].lineDebugVis->renderWithStandardGpuProgram(device, model * viewProjection, m_lightSources[i].lightSource.diffuseColor);
+			m_lightSources[i].lineDebugVis->renderWithStandardGpuProgram(model * viewProjection, m_lightSources[i].lightSource.diffuseColor);
 
 			if (m_arrowDataBuffer.get() != 0)
 			{
 				auto program = framework::StandardGpuPrograms::getArrowRenderer();
-				if (program->use(device))
+				if (program->use())
 				{
 					ArrowRendererData data;
 					data.modelViewProjection = viewProjection;
@@ -86,9 +89,9 @@ void LightManager::renderDebugVisualization(const Device& device, const matrix44
 					data.position = m_lightSources[i].lightSource.position;
 					data.color = vector4(m_lightSources[i].lightSource.diffuseColor);
 					m_arrowDataBuffer->setData(data);
-					m_arrowDataBuffer->applyChanges(device);
+					m_arrowDataBuffer->applyChanges();
 
-					program->setUniform<StandardUniforms>(device, STD_UF::ARROW_RENDERER_DATA, m_arrowDataBuffer);
+					program->setUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, m_arrowDataBuffer);
 
 					device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 					device.context->Draw(1, 0);
@@ -98,7 +101,7 @@ void LightManager::renderDebugVisualization(const Device& device, const matrix44
 	}
 }
 
-void LightManager::createDirectLightDebugVisualization(const Device& device, const std::shared_ptr<Line3D>& line)
+void LightManager::createDirectLightDebugVisualization(const std::shared_ptr<Line3D>& line)
 {
 	std::vector<vector3> points;
 	points.reserve(5);
@@ -107,10 +110,10 @@ void LightManager::createDirectLightDebugVisualization(const Device& device, con
 	points.push_back(vector3(3, -3, 0));
 	points.push_back(vector3(-3, -3, 0));
 	points.push_back(vector3(-3, 3, 0));
-	line->initWithArray(device, points);
+	line->initWithArray(points);
 }
 
-void LightManager::createOmniLightDebugVisualization(const Device& device, const std::shared_ptr<Line3D>& line)
+void LightManager::createOmniLightDebugVisualization(const std::shared_ptr<Line3D>& line)
 {
 	std::vector<vector3> points;
 	points.reserve(43);
@@ -138,10 +141,10 @@ void LightManager::createOmniLightDebugVisualization(const Device& device, const
 		float y = n_sin(2.0f * N_PI * i / 12.0f);
 		points.push_back(vector3(0, y, z));
 	}
-	line->initWithArray(device, points);
+	line->initWithArray(points);
 }
 
-void LightManager::createSpotLightDebugVisualization(const Device& device, const std::shared_ptr<Line3D>& line)
+void LightManager::createSpotLightDebugVisualization(const std::shared_ptr<Line3D>& line)
 {
 	std::vector<vector3> points;
 	points.reserve(13);
@@ -152,7 +155,7 @@ void LightManager::createSpotLightDebugVisualization(const Device& device, const
 		points.push_back(vector3(x, y, 0));
 	}
 	points.push_back(vector3(points[0].x, points[0].y, 0));
-	line->initWithArray(device, points);
+	line->initWithArray(points);
 }
 
 LightRawData LightManager::getRawLightData(size_t index)

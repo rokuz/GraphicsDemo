@@ -78,14 +78,14 @@ public:
 	LightManager(){}
 	~LightManager(){}
 
-	void init(const Device& device);
+	void init();
 
 	size_t getLightSourcesCount() const { return m_lightSources.size(); }
-	void addLightSource(const Device& device, const LightSource& lightSource);
+	void addLightSource(const LightSource& lightSource);
 	const LightSource& getLightSource(size_t index) { return m_lightSources[index].lightSource; }
 	LightRawData getRawLightData(size_t index);
 
-	void renderDebugVisualization(const Device& device, const matrix44& viewProjection);
+	void renderDebugVisualization(const matrix44& viewProjection);
 
 private:
 	struct LightData
@@ -98,9 +98,9 @@ private:
 
 	std::shared_ptr<UniformBuffer> m_arrowDataBuffer;
 
-	void createDirectLightDebugVisualization(const Device& device, const std::shared_ptr<Line3D>& line);
-	void createOmniLightDebugVisualization(const Device& device, const std::shared_ptr<Line3D>& line);
-	void createSpotLightDebugVisualization(const Device& device, const std::shared_ptr<Line3D>& line);
+	void createDirectLightDebugVisualization(const std::shared_ptr<Line3D>& line);
+	void createOmniLightDebugVisualization(const std::shared_ptr<Line3D>& line);
+	void createSpotLightDebugVisualization(const std::shared_ptr<Line3D>& line);
 };
 
 }

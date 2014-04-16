@@ -67,7 +67,7 @@ Application::Application() :
 {
 }
 
-Application* Application::Instance()
+Application* Application::instance()
 {
 	return m_self;
 }
@@ -110,15 +110,15 @@ int Application::run(Application* self)
 	}
 
 	// init other subsystems
-	if (!StandardGpuPrograms::init(m_device))
+	if (!StandardGpuPrograms::init())
 	{
 		destroyDevice();
 		destroyAllDestroyable();
 		return EXIT_FAILURE;
 	}
 	initGui();
-	initAxes(m_device);
-	m_lightManager.init(m_device);
+	initAxes();
+	m_lightManager.init();
 
 	// user-defined initialization
 	startup(m_rootWindow);
@@ -462,11 +462,11 @@ void Application::renderGui(double elapsedTime)
 	CEGUI::WindowManager::getSingleton().cleanDeadPool();
 }
 
-void Application::renderAxes(const Device& device, const matrix44& viewProjection)
+void Application::renderAxes(const matrix44& viewProjection)
 {
-	m_axisX->renderWithStandardGpuProgram(device, viewProjection, vector4(1, 0, 0, 1));
-	m_axisY->renderWithStandardGpuProgram(device, viewProjection, vector4(0, 1, 0, 1));
-	m_axisZ->renderWithStandardGpuProgram(device, viewProjection, vector4(0, 0, 1, 1));
+	m_axisX->renderWithStandardGpuProgram(viewProjection, vector4(1, 0, 0, 1));
+	m_axisY->renderWithStandardGpuProgram(viewProjection, vector4(0, 1, 0, 1));
+	m_axisZ->renderWithStandardGpuProgram(viewProjection, vector4(0, 0, 1, 1));
 }
 
 void Application::registerDestroyable(std::weak_ptr<Destroyable> ptr)
@@ -608,7 +608,7 @@ void Application::initInput()
 	});
 }
 
-void Application::initAxes(const Device& device)
+void Application::initAxes()
 {	
 	#define INIT_POINTS(name, point) std::vector<vector3> name; name.push_back(vector3()); name.push_back(point);
 	INIT_POINTS(points_x, vector3(20, 0, 0));
@@ -617,13 +617,13 @@ void Application::initAxes(const Device& device)
 	#undef INIT_POINTS
 
 	m_axisX.reset(new Line3D());
-	m_axisX->initWithArray(device, points_x);
+	m_axisX->initWithArray(points_x);
 		
 	m_axisY.reset(new Line3D());
-	m_axisY->initWithArray(device, points_y);
+	m_axisY->initWithArray(points_y);
 
 	m_axisZ.reset(new Line3D());
-	m_axisZ->initWithArray(device, points_z);
+	m_axisZ->initWithArray(points_z);
 }
 
 void Application::initialiseResources()

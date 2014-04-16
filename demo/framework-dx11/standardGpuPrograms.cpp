@@ -29,7 +29,7 @@ namespace framework
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_lineRenderer;
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_arrowRenderer;
 
-bool StandardGpuPrograms::init(const Device& device)
+bool StandardGpuPrograms::init()
 {
 	bool result = true;
 	std::string shadersPath = "data/shaders/dx11/standard/";
@@ -37,7 +37,7 @@ bool StandardGpuPrograms::init(const Device& device)
 	m_lineRenderer.reset(new GpuProgram());
 	m_lineRenderer->addShader(shadersPath + "line.vsh");
 	m_lineRenderer->addShader(shadersPath + "line.psh");
-	result &= m_lineRenderer->init(device, true);
+	result &= m_lineRenderer->init(true);
 	if (!result) return false;
 	m_lineRenderer->bindUniform<StandardUniforms>(STD_UF::LINE_RENDERER_DATA, "lineData");
 
@@ -45,7 +45,7 @@ bool StandardGpuPrograms::init(const Device& device)
 	m_arrowRenderer->addShader(shadersPath + "arrow.vsh");
 	m_arrowRenderer->addShader(shadersPath + "arrow.psh");
 	m_arrowRenderer->addShader(shadersPath + "arrow.gsh");
-	result &= m_arrowRenderer->init(device, true);
+	result &= m_arrowRenderer->init(true);
 	if (!result) return false;
 	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, "arrowData");
 

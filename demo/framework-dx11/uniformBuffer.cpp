@@ -23,6 +23,7 @@
 
 #include "uniformBuffer.h"
 #include "logger.h"
+#include "application.h"
 
 namespace framework
 {
@@ -62,8 +63,10 @@ UniformBuffer::~UniformBuffer()
 	destroy();
 }
 
-void UniformBuffer::initBuffer(const Device& device, size_t elemSize, size_t count)
+void UniformBuffer::initBuffer(size_t elemSize, size_t count)
 {
+	const Device& device = Application::instance()->getDevice();
+
 	HRESULT hr = device.device->CreateBuffer(&m_desc, 0, &m_buffer);
 	if (hr != S_OK)
 	{
@@ -92,8 +95,10 @@ void UniformBuffer::initBuffer(const Device& device, size_t elemSize, size_t cou
 	}
 }
 
-void UniformBuffer::initBufferImmutable(const Device& device, unsigned char* dataPtr, size_t elemSize, size_t count)
+void UniformBuffer::initBufferImmutable(unsigned char* dataPtr, size_t elemSize, size_t count)
 {
+	const Device& device = Application::instance()->getDevice();
+
 	D3D11_SUBRESOURCE_DATA data;
 	data.pSysMem = dataPtr;
 	data.SysMemPitch = 0;
@@ -120,11 +125,13 @@ void UniformBuffer::destroy()
 	m_isChanged = false;
 }
 
-void UniformBuffer::applyChanges(const Device& device)
+void UniformBuffer::applyChanges()
 {
 	if (m_bufferInMemory.empty()) return;
 	if (m_isChanged)
 	{
+		const Device& device = Application::instance()->getDevice();
+
 		D3D11_MAPPED_SUBRESOURCE data;
 		data.pData = NULL;
 		data.DepthPitch = data.RowPitch = 0;

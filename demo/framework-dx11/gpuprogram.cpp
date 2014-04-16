@@ -164,8 +164,10 @@ void GpuProgram::addShader(const std::string& fileName, const std::string& mainF
 	m_data[shaderType].mainFunction = mainFunc;
 }
 
-bool GpuProgram::init(const Device& device, bool autoInputLayout)
+bool GpuProgram::init(bool autoInputLayout)
 {
+	const Device& device = Application::instance()->getDevice();
+
 	destroy();
 
 	bool noShaders = true;
@@ -462,8 +464,10 @@ const char* GpuProgram::stringInPool(const char* str)
 	return m_inputLayoutStringsPool.begin()->c_str();
 }
 
-int GpuProgram::bindInputLayoutInfo(const Device& device, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info)
+int GpuProgram::bindInputLayoutInfo(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info)
 {
+	const Device& device = Application::instance()->getDevice();
+
 	if (m_vertexShader == 0)
 	{
 		utils::Logger::toLog("Error: could not bind an input layout. The reason: there is no a vertex shader.\n");
@@ -520,9 +524,11 @@ bool GpuProgram::compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_D
 	return true;
 }
 
-bool GpuProgram::use(const Device& device)
+bool GpuProgram::use()
 {
 	if (!isValid()) return false;
+
+	const Device& device = Application::instance()->getDevice();
 
 	// set shader
 	device.context->VSSetShader(m_vertexShader, 0, 0);
@@ -539,14 +545,17 @@ bool GpuProgram::use(const Device& device)
 	}
 
 	// set using GPU-program
-	Application::Instance()->setUsingGpuProgram(std::static_pointer_cast<GpuProgram>(shared_from_this()));
+	Application::instance()->setUsingGpuProgram(std::static_pointer_cast<GpuProgram>(shared_from_this()));
 
 	return true;
 }
 
-void GpuProgram::applyInputLayout(const Device& device, int inputLayoutIndex)
+void GpuProgram::applyInputLayout(int inputLayoutIndex)
 {
 	if (!isValid()) return;
+
+	const Device& device = Application::instance()->getDevice();
+
 	if (inputLayoutIndex >= 0 && inputLayoutIndex < (int)m_inputLayoutInfoBase.size() && 
 		m_inputLayoutInfoBase[inputLayoutIndex].inputLayout != 0)
 	{
@@ -598,8 +607,10 @@ void GpuProgram::bindUniformByIndex(int index, const std::string& name)
 	}
 }
 
-void GpuProgram::setUniformByIndex(const Device& device, int index, std::shared_ptr<UniformBuffer> buffer)
+void GpuProgram::setUniformByIndex(int index, std::shared_ptr<UniformBuffer> buffer)
 {
+	const Device& device = Application::instance()->getDevice();
+
 	// check size
 	for (size_t i = 0; i < m_data.size(); i++)
 	{

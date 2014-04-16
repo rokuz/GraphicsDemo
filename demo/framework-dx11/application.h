@@ -78,9 +78,12 @@ public:
 	virtual void onMouseButton(double xpos, double ypos, int button, bool pressed){}
 	virtual void onMouseMove(double xpos, double ypos){}
 
-	static Application* Instance();
+	static Application* instance();
 	int run(Application* self);
+
+	const Device& getDevice() const { return m_device; }
 	std::weak_ptr<GpuProgram> getUsingGpuProgram() const { return m_usingGpuProgram; }
+	PipelineStageManager& getPipelineStageManager() { return m_pipelineManager; }
 
 protected:
 	struct AppInfo
@@ -111,12 +114,10 @@ protected:
 	void exit();
 
 	static std::string getGuiFullName(const std::string& name);
-	void renderGui(double elapsedTime);
-	void renderAxes(const Device& device, const matrix44& viewProjection);
-	PipelineStageManager& getPipelineStageManager() { return m_pipelineManager; }
-	const Device& getDevice() const { return m_device; }
-	void useDefaultRenderTarget();
 
+	void renderGui(double elapsedTime);
+	void renderAxes(const matrix44& viewProjection);
+	void useDefaultRenderTarget();
 	void resize();
 
 private:
@@ -164,7 +165,7 @@ private:
 	void destroyGui();
 	void initialiseResources();
 	void initInput();
-	void initAxes(const Device& device);
+	void initAxes();
 
 	void setUsingGpuProgram(std::weak_ptr<GpuProgram> program) { m_usingGpuProgram = program; }
 

@@ -62,7 +62,7 @@ public:
 	int getId() const { return m_id; }
 
 	void addShader(const std::string& fileName, const std::string& mainFunc = "");
-	bool init(const Device& device, bool autoInputLayout = false);
+	bool init(bool autoInputLayout = false);
 	bool isValid() const;
 
 	template<typename UniformType>
@@ -79,14 +79,14 @@ public:
 	}
 
 	template<typename UniformType>
-	void setUniform(const Device& device, typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer)
+	void setUniform(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer)
 	{
-		setUniformByIndex(device, (int)uniform, std::move(buffer));
+		setUniformByIndex((int)uniform, std::move(buffer));
 	}
 
-	int bindInputLayoutInfo(const Device& device, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info);
-	bool use(const Device& device);
-	void applyInputLayout(const Device& device, int inputLayoutIndex);
+	int bindInputLayoutInfo(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info);
+	bool use();
+	void applyInputLayout(int inputLayoutIndex);
 
 private:
 	struct ConstantBufferData
@@ -132,7 +132,7 @@ private:
 	bool createShaderByType(const Device& device, ShaderType shaderType, ID3DBlob* compiledShader);
 	bool reflectShaders(const Device& device, bool autoInputLayout);
 	void bindUniformByIndex(int index, const std::string& name);
-	void setUniformByIndex(const Device& device, int index, std::shared_ptr<UniformBuffer> buffer);
+	void setUniformByIndex(int index, std::shared_ptr<UniformBuffer> buffer);
 	const char* stringInPool(const char* str);
 	bool compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info1, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info2);
 

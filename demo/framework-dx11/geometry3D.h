@@ -58,7 +58,7 @@ class Geometry3D : public Destroyable
 	std::shared_ptr<Line3D> m_boundingBoxLine;
 
 	int getInputLayoutBindingIndex(int programId) const;
-	void applyInputLayout(const Device& device);
+	void applyInputLayout();
 	virtual void destroy();
     
 public:
@@ -68,15 +68,15 @@ public:
 	static D3D11_BUFFER_DESC getDefaultVertexBuffer(unsigned int size);
 	static D3D11_BUFFER_DESC getDefaultIndexBuffer(unsigned int size);
 	
-	bool init(const Device& device, const std::string& fileName);
-	void bindToGpuProgram(const Device& device, std::shared_ptr<GpuProgram> program);
+	bool init(const std::string& fileName);
+	void bindToGpuProgram(std::shared_ptr<GpuProgram> program);
 
 	const std::vector<D3D11_INPUT_ELEMENT_DESC>& getInputLayoutInfo() const { return m_inputLayoutInfo; }
     
     size_t getMeshesCount() const;
-	void renderMesh(const Device& device, size_t index);
-	void renderAllMeshes(const Device& device);
-	void renderBoundingBox(const Device& device, const matrix44& mvp);
+	void renderMesh(size_t index);
+	void renderAllMeshes();
+	void renderBoundingBox(const matrix44& mvp);
 };
 
 }

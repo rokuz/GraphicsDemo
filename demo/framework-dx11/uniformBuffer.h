@@ -41,33 +41,33 @@ public:
 	D3D11_BUFFER_DESC getDefaultConstant(unsigned int size);
 	D3D11_BUFFER_DESC getDefaultStructured(unsigned int size, unsigned int structsize);
 
-	template<typename DataType> bool initImmutable(const Device& device, const std::vector<DataType>& data, const D3D11_BUFFER_DESC& desc)
+	template<typename DataType> bool initImmutable(const std::vector<DataType>& data, const D3D11_BUFFER_DESC& desc)
 	{
 		destroy();
 		m_desc = desc;
 		m_desc.Usage = D3D11_USAGE_IMMUTABLE;
 		m_desc.CPUAccessFlags = 0;
-		initBufferImmutable(device, data.data(), sizeof(DataType), count);
+		initBufferImmutable(data.data(), sizeof(DataType), count);
 
 		if (m_buffer != 0) initDestroyable();
 		return m_buffer != 0;
 	}
 
-	template<typename DataType> bool initDefaultConstant(const Device& device)
+	template<typename DataType> bool initDefaultConstant()
 	{
-		return init<DataType>(device, 1, getDefaultConstant(sizeof(DataType)));
+		return init<DataType>(1, getDefaultConstant(sizeof(DataType)));
 	}
 
-	template<typename DataType> bool initDefaultStructured(const Device& device, size_t count)
+	template<typename DataType> bool initDefaultStructured(size_t count)
 	{
-		return init<DataType>(device, count, getDefaultStructured(count, sizeof(DataType)));
+		return init<DataType>(count, getDefaultStructured(count, sizeof(DataType)));
 	}
 
-	template<typename DataType> bool init(const Device& device, size_t count, const D3D11_BUFFER_DESC& desc)
+	template<typename DataType> bool init(size_t count, const D3D11_BUFFER_DESC& desc)
 	{
 		destroy();
 		m_desc = desc;	
-		initBuffer(device, sizeof(DataType), count);
+		initBuffer(sizeof(DataType), count);
 
 		if (m_buffer != 0) initDestroyable();
 		return m_buffer != 0;
@@ -106,19 +106,17 @@ public:
 	}
 
 	unsigned int getElementByteSize() const;
-
 	const D3D11_BUFFER_DESC& getDesc() const { return m_desc; }
 	ID3D11Buffer* getBuffer() { return m_buffer; }
 	ResourceView& getView() { return m_view; }
-
 	bool isStructured() const;
 
-	void applyChanges(const Device& device);
+	void applyChanges();
 
 private:
 	virtual void destroy();
-	void initBuffer(const Device& device, size_t elemSize, size_t count);
-	void initBufferImmutable(const Device& device, unsigned char* dataPtr, size_t elemSize, size_t count);
+	void initBuffer(size_t elemSize, size_t count);
+	void initBufferImmutable(unsigned char* dataPtr, size_t elemSize, size_t count);
 
 	ID3D11Buffer* m_buffer;
 	D3D11_BUFFER_DESC m_desc;

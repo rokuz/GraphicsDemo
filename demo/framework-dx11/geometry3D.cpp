@@ -128,8 +128,9 @@ void Geometry3D::destroy()
 
 	m_boundingBoxLine.reset();
 }
-bool Geometry3D::init(const Device& device, const std::string& fileName)
+bool Geometry3D::init(const std::string& fileName)
 {
+	const Device& device = Application::instance()->getDevice();
 	destroy();
 
 	geom::Data data = geom::Geometry::instance().load(fileName);
@@ -196,12 +197,12 @@ bool Geometry3D::init(const Device& device, const std::string& fileName)
 	return m_isLoaded;
 }
 
-void Geometry3D::bindToGpuProgram(const Device& device, std::shared_ptr<GpuProgram> program)
+void Geometry3D::bindToGpuProgram(std::shared_ptr<GpuProgram> program)
 {
 	auto i = getInputLayoutBindingIndex(program->getId());
 	if (i < 0)
 	{
-		int index = program->bindInputLayoutInfo(device, m_inputLayoutInfo);
+		int index = program->bindInputLayoutInfo(m_inputLayoutInfo);
 		m_inputLayoutCache.push_back(std::make_pair(program->getId(), index));
 	}
 }
@@ -224,22 +225,24 @@ size_t Geometry3D::getMeshesCount() const
     return m_meshes.size();
 }
 
-void Geometry3D::applyInputLayout(const Device& device)
+void Geometry3D::applyInputLayout()
 {
-	auto gpuProgram = Application::Instance()->getUsingGpuProgram();
+	auto gpuProgram = Application::instance()->getUsingGpuProgram();
 	if (!gpuProgram.expired())
 	{
 		auto gpuProgramPtr = gpuProgram.lock();
 		int inputLayoutIndex = getInputLayoutBindingIndex(gpuProgramPtr->getId());
-		gpuProgramPtr->applyInputLayout(device, inputLayoutIndex);
+		gpuProgramPtr->applyInputLayout(inputLayoutIndex);
 	}
 }
 
-void Geometry3D::renderMesh(const Device& device, size_t index)
+void Geometry3D::renderMesh(size_t index)
 {
     if (index >= m_meshes.size()) return;
 
-	applyInputLayout(device);
+	const Device& device = Application::instance()->getDevice();
+
+	applyInputLayout();
 	UINT vertexStride = m_vertexSize;
 	UINT vertexOffset = 0;
 	device.context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &vertexStride, &vertexOffset);
@@ -248,9 +251,11 @@ void Geometry3D::renderMesh(const Device& device, size_t index)
 	device.context->DrawIndexed(m_meshes[index].indicesCount, m_meshes[index].offsetInIB, 0);
 }
 
-void Geometry3D::renderAllMeshes(const Device& device)
+void Geometry3D::renderAllMeshes()
 {
-	applyInputLayout(device);
+	const Device& device = Application::instance()->getDevice();
+
+	applyInputLayout();
 	UINT vertexStride = m_vertexSize;
 	UINT vertexOffset = 0;
 	device.context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &vertexStride, &vertexOffset);
@@ -262,7 +267,7 @@ void Geometry3D::renderAllMeshes(const Device& device)
 	}
 }
 
-void Geometry3D::renderBoundingBox(const Device& device, const matrix44& mvp)
+void Geometry3D::renderBoundingBox(const matrix44& mvp)
 {
 	static bool failed = false;
 	if (m_boundingBoxLine.get() == 0 && !failed)
@@ -276,7 +281,7 @@ void Geometry3D::renderBoundingBox(const Device& device, const matrix44& mvp)
 		}
 		
 		m_boundingBoxLine.reset(new Line3D());
-		if (!m_boundingBoxLine->initWithArray(device, points))
+		if (!m_boundingBoxLine->initWithArray(points))
 		{
 			utils::Logger::toLog("Error: could not render a bounding box.\n");
 			failed = true;
@@ -286,7 +291,7 @@ void Geometry3D::renderBoundingBox(const Device& device, const matrix44& mvp)
 
 	if (m_boundingBoxLine.get() != 0)
 	{
-		m_boundingBoxLine->renderWithStandardGpuProgram(device, mvp, vector4(1, 1, 0, 1));
+		m_boundingBoxLine->renderWithStandardGpuProgram(mvp, vector4(1, 1, 0, 1));
 	}
 }
 

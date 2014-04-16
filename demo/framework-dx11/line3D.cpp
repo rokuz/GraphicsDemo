@@ -26,6 +26,7 @@
 #include "standardGpuPrograms.h"
 #include "uniformBuffer.h"
 #include "geometry3D.h"
+#include "application.h"
 
 namespace framework
 {
@@ -41,14 +42,16 @@ Line3D::~Line3D()
 	destroy();
 }
 
-bool Line3D::initWithArray(const Device& device, const std::vector<vector3>& points)
+bool Line3D::initWithArray(const std::vector<vector3>& points)
 {
+	const Device& device = Application::instance()->getDevice();
+
 	m_points = points;
 	destroy();
 	if (m_points.empty()) return m_isInitialized;
 
 	m_lineDataBuffer.reset(new UniformBuffer());
-	if (!m_lineDataBuffer->initDefaultConstant<LineRendererData>(device))
+	if (!m_lineDataBuffer->initDefaultConstant<LineRendererData>())
 	{
 		m_lineDataBuffer.reset();
 		return m_isInitialized;
@@ -72,29 +75,30 @@ bool Line3D::initWithArray(const Device& device, const std::vector<vector3>& poi
 	return m_isInitialized;
 }
 
-void Line3D::renderWithStandardGpuProgram(const Device& device, const matrix44& mvp, const vector4& color)
+void Line3D::renderWithStandardGpuProgram(const matrix44& mvp, const vector4& color)
 {
 	if (m_lineDataBuffer.get() == 0) return;
 
 	auto program = StandardGpuPrograms::getLineRenderer();
-	if (program->use(device))
+	if (program->use())
 	{
 		LineRendererData data;
 		data.modelViewProjection = mvp;
 		data.color = color;
 		m_lineDataBuffer->setData(data);
-		m_lineDataBuffer->applyChanges(device);
+		m_lineDataBuffer->applyChanges();
 
-		program->setUniform<StandardUniforms>(device, STD_UF::LINE_RENDERER_DATA, m_lineDataBuffer);
+		program->setUniform<StandardUniforms>(STD_UF::LINE_RENDERER_DATA, m_lineDataBuffer);
 		
-		render(device);
+		render();
 	}
 }
 
-void Line3D::render(const Device& device)
+void Line3D::render()
 {
 	if (!m_isInitialized || m_points.empty()) return;
 
+	const Device& device = Application::instance()->getDevice();
 	UINT vertexStride = sizeof(vector3);
 	UINT vertexOffset = 0;
 	device.context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &vertexStride, &vertexOffset);

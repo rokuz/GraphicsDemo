@@ -39,12 +39,12 @@ class Line3D : public Destroyable
 
 public:
 	Line3D();
-	virtual  ~Line3D();
+	virtual ~Line3D();
 
-	bool initWithArray(const Device& device, const std::vector<vector3>& points);
+	bool initWithArray(const std::vector<vector3>& points);
 	
-	void renderWithStandardGpuProgram(const Device& device, const matrix44& mvp, const vector4& color);
-	void render(const Device& device);
+	void renderWithStandardGpuProgram(const matrix44& mvp, const vector4& color);
+	void render();
 
 private:
 	std::vector<vector3> m_points;

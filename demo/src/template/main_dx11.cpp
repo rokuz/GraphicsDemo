@@ -35,20 +35,21 @@ public:
 	virtual void startup(CEGUI::DefaultWindow* root)
 	{
 		m_rotation = 0.0f;
+		m_pause = false;
 
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
 		m_program.reset(new framework::GpuProgram());
 		m_program->addShader("data/shaders/dx11/shader.vsh");
 		m_program->addShader("data/shaders/dx11/shader.psh");
-		if (!m_program->init(getDevice())) exit();
+		if (!m_program->init()) exit();
 		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
 		//m_program->bindUniform<TestAppUniforms>(UF::TEXTURES_DATA, "texturesData");
 		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
 
 		m_geometry.reset(new framework::Geometry3D());
-		if (!m_geometry->init(getDevice(), "data/media/spaceship/spaceship.geom")) exit();
-		m_geometry->bindToGpuProgram(getDevice(), m_program);
+		if (!m_geometry->init("data/media/spaceship/spaceship.geom")) exit();
+		m_geometry->bindToGpuProgram(m_program);
 
 		//m_texture.reset(new framework::Texture());
 		//m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx");
@@ -61,7 +62,7 @@ public:
 
 		// space info buffer
 		m_spaceBuffer.reset(new framework::UniformBuffer());
-		if (!m_spaceBuffer->initDefaultConstant<SpaceData>(getDevice())) exit();
+		if (!m_spaceBuffer->initDefaultConstant<SpaceData>()) exit();
 
 		// lights
 		framework::LightSource source;
@@ -70,17 +71,17 @@ public:
 		vector3 dir(1, -1, 1);
 		dir.norm();
 		source.orientation.set_from_axes(vector3(0, 0, 1), dir);
-		m_lightManager.addLightSource(getDevice(), source);
+		m_lightManager.addLightSource(source);
 
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->initDefaultStructured<framework::LightRawData>(getDevice(), (size_t)MAX_LIGHTS_COUNT)) exit();
+		if (!m_lightsBuffer->initDefaultStructured<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
 
 		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
 		for (int i = 0; i < lightsCount; i++)
 		{
 			m_lightsBuffer->setElement(i, m_lightManager.getRawLightData(i));
 		}
-		m_lightsBuffer->applyChanges(getDevice());
+		m_lightsBuffer->applyChanges();
 	}
 
 	virtual void shutdown()
@@ -107,38 +108,43 @@ public:
 
 		m_mvp = (model * m_camera.getView()) * m_camera.getProjection();
 
-		m_rotation += (float)elapsedTime * 70.0f;
+		m_rotation += (m_pause? 0 : (float)elapsedTime * 70.0f);
 
 		useDefaultRenderTarget();
 
-		if (m_program->use(getDevice()))
+		if (m_program->use())
 		{
 			SpaceData spaceData;
 			spaceData.modelViewProjection = m_mvp;
 			spaceData.model = model;
 			spaceData.viewDirection = m_camera.getOrientation().z_direction();
 			m_spaceBuffer->setData(spaceData);
-			m_spaceBuffer->applyChanges(getDevice());
+			m_spaceBuffer->applyChanges();
 
-			m_program->setUniform<TestAppUniforms>(getDevice(), UF::SPACE_DATA, m_spaceBuffer);
-			m_program->setUniform<TestAppUniforms>(getDevice(), UF::LIGHTS_DATA, m_lightsBuffer);
+			m_program->setUniform<TestAppUniforms>(UF::SPACE_DATA, m_spaceBuffer);
+			m_program->setUniform<TestAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
 
 			//m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));
 			//m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));
 			//m_specularTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::SPECULAR_MAP));
 
-			m_geometry->renderAllMeshes(getDevice());
+			m_geometry->renderAllMeshes();
 		}
 
 		//m_geometry->renderBoundingBox(m_mvp);
 
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
-		renderAxes(getDevice(), vp);
-		m_lightManager.renderDebugVisualization(getDevice(), vp);
+		renderAxes(vp);
+		m_lightManager.renderDebugVisualization(vp);
 	}
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)
 	{
+		if (key == CEGUI::Key::Space && pressed)
+		{
+			m_pause = !m_pause;
+			return;
+		}
 		m_camera.onKeyButton(key, scancode, pressed);
 	}
 
@@ -166,6 +172,7 @@ private:
 	matrix44 m_mvp;
 
 	float m_rotation;
+	bool m_pause;
 };
 
 DECLARE_MAIN(TestApp);

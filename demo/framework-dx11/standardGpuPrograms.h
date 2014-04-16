@@ -57,7 +57,7 @@ class StandardGpuPrograms
 {
 public:
 
-	static bool init(const Device& device);
+	static bool init();
 
 	static std::shared_ptr<GpuProgram> getLineRenderer();
 	static std::shared_ptr<GpuProgram> getArrowRenderer();

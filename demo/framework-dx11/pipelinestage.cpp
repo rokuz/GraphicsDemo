@@ -39,13 +39,13 @@ void PipelineStage::init(const Device& device)
 void PipelineStage::apply(const Device& device)
 {
 	onApply(device);
-	Application::Instance()->getPipelineStageManager().pushPipelineStage(std::static_pointer_cast<PipelineStage>(shared_from_this()));
+	Application::instance()->getPipelineStageManager().pushPipelineStage(std::static_pointer_cast<PipelineStage>(shared_from_this()));
 }
 
 void PipelineStage::cancel(const Device& device)
 {
 	onCancel(device);
-	Application::Instance()->getPipelineStageManager().popPipelineStage(std::static_pointer_cast<PipelineStage>(shared_from_this()), device);
+	Application::instance()->getPipelineStageManager().popPipelineStage(std::static_pointer_cast<PipelineStage>(shared_from_this()), device);
 }
 
 PipelineStageManager::PipelineStageManager()
