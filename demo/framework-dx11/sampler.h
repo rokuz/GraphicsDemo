@@ -23,19 +23,30 @@
 
 #pragma once
 #include "structs.h"
-#include <string>
+#include "destroyable.h"
 
 namespace framework
 {
 
-std::string toString(D3D_FEATURE_LEVEL featureLevel);
-std::string toString(D3D11_FILL_MODE fillMode);
-std::string toString(D3D11_CULL_MODE cullMode);
-std::string toString(const D3D11_RASTERIZER_DESC& desc);
-std::string toString(const D3D11_DEPTH_STENCIL_DESC& desc);
-std::string toString(const D3D11_BLEND_DESC& desc);
-std::string toString(const D3D11_SAMPLER_DESC& desc);
+class Sampler : public Destroyable
+{
+	friend class Application;
+public:
+	Sampler();
+	virtual ~Sampler();
+		
+	void initWithDescription(const D3D11_SAMPLER_DESC& desc);
+	bool isValid() const;
+	ID3D11SamplerState* getSampler() { return m_state; }
 
-std::string toString(ShaderType shaderType);
+	static const D3D11_SAMPLER_DESC& getDefault();
+	
+protected:
+	virtual void destroy();
+
+private:
+	D3D11_SAMPLER_DESC m_description;
+	ID3D11SamplerState* m_state;
+};
 
 }

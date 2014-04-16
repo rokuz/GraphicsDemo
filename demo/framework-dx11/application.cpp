@@ -323,6 +323,26 @@ bool Application::initDevice()
 		return false;
 	}
 
+	// init default samplers
+	m_anisotropicSampler.reset(new framework::Sampler());
+	D3D11_SAMPLER_DESC anisoSamplerDesc = framework::Sampler::getDefault();
+	anisoSamplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+	anisoSamplerDesc.MaxAnisotropy = 16;
+	m_anisotropicSampler->initWithDescription(anisoSamplerDesc);
+	if (!m_anisotropicSampler->isValid())
+	{
+		return false;
+	}
+
+	m_linearSampler.reset(new framework::Sampler());
+	D3D11_SAMPLER_DESC linearSamplerDesc = framework::Sampler::getDefault();
+	linearSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	m_linearSampler->initWithDescription(linearSamplerDesc);
+	if (!m_linearSampler->isValid())
+	{
+		return false;
+	}
+
 	return true;
 }
 

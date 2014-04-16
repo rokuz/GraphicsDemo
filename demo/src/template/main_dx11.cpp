@@ -5,7 +5,8 @@ DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
 	LIGHTS_DATA,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
-	SPECULAR_MAP
+	SPECULAR_MAP,
+	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<TestAppUniforms>::Uniform
 
@@ -43,14 +44,15 @@ public:
 
 		// gpu program
 		m_program.reset(new framework::GpuProgram());
-		m_program->addShader("data/shaders/dx11/shader.vsh");
-		m_program->addShader("data/shaders/dx11/shader.psh");
+		m_program->addShader("data/shaders/dx11/template/shader.vsh");
+		m_program->addShader("data/shaders/dx11/template/shader.psh");
 		if (!m_program->init()) exit();
 		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
 		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
 		m_program->bindUniform<TestAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_program->bindUniform<TestAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_program->bindUniform<TestAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_program->bindUniform<TestAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		// geometry
 		m_geometry.reset(new framework::Geometry3D());
@@ -133,6 +135,7 @@ public:
 			m_program->setUniform<TestAppUniforms>(UF::DIFFUSE_MAP, m_texture);
 			m_program->setUniform<TestAppUniforms>(UF::NORMAL_MAP, m_normalTexture);
 			m_program->setUniform<TestAppUniforms>(UF::SPECULAR_MAP, m_specularTexture);
+			m_program->setUniform<TestAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
 
 			m_geometry->renderAllMeshes();
 		}

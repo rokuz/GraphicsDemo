@@ -11,7 +11,7 @@ texture2D diffuseMap;
 texture2D normalMap;
 texture2D specularMap;
 
-SamplerState AnisotropicSampler
+SamplerState defaultSampler
 {
 	Filter = MIN_MAG_MIP_ANISOTROPIC;
     AddressU = Wrap;
@@ -27,24 +27,24 @@ struct LightData
 	float3 ambientColor;
 	float angle;
 	float3 specularColor;
-	uint dummy;
 };
 StructuredBuffer<LightData> lightsData;
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
-	float3 normalTS = float3(0, 0, 1);//normalize(texture(normalSampler, input.uv0).rgb * 2.0 - 1.0);
+	float3 normalTS = normalMap.Sample(defaultSampler, input.uv0).rgb * 2.0 - 1.0;
 	float3x3 ts = float3x3(input.tangent, cross(input.normal, input.tangent), input.normal);
 	float3 normal = mul(normalTS, ts);
 	float ndol = max(0, dot(-lightsData[0].positionOrDirection, normal));
 	
-	float3 textureColor = diffuseMap.Sample(AnisotropicSampler, input.uv0).rgb;
-	float3 diffuse = textureColor * ndol;
+	float3 textureColor = diffuseMap.Sample(defaultSampler, input.uv0).rgb;
+	float3 diffuse = textureColor * lightsData[0].diffuseColor * ndol;
 	
-	//float3 reflectTS = reflect(lightDirTS, normalTS);
-	float3 specular = float3(0, 0, 0);//pow(max(dot(reflectTS, -viewDirTS), 0), 16) * texture(specularSampler, input.uv0).rgb * ndol;
+	float3 reflectVec = reflect(lightsData[0].positionOrDirection, normal);
+	float specularCoef = pow(max(dot(reflectVec, -input.viewDirection), 0), 16);
+	float3 specular = specularCoef * specularMap.Sample(defaultSampler, input.uv0).rgb * ndol * lightsData[0].specularColor;
 	
-	float3 ambient = float3(0.3, 0.3, 0.3) * textureColor;
+	float3 ambient = float3(0.1, 0.1, 0.1) * lightsData[0].ambientColor * textureColor;
 	
     return float4(saturate(ambient + diffuse + specular), 1);
 }

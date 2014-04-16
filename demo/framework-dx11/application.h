@@ -54,6 +54,7 @@
 #include "freeCamera.h"
 #include "lightManager.h"
 #include "uniformBuffer.h"
+#include "sampler.h"
 
 namespace framework
 {
@@ -118,6 +119,8 @@ protected:
 	void renderAxes(const matrix44& viewProjection);
 	void useDefaultRenderTarget();
 	void resize();
+	const std::shared_ptr<Sampler>& anisotropicSampler() const { return m_anisotropicSampler; }
+	const std::shared_ptr<Sampler>& linearSampler() const { return m_linearSampler; }
 
 private:
 	static Application* m_self;
@@ -150,6 +153,8 @@ private:
 	std::shared_ptr<DepthStencilStage> m_defaultDepthStencil;
 	std::shared_ptr<BlendStage> m_defaultBlending;
 	std::shared_ptr<RenderTarget> m_defaultRenderTarget;
+	std::shared_ptr<Sampler> m_anisotropicSampler;
+	std::shared_ptr<Sampler> m_linearSampler;
 
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	void destroyAllDestroyable();

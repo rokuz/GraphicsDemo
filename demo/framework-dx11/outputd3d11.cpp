@@ -76,7 +76,7 @@ std::string toString(D3D11_CULL_MODE cullMode)
 	}
 }
 
-std::string toString(D3D11_RASTERIZER_DESC desc)
+std::string toString(const D3D11_RASTERIZER_DESC& desc)
 {
 	std::stringstream ss;
 	ss << "{ fill mode = " << toString(desc.FillMode)
@@ -93,13 +93,19 @@ std::string toString(D3D11_RASTERIZER_DESC desc)
 	return ss.str();
 }
 
-std::string toString(D3D11_DEPTH_STENCIL_DESC desc)
+std::string toString(const D3D11_DEPTH_STENCIL_DESC& desc)
 {
 	// TODO: implement
 	return "{ undefined }";
 }
 
-std::string toString(D3D11_BLEND_DESC desc)
+std::string toString(const D3D11_BLEND_DESC& desc)
+{
+	// TODO: implement
+	return "{ undefined }";
+}
+
+std::string toString(const D3D11_SAMPLER_DESC& desc)
 {
 	// TODO: implement
 	return "{ undefined }";

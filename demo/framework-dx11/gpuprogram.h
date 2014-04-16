@@ -32,6 +32,7 @@
 #include "logger.h"
 #include "uniformBuffer.h"
 #include "texture.h"
+#include "sampler.h"
 
 namespace framework
 {
@@ -91,6 +92,12 @@ public:
 		setUniformByIndex((int)uniform, std::move(texture));
 	}
 
+	template<typename UniformType>
+	void setUniform(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<Sampler> sampler)
+	{
+		setUniformByIndex((int)uniform, std::move(sampler));
+	}
+
 	int bindInputLayoutInfo(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info);
 	bool use();
 	void applyInputLayout(int inputLayoutIndex);
@@ -141,6 +148,7 @@ private:
 	void bindUniformByIndex(int index, const std::string& name);
 	void setUniformByIndex(int index, std::shared_ptr<UniformBuffer> buffer);
 	void setUniformByIndex(int index, std::shared_ptr<Texture> texture);
+	void setUniformByIndex(int index, std::shared_ptr<Sampler> sampler);
 	const char* stringInPool(const char* str);
 	bool compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info1, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info2);
 

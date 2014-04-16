@@ -19,6 +19,8 @@ set(SOURCE_PIP  pipelinestage.h
 				resourceview.cpp
 				depthstencilstage.h
 				depthstencilstage.cpp
+				sampler.h
+				sampler.cpp
 				blendstage.h
 				blendstage.cpp
 				uniformbuffer.h

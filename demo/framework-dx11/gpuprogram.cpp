@@ -450,7 +450,7 @@ bool GpuProgram::reflectShaders(const Device& device, bool autoInputLayout)
 			}
 			if (reflectionFailed) break;
 
-			// textures
+			// textures and samplers
 			for (UINT j = 0; j < desc.BoundResources; j++)
 			{
 				D3D11_SHADER_INPUT_BIND_DESC resDesc;
@@ -461,7 +461,7 @@ bool GpuProgram::reflectShaders(const Device& device, bool autoInputLayout)
 					reflector->Release();
 					break;
 				}
-				if (resDesc.Type == D3D_SIT_TEXTURE)
+				if (resDesc.Type == D3D_SIT_TEXTURE || resDesc.Type == D3D_SIT_SAMPLER)
 				{
 					std::shared_ptr<ShaderResourceData> cbdata(new ShaderResourceData);
 					cbdata->name = resDesc.Name;
@@ -730,11 +730,51 @@ void GpuProgram::setUniformByIndex( int index, std::shared_ptr<Texture> texture 
 	{
 		auto ptr = m_uniforms[PIXEL_SHADER][index].lock();
 		device.context->PSSetShaderResources(ptr->bindingPoint, 1, &view);
+
+		ID3D11SamplerState* samplerState = 0;
+		device.context->PSSetSamplers(ptr->bindingPoint, 1, &samplerState);
 	}
 	if (m_computeShader != 0 && !m_uniforms[COMPUTE_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[COMPUTE_SHADER][index].lock();
 		device.context->CSSetShaderResources(ptr->bindingPoint, 1, &view);
+	}
+}
+
+void GpuProgram::setUniformByIndex(int index, std::shared_ptr<Sampler> sampler)
+{
+	const Device& device = Application::instance()->getDevice();
+
+	ID3D11SamplerState* samplerState = sampler->getSampler();
+	if (m_vertexShader != 0 && !m_uniforms[VERTEX_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[VERTEX_SHADER][index].lock();
+		device.context->VSSetSamplers(ptr->bindingPoint, 1, &samplerState);
+	}
+	if (m_hullShader != 0 && !m_uniforms[HULL_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[HULL_SHADER][index].lock();
+		device.context->HSSetSamplers(ptr->bindingPoint, 1, &samplerState);
+	}
+	if (m_domainShader != 0 && !m_uniforms[DOMAIN_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[DOMAIN_SHADER][index].lock();
+		device.context->DSSetSamplers(ptr->bindingPoint, 1, &samplerState);
+	}
+	if (m_geometryShader != 0 && !m_uniforms[GEOMETRY_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[GEOMETRY_SHADER][index].lock();
+		device.context->GSSetSamplers(ptr->bindingPoint, 1, &samplerState);
+	}
+	if (m_pixelShader != 0 && !m_uniforms[PIXEL_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[PIXEL_SHADER][index].lock();
+		device.context->PSSetSamplers(ptr->bindingPoint, 1, &samplerState);
+	}
+	if (m_computeShader != 0 && !m_uniforms[COMPUTE_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[COMPUTE_SHADER][index].lock();
+		device.context->CSSetSamplers(ptr->bindingPoint, 1, &samplerState);
 	}
 }
 

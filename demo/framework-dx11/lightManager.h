@@ -66,7 +66,6 @@ struct LightRawData
 	float ambientColor[3];
 	float angle;
 	float specularColor[3];
-	unsigned int : 32;
 };
 #pragma pack (pop)
 
