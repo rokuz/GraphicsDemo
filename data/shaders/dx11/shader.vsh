@@ -13,13 +13,14 @@ struct VS_OUTPUT
 	float2 uv0 : TEXCOORD0;
 	float3 tangent : TEXCOORD1;
 	float3 normal : TEXCOORD2;
+	float3 viewDirection : TEXCOORD3;
 };
 
 cbuffer spaceData
 {
 	matrix modelViewProjection : packoffset(c0);
 	matrix model : packoffset(c4);
-	float3 viewDirection : packoffset(c8);
+	float3 viewPosition : packoffset(c8);
 };
 
 VS_OUTPUT main(VS_INPUT input)
@@ -29,6 +30,8 @@ VS_OUTPUT main(VS_INPUT input)
     output.uv0 = input.uv0;
 	output.normal = mul(normalize(input.normal), (float3x3)model);
 	output.tangent = mul(normalize(input.tangent), (float3x3)model);
+	float3 worldPos = mul(float4(input.position, 1), model);
+	output.viewDirection = normalize(viewPosition - worldPos);
 	
 	return output;
 }

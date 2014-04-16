@@ -4,7 +4,6 @@ set(SOURCE_CORE application.h
 				structs.h
 				window.h
 				window.cpp
-				autoreleasepool.h
 				outputd3d11.h
 				outputd3d11.cpp
 				destroyable.h
@@ -28,6 +27,8 @@ set(SOURCE_PIP  pipelinestage.h
 				gpuprogram.cpp
 				standardGpuPrograms.h
 				standardGpuPrograms.cpp
+				texture.h
+				texture.cpp
 )
 set(SOURCE_ENT  camera.h
 				camera.cpp
@@ -49,13 +50,13 @@ add_library(framework STATIC ${SOURCE_CORE} ${SOURCE_PIP} ${SOURCE_ENT})
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 #subdirectories
-#add_subdirectory(GL)
+add_subdirectory(dds)
 
 #headers search
 include_directories(../geomlib ../mathlib ../utils)
 
 #dependences
-set(DEPS_LIBS utils mathlib geomlib)
+set(DEPS_LIBS utils mathlib geomlib ddslib)
 
 #link DirectX SDK (yes, we are going to support Windows 7 as long as it lives)
 set(LIBRARY_NAME d3d11)

@@ -2,8 +2,10 @@
 
 DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
 	SPACE_DATA,
-	TEXTURES_DATA,
-	LIGHTS_DATA
+	LIGHTS_DATA,
+	DIFFUSE_MAP,
+	NORMAL_MAP,
+	SPECULAR_MAP
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<TestAppUniforms>::Uniform
 
@@ -12,7 +14,7 @@ struct SpaceData
 {
 	matrix44 modelViewProjection;
 	matrix44 model;
-	vector3 viewDirection;
+	vector3 viewPosition;
 	unsigned int : 32;
 };
 #pragma pack (pop)
@@ -39,26 +41,31 @@ public:
 
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
+		// gpu program
 		m_program.reset(new framework::GpuProgram());
 		m_program->addShader("data/shaders/dx11/shader.vsh");
 		m_program->addShader("data/shaders/dx11/shader.psh");
 		if (!m_program->init()) exit();
 		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
-		//m_program->bindUniform<TestAppUniforms>(UF::TEXTURES_DATA, "texturesData");
 		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_program->bindUniform<TestAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_program->bindUniform<TestAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_program->bindUniform<TestAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 
+		// geometry
 		m_geometry.reset(new framework::Geometry3D());
 		if (!m_geometry->init("data/media/spaceship/spaceship.geom")) exit();
 		m_geometry->bindToGpuProgram(m_program);
 
-		//m_texture.reset(new framework::Texture());
-		//m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx");
+		// textures
+		m_texture.reset(new framework::Texture());
+		m_texture->initWithDDS("data/media/spaceship/spaceship_diff.dds");
 
-		//m_specularTexture.reset(new framework::Texture());
-		//m_specularTexture->initWithKtx("data/media/spaceship/spaceship_specular.ktx");
+		m_specularTexture.reset(new framework::Texture());
+		m_specularTexture->initWithDDS("data/media/spaceship/spaceship_specular.dds");
 
-		//m_normalTexture.reset(new framework::Texture());
-		//m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx");
+		m_normalTexture.reset(new framework::Texture());
+		m_normalTexture->initWithDDS("data/media/spaceship/spaceship_normal.dds");
 
 		// space info buffer
 		m_spaceBuffer.reset(new framework::UniformBuffer());
@@ -117,16 +124,15 @@ public:
 			SpaceData spaceData;
 			spaceData.modelViewProjection = m_mvp;
 			spaceData.model = model;
-			spaceData.viewDirection = m_camera.getOrientation().z_direction();
+			spaceData.viewPosition = m_camera.getPosition();
 			m_spaceBuffer->setData(spaceData);
 			m_spaceBuffer->applyChanges();
 
 			m_program->setUniform<TestAppUniforms>(UF::SPACE_DATA, m_spaceBuffer);
 			m_program->setUniform<TestAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-
-			//m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));
-			//m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));
-			//m_specularTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::SPECULAR_MAP));
+			m_program->setUniform<TestAppUniforms>(UF::DIFFUSE_MAP, m_texture);
+			m_program->setUniform<TestAppUniforms>(UF::NORMAL_MAP, m_normalTexture);
+			m_program->setUniform<TestAppUniforms>(UF::SPECULAR_MAP, m_specularTexture);
 
 			m_geometry->renderAllMeshes();
 		}
@@ -161,9 +167,9 @@ public:
 private:
 	std::shared_ptr<framework::GpuProgram> m_program;
 	std::shared_ptr<framework::Geometry3D> m_geometry;
-	//std::shared_ptr<framework::Texture> m_texture;
-	//std::shared_ptr<framework::Texture> m_normalTexture;
-	//std::shared_ptr<framework::Texture> m_specularTexture;
+	std::shared_ptr<framework::Texture> m_texture;
+	std::shared_ptr<framework::Texture> m_normalTexture;
+	std::shared_ptr<framework::Texture> m_specularTexture;
 
 	std::shared_ptr<framework::UniformBuffer> m_spaceBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;

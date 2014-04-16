@@ -139,7 +139,7 @@ void GpuProgram::destroy()
 			m_data[i].compiledShader->Release();
 			m_data[i].compiledShader = 0;
 		}
-		m_data[i].m_constantBuffers.clear();
+		m_data[i].m_resources.clear();
 	}
 
 	if (m_vertexShader != 0) { m_vertexShader->Release();  m_vertexShader = 0; }
@@ -421,10 +421,11 @@ bool GpuProgram::reflectShaders(const Device& device, bool autoInputLayout)
 				}
 			}
 
-			m_data[i].m_constantBuffers.reserve(16);
+			// constant buffers
+			m_data[i].m_resources.reserve(32);
 			for (UINT j = 0; j < desc.ConstantBuffers; j++)
 			{
-				std::shared_ptr<ConstantBufferData> cbdata(new ConstantBufferData);
+				std::shared_ptr<ShaderResourceData> cbdata(new ShaderResourceData);
 
 				// buffer info
 				ID3D11ShaderReflectionConstantBuffer* constBuffer = reflector->GetConstantBufferByIndex(j);
@@ -445,7 +446,31 @@ bool GpuProgram::reflectShaders(const Device& device, bool autoInputLayout)
 				cbdata->bindingPoint = bindDesc.BindPoint;
 				cbdata->bindingCount = bindDesc.BindCount;
 
-				m_data[i].m_constantBuffers.push_back(cbdata);
+				m_data[i].m_resources.push_back(cbdata);
+			}
+			if (reflectionFailed) break;
+
+			// textures
+			for (UINT j = 0; j < desc.BoundResources; j++)
+			{
+				D3D11_SHADER_INPUT_BIND_DESC resDesc;
+				hr = reflector->GetResourceBindingDesc(j, &resDesc);
+				if (hr != S_OK)
+				{
+					reflectionFailed = true;
+					reflector->Release();
+					break;
+				}
+				if (resDesc.Type == D3D_SIT_TEXTURE)
+				{
+					std::shared_ptr<ShaderResourceData> cbdata(new ShaderResourceData);
+					cbdata->name = resDesc.Name;
+					cbdata->sizeInBytes = 0;
+					cbdata->bindingPoint = resDesc.BindPoint;
+					cbdata->bindingCount = resDesc.BindCount;
+
+					m_data[i].m_resources.push_back(cbdata);
+				}
 			}
 			if (reflectionFailed) break;
 
@@ -568,8 +593,7 @@ void GpuProgram::bindUniformByIndex(int index, const std::string& name)
 	bool found = false;
 	for (size_t i = 0; i < m_data.size(); i++)
 	{
-		std::for_each(m_data[i].m_constantBuffers.begin(), 
-					  m_data[i].m_constantBuffers.end(), [&](const std::shared_ptr<ConstantBufferData>& cb)
+		std::for_each(m_data[i].m_resources.begin(), m_data[i].m_resources.end(), [&](const std::shared_ptr<ShaderResourceData>& cb)
 		{
 			if (cb->name == name)
 			{
@@ -674,6 +698,43 @@ void GpuProgram::setUniformByIndex(int index, std::shared_ptr<UniformBuffer> buf
 		{
 			device.context->CSSetConstantBuffers(ptr->bindingPoint, 1, (ID3D11Buffer * const *)&buf);
 		}
+	}
+}
+
+void GpuProgram::setUniformByIndex( int index, std::shared_ptr<Texture> texture )
+{
+	const Device& device = Application::instance()->getDevice();
+
+	ID3D11ShaderResourceView* view = texture->getView();
+	if (m_vertexShader != 0 && !m_uniforms[VERTEX_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[VERTEX_SHADER][index].lock();
+		device.context->VSGetShaderResources(ptr->bindingPoint, 1, &view);
+	}
+	if (m_hullShader != 0 && !m_uniforms[HULL_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[HULL_SHADER][index].lock();
+		device.context->HSSetShaderResources(ptr->bindingPoint, 1, &view);
+	}
+	if (m_domainShader != 0 && !m_uniforms[DOMAIN_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[DOMAIN_SHADER][index].lock();
+		device.context->DSSetShaderResources(ptr->bindingPoint, 1, &view);
+	}
+	if (m_geometryShader != 0 && !m_uniforms[GEOMETRY_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[GEOMETRY_SHADER][index].lock();
+		device.context->GSSetShaderResources(ptr->bindingPoint, 1, &view);
+	}
+	if (m_pixelShader != 0 && !m_uniforms[PIXEL_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[PIXEL_SHADER][index].lock();
+		device.context->PSSetShaderResources(ptr->bindingPoint, 1, &view);
+	}
+	if (m_computeShader != 0 && !m_uniforms[COMPUTE_SHADER][index].expired())
+	{
+		auto ptr = m_uniforms[COMPUTE_SHADER][index].lock();
+		device.context->CSSetShaderResources(ptr->bindingPoint, 1, &view);
 	}
 }
 

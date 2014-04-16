@@ -39,7 +39,6 @@
 #include "timer.h"
 
 #include "window.h"
-#include "autoreleasepool.h"
 #include "outputd3d11.h"
 #include "destroyable.h"
 #include "pipelinestage.h"
@@ -49,7 +48,7 @@
 #include "renderTarget.h"
 #include "geometry3D.h"
 #include "line3D.h"
-//#include "texture.h"
+#include "texture.h"
 #include "gpuprogram.h"
 #include "standardGpuPrograms.h"
 #include "freeCamera.h"

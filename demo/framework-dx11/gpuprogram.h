@@ -31,6 +31,7 @@
 #include "matrix.h"
 #include "logger.h"
 #include "uniformBuffer.h"
+#include "texture.h"
 
 namespace framework
 {
@@ -84,29 +85,35 @@ public:
 		setUniformByIndex((int)uniform, std::move(buffer));
 	}
 
+	template<typename UniformType>
+	void setUniform(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<Texture> texture)
+	{
+		setUniformByIndex((int)uniform, std::move(texture));
+	}
+
 	int bindInputLayoutInfo(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info);
 	bool use();
 	void applyInputLayout(int inputLayoutIndex);
 
 private:
-	struct ConstantBufferData
+	struct ShaderResourceData
 	{
 		std::string name;
 		unsigned int sizeInBytes;
 		unsigned int bindingPoint;
 		unsigned int bindingCount;
-		ConstantBufferData() : sizeInBytes(0), bindingPoint(0), bindingCount(0){}
+		ShaderResourceData() : sizeInBytes(0), bindingPoint(0), bindingCount(0) {}
 	};
 	struct ShaderData
 	{
 		std::string filename;
 		std::string mainFunction;
 		ID3DBlob* compiledShader;
-		std::vector<std::shared_ptr<ConstantBufferData> > m_constantBuffers;
+		std::vector<std::shared_ptr<ShaderResourceData> > m_resources;
 		ShaderData() : compiledShader(0){}
 	};
 	std::vector<ShaderData> m_data;
-	std::weak_ptr<ConstantBufferData> m_uniforms[SHADERS_COUNT][MAX_UNIFORMS];
+	std::weak_ptr<ShaderResourceData> m_uniforms[SHADERS_COUNT][MAX_UNIFORMS];
 
 	int m_id;
 	ID3D11VertexShader* m_vertexShader;
@@ -133,6 +140,7 @@ private:
 	bool reflectShaders(const Device& device, bool autoInputLayout);
 	void bindUniformByIndex(int index, const std::string& name);
 	void setUniformByIndex(int index, std::shared_ptr<UniformBuffer> buffer);
+	void setUniformByIndex(int index, std::shared_ptr<Texture> texture);
 	const char* stringInPool(const char* str);
 	bool compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info1, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info2);
 
