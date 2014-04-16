@@ -7,10 +7,10 @@ add_executable(${TOOL_NAME} ${SOURCE_TOOL})
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 #link libraries
-target_link_libraries(${TOOL_NAME} geomlib)
+target_link_libraries(${TOOL_NAME} mathlib geomlib utils)
 
 #headers search
-include_directories(../mathlib ../geomlib)
+include_directories(../mathlib ../geomlib ../utils)
 
 IF (USE_FBX)
 # set copying FBX SDK binaries
