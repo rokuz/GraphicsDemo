@@ -38,11 +38,14 @@ public:
 		FILE		= 1 << 2
 	};
 
+	static void start(unsigned char flags);
+	static void finish();
+
 	static void toLog(const std::string& message);
 	static void toLog(const std::wstring& message);
 	static void toLogWithFormat(const char* format, ...);
 
-	static void setOutputFlags(OutputFlags flag);
+	static void setOutputFlags(unsigned char flags);
 	static void setOutputFlagsToDefault();
 
 private:

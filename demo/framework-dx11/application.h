@@ -179,16 +179,19 @@ private:
 
 }
 #if defined _WIN32
-#define DECLARE_MAIN(A)                             \
-int CALLBACK WinMain(HINSTANCE hInstance,           \
-                     HINSTANCE hPrevInstance,       \
-                     LPSTR lpCmdLine,               \
-                     int nCmdShow)                  \
-{                                                   \
-    A *app = new A();                               \
-    int result = app->run(app);                     \
-    delete app;                                     \
-    return result;                                  \
+#define DECLARE_MAIN(A)										 \
+int CALLBACK WinMain(HINSTANCE hInstance,					 \
+                     HINSTANCE hPrevInstance,				 \
+                     LPSTR lpCmdLine,						 \
+                     int nCmdShow)							 \
+{															 \
+	utils::Logger::start(utils::Logger::IDE_OUTPUT |		 \
+						 utils::Logger::FILE);				 \
+    A *app = new A();										 \
+    int result = app->run(app);								 \
+    delete app;												 \
+	utils::Logger::finish();								 \
+    return result;											 \
 }
 #else
 #error Undefined platform!

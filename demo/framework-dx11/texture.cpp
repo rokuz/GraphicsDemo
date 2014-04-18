@@ -42,22 +42,12 @@ public:
 		}
 
 		// path to unicode
-		const int maxLen = 1024;
-		if (fileName.length() > maxLen)
-		{
-			utils::Logger::toLogWithFormat("Error: path to the file '%s' is longer than expected.\n", fileName.c_str());
-			return false;
-		}
-		wchar_t unicodeFileName[maxLen];
-		int reslen = MultiByteToWideChar(CP_ACP, 0, fileName.c_str(), -1, unicodeFileName, maxLen);
-		if (reslen < 0) reslen = 0;
-		if (reslen < maxLen) unicodeFileName[reslen] = 0;
-		else if (unicodeFileName[maxLen-1]) unicodeFileName[0] = 0;
+		std::wstring unicodeFileName = utils::Utils::toUnicode(fileName);
 
 		// load texture
 		const Device& device = Application::instance()->getDevice();
 		ID3D11Resource* resource = 0;
-		HRESULT hr = DirectX::CreateDDSTextureFromFile(device.device, unicodeFileName, (ID3D11Resource**)&resource, &texture->m_view);
+		HRESULT hr = DirectX::CreateDDSTextureFromFile(device.device, unicodeFileName.c_str(), (ID3D11Resource**)&resource, &texture->m_view);
 		if (hr != S_OK)
 		{
 			utils::Logger::toLogWithFormat("Error: could not load a texture '%s'.\n", fileName.c_str());

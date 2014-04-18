@@ -22,6 +22,8 @@
  */
 
 #include "logger.h"
+#include "utils.h"
+#include <vector>
 
 #ifdef WIN32
     #define WIN32_LEAN_AND_MEAN 1
@@ -30,11 +32,13 @@
 	#include <stdio.h>
 	#include <algorithm>
 	#include <iostream>
+	#include <fstream>
 #endif
 
 namespace utils
 {
 
+std::ofstream g_logFile;
 unsigned char Logger::outputFlags = (unsigned char)Logger::OutputFlags::IDE_OUTPUT;
 
 void Logger::toLog(const std::string& message)
@@ -50,7 +54,10 @@ void Logger::toLog(const std::string& message)
 	}
 	if ((outputFlags & (unsigned char)OutputFlags::FILE) != 0)
 	{
-		//TODO: implement
+		if (g_logFile.is_open())
+		{
+			g_logFile << message;
+		}
 	}
 #endif
 }
@@ -68,7 +75,10 @@ void Logger::toLog(const std::wstring& message)
 	}
 	if ((outputFlags & (unsigned char)OutputFlags::FILE) != 0)
 	{
-		//TODO: implement
+		if (g_logFile.is_open())
+		{
+			g_logFile << utils::Utils::fromUnicode(message);
+		}
 	}
 #endif
 }
@@ -95,14 +105,28 @@ void Logger::toLogWithFormat(const char* format, ...)
 #endif
 }
 
-void Logger::setOutputFlags(OutputFlags flag)
+void Logger::setOutputFlags(unsigned char flags)
 {
-	outputFlags |= (unsigned int)flag;
+	outputFlags |= flags;
 }
 
 void Logger::setOutputFlagsToDefault()
 {
 	outputFlags = (unsigned char)Logger::OutputFlags::IDE_OUTPUT;
+}
+
+void Logger::start(unsigned char flags)
+{
+	setOutputFlags(flags);
+	if ((outputFlags & (unsigned char)OutputFlags::FILE) != 0)
+	{
+		g_logFile.open("log.txt");
+	}
+}
+
+void Logger::finish()
+{
+	if (g_logFile.is_open()) g_logFile.close();
 }
 
 }

@@ -30,6 +30,7 @@
 #include <algorithm>
 #endif
 #include <locale>
+#include <memory>
 
 namespace utils
 {
@@ -101,6 +102,34 @@ float* Utils::convert(const quaternion& q)
 	static float arr[4];
 	arr[0] = q.x; arr[1] = q.y; arr[2] = q.z; arr[3] = q.w;
 	return arr;
+}
+
+std::string Utils::fromUnicode( const std::wstring& str )
+{
+	size_t maxLen = str.length() + 1;
+	std::unique_ptr<char[]> buffer(new char[maxLen]);
+
+	int reslen = WideCharToMultiByte(CP_ACP, 0, str.c_str(), -1, buffer.get(), maxLen, NULL, NULL);
+	if (reslen < 0) reslen = 0;
+	if (reslen < (int)maxLen) buffer.get()[reslen] = 0;
+	else if (buffer.get()[maxLen - 1]) buffer.get()[0] = 0;
+
+	std::string output = buffer.get();
+	return std::move(output);
+}
+
+std::wstring Utils::toUnicode( const std::string& str )
+{
+	size_t maxLen = str.length() + 1;
+	std::unique_ptr<wchar_t[]> buffer(new wchar_t[maxLen]);
+
+	int reslen = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, buffer.get(), maxLen);
+	if (reslen < 0) reslen = 0;
+	if (reslen < (int)maxLen) buffer.get()[reslen] = 0;
+	else if (buffer.get()[maxLen - 1]) buffer.get()[0] = 0;
+
+	std::wstring output = buffer.get();
+	return std::move(output);
 }
 
 }
