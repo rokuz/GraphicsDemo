@@ -21,45 +21,26 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "standardgpuprograms.h"
+#pragma once
+#include "structs.h"
+#include "vector.h"
+#include <memory>
 
 namespace framework
 {
 
-std::shared_ptr<GpuProgram> StandardGpuPrograms::m_lineRenderer;
-std::shared_ptr<GpuProgram> StandardGpuPrograms::m_arrowRenderer;
+class UnorderedAccessBuffer;
+class RenderTarget;
 
-bool StandardGpuPrograms::init()
+struct UnorderedAccessibleBatch
 {
-	bool result = true;
-	std::string shadersPath = "data/shaders/dx11/standard/";
+	ID3D11UnorderedAccessView* elements[D3D11_PS_CS_UAV_REGISTER_COUNT];
+	unsigned int initialValues[D3D11_PS_CS_UAV_REGISTER_COUNT];
+	int elementsNumber;
 
-	m_lineRenderer.reset(new GpuProgram());
-	m_lineRenderer->addShader(shadersPath + "line.vsh");
-	m_lineRenderer->addShader(shadersPath + "line.psh");
-	result &= m_lineRenderer->init(true);
-	if (!result) return false;
-	m_lineRenderer->bindUniform<StandardUniforms>(STD_UF::LINE_RENDERER_DATA, "lineData");
-
-	m_arrowRenderer.reset(new GpuProgram());
-	m_arrowRenderer->addShader(shadersPath + "arrow.vsh");
-	m_arrowRenderer->addShader(shadersPath + "arrow.psh");
-	m_arrowRenderer->addShader(shadersPath + "arrow.gsh");
-	result &= m_arrowRenderer->init(true);
-	if (!result) return false;
-	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, "arrowData");
-
-	return result;
-}
-
-std::shared_ptr<GpuProgram> StandardGpuPrograms::getLineRenderer()
-{
-	return m_lineRenderer;
-}
-
-std::shared_ptr<GpuProgram> StandardGpuPrograms::getArrowRenderer()
-{
-	return m_arrowRenderer;
-}
+	UnorderedAccessibleBatch();
+	void add(std::shared_ptr<UnorderedAccessBuffer> buffer, unsigned int initialValue = -1);
+	void add(std::shared_ptr<RenderTarget> renderTarget, unsigned int initialValue = -1);
+};
 
 }

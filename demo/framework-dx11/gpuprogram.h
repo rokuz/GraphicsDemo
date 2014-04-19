@@ -30,7 +30,7 @@
 #include "quaternion.h"
 #include "matrix.h"
 #include "logger.h"
-#include "uniformBuffer.h"
+#include "uniformbuffer.h"
 #include "texture.h"
 #include "sampler.h"
 

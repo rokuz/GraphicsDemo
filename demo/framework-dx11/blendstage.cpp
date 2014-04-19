@@ -69,10 +69,10 @@ BlendStage::~BlendStage()
 	destroy();
 }
 
-void BlendStage::initWithDescription(const Device& device, const D3D11_BLEND_DESC& desc)
+void BlendStage::initWithDescription(const D3D11_BLEND_DESC& desc)
 {
 	m_description = desc;
-	PipelineStage::init(device);
+	PipelineStage::init();
 }
 
 void BlendStage::destroy()

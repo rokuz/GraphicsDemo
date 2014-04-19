@@ -149,10 +149,10 @@ void Application::mainLoop()
 		}
 
 		// pre-render
-		m_pipelineManager.beginFrame(m_device, m_defaultRenderTarget);
-		m_defaultRasterizer->apply(m_device);
-		m_defaultDepthStencil->apply(m_device);
-		m_defaultBlending->apply(m_device);
+		m_pipeline.beginFrame(m_defaultRenderTarget);
+		m_defaultRasterizer->apply();
+		m_defaultDepthStencil->apply();
+		m_defaultBlending->apply();
 
 		// render frame
 		if (fabs(m_lastTime) < 1e-7)
@@ -181,7 +181,7 @@ void Application::mainLoop()
 		// post-render
 		present();
 		m_usingGpuProgram.reset();
-		m_pipelineManager.endFrame(m_device);
+		m_pipeline.endFrame();
 	} 
 	while (m_isRunning);
 }
@@ -297,18 +297,18 @@ bool Application::initDevice()
 	D3D11_RASTERIZER_DESC rastDesc = framework::RasterizerStage::getDefault();
 	rastDesc.MultisampleEnable = m_info.samples > 0 ? TRUE : FALSE;
 	rastDesc.AntialiasedLineEnable = m_info.samples > 0 ? TRUE : FALSE;
-	m_defaultRasterizer->initWithDescription(m_device, rastDesc);
+	m_defaultRasterizer->initWithDescription(rastDesc);
 	m_defaultRasterizer->addViewport(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
 	if (!m_defaultRasterizer->isValid())
 	{
 		return false;
 	}
-	m_defaultRasterizer->apply(m_device);
+	m_defaultRasterizer->apply();
 
 	// init default depth-stencil
 	m_defaultDepthStencil.reset(new framework::DepthStencilStage());
 	D3D11_DEPTH_STENCIL_DESC dsDesc = framework::DepthStencilStage::getDefault();
-	m_defaultDepthStencil->initWithDescription(m_device, dsDesc);
+	m_defaultDepthStencil->initWithDescription(dsDesc);
 	if (!m_defaultDepthStencil->isValid())
 	{
 		return false;
@@ -317,7 +317,7 @@ bool Application::initDevice()
 	// init default blending
 	m_defaultBlending.reset(new framework::BlendStage());
 	D3D11_BLEND_DESC blendDesc = framework::BlendStage::getDefault();
-	m_defaultBlending->initWithDescription(m_device, blendDesc);
+	m_defaultBlending->initWithDescription(blendDesc);
 	if (!m_defaultBlending->isValid())
 	{
 		return false;
@@ -462,7 +462,7 @@ void Application::measureFps(double delta)
 
 void Application::useDefaultRenderTarget()
 {
-	m_pipelineManager.setRenderTarget(m_device, m_defaultRenderTarget);
+	m_pipeline.setRenderTarget(m_defaultRenderTarget);
 }
 
 std::string Application::getGuiFullName(const std::string& name)

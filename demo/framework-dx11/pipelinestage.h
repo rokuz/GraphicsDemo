@@ -29,11 +29,10 @@
 #include "destroyable.h"
 #include "structs.h"
 #include "renderTarget.h"
+#include "unorderedaccessiblebatch.h"
 
 namespace framework
 {
-
-class PipelineStageManager;
 
 enum PipelineStageType
 {
@@ -46,16 +45,16 @@ enum PipelineStageType
 class PipelineStage : public Destroyable
 {
 	friend class Application;
-	friend class PipelineStageManager;
+	friend class Pipeline;
 	
 public:
 	virtual ~PipelineStage(){}
 	virtual PipelineStageType GetType() const = 0;
 	virtual bool isValid() { return true; }
 	
-	void init(const Device& device);
-	void apply(const Device& device);
-	void cancel(const Device& device);
+	void init();
+	void apply();
+	void cancel();
 	
 protected:
 	virtual void onInit(const Device& device){}
@@ -63,17 +62,19 @@ protected:
 	virtual void onCancel(const Device& device){}
 };
 
-class PipelineStageManager
+class Pipeline
 {
 	friend class PipelineStage;
 
 public:
-	PipelineStageManager();
-	void beginFrame(const Device& device, std::shared_ptr<RenderTarget> renderTarget);
-	void endFrame(const Device& device);
+	Pipeline();
+	void beginFrame(std::shared_ptr<RenderTarget> renderTarget);
+	void endFrame();
 
-	void clearRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget, const vector4& color = vector4(0, 0, 0, 0), float depth = 1.0f, unsigned int stencil = 0);
-	void setRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget);
+	void clearRenderTarget(std::shared_ptr<RenderTarget> renderTarget, const vector4& color = vector4(0, 0, 0, 0), float depth = 1.0f, unsigned int stencil = 0);
+	void clearUnorderedAccessBatch(const UnorderedAccessibleBatch& uabatch, unsigned int value = -1);
+	void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget);
+	void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget, const UnorderedAccessibleBatch& uabatch);
 
 private:
 	void pushPipelineStage(std::shared_ptr<PipelineStage> stagePtr);

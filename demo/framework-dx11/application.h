@@ -50,10 +50,12 @@
 #include "line3D.h"
 #include "texture.h"
 #include "gpuprogram.h"
-#include "standardGpuPrograms.h"
+#include "standardgpuprograms.h"
 #include "freeCamera.h"
 #include "lightManager.h"
-#include "uniformBuffer.h"
+#include "uniformbuffer.h"
+#include "unorderedaccessbuffer.h"
+#include "unorderedaccessiblebatch.h"
 #include "sampler.h"
 
 namespace framework
@@ -83,7 +85,7 @@ public:
 
 	const Device& getDevice() const { return m_device; }
 	std::weak_ptr<GpuProgram> getUsingGpuProgram() const { return m_usingGpuProgram; }
-	PipelineStageManager& getPipelineStageManager() { return m_pipelineManager; }
+	Pipeline& getPipeline() { return m_pipeline; }
 
 protected:
 	struct AppInfo
@@ -118,6 +120,7 @@ protected:
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
 	void useDefaultRenderTarget();
+	const std::shared_ptr<RenderTarget>& defaultRenderTarget() const { return m_defaultRenderTarget; }
 	void resize();
 	const std::shared_ptr<Sampler>& anisotropicSampler() const { return m_anisotropicSampler; }
 	const std::shared_ptr<Sampler>& linearSampler() const { return m_linearSampler; }
@@ -135,7 +138,7 @@ private:
 	double m_timeSinceLastFpsUpdate;
 	double m_averageFps;
 	size_t m_framesCounter;
-	PipelineStageManager m_pipelineManager;
+	Pipeline m_pipeline;
 	std::weak_ptr<GpuProgram> m_usingGpuProgram;
 
 	IDXGIFactory* m_factory;

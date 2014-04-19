@@ -36,7 +36,7 @@ public:
 	virtual bool isValid();
 	virtual void destroy();
 
-	void initWithDescription(const Device& device, const D3D11_DEPTH_STENCIL_DESC& desc);
+	void initWithDescription(const D3D11_DEPTH_STENCIL_DESC& desc);
 	
 	void setStencilRef(unsigned int stencilRef) { m_stencilRef = stencilRef; }
 	unsigned int getStencilRef() const { return m_stencilRef; }

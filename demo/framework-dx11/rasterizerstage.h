@@ -36,7 +36,7 @@ public:
 	virtual bool isValid();
 	virtual void destroy();
 
-	void initWithDescription(const Device& device, const D3D11_RASTERIZER_DESC& desc);
+	void initWithDescription(const D3D11_RASTERIZER_DESC& desc);
 	
 	void addViewport(const D3D11_VIEWPORT& viewport);
 	void clearViewports();

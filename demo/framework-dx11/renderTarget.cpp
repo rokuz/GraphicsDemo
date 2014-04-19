@@ -23,6 +23,7 @@
 
 #include "renderTarget.h"
 #include "logger.h"
+#include "application.h"
 
 namespace framework
 {
@@ -109,7 +110,7 @@ void RenderTarget::initWithSwapChain(const Device& device)
 	if (hr != S_OK)
 	{
 		destroy();
-		utils::Logger::toLog("Error: could not create depth buffer.\n");
+		utils::Logger::toLog("Error: could not create a depth buffer.\n");
 		return;
 	}
 
@@ -119,6 +120,61 @@ void RenderTarget::initWithSwapChain(const Device& device)
 	{
 		destroy();
 		return;
+	}
+
+	if (isValid()) initDestroyable();
+}
+
+void RenderTarget::initWithDescription(const D3D11_TEXTURE2D_DESC& desc, bool withDepth)
+{
+	const Device& device = Application::instance()->getDevice();
+
+	destroy();
+
+	m_useDepth = withDepth;
+	m_colorBufferDesc = desc;
+	m_isSwapChain = false;
+	HRESULT hr = S_OK;
+
+	// create a render target
+	hr = device.device->CreateTexture2D(&m_colorBufferDesc, 0, &m_colorBuffer);
+	if (hr != S_OK)
+	{
+		destroy();
+		utils::Logger::toLog("Error: could not create a render target.\n");
+		return;
+	}
+
+	// initialize view
+	m_view.init(device, m_colorBuffer, m_colorBufferDesc.BindFlags);
+	if (!m_view.isValid())
+	{
+		destroy();
+		return;
+	}
+
+	// depth buffer
+	if (m_useDepth)
+	{
+		m_depthBufferDesc = getDefaultDepthDesc(m_colorBufferDesc.Width, m_colorBufferDesc.Height);
+		m_depthBufferDesc.SampleDesc.Count = m_colorBufferDesc.SampleDesc.Count;
+		m_depthBufferDesc.SampleDesc.Quality = m_colorBufferDesc.SampleDesc.Quality;
+
+		hr = device.device->CreateTexture2D(&m_depthBufferDesc, 0, &m_depthBuffer);
+		if (hr != S_OK)
+		{
+			destroy();
+			utils::Logger::toLog("Error: could not create a depth buffer.\n");
+			return;
+		}
+
+		// initialize depth view
+		m_depthView.init(device, m_depthBuffer, m_depthBufferDesc.BindFlags);
+		if (!m_depthView.isValid())
+		{
+			destroy();
+			return;
+		}
 	}
 
 	if (isValid()) initDestroyable();

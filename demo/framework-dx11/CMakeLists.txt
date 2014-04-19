@@ -27,10 +27,14 @@ set(SOURCE_PIP  pipelinestage.h
 				uniformbuffer.cpp
 				gpuprogram.h
 				gpuprogram.cpp
-				standardGpuPrograms.h
-				standardGpuPrograms.cpp
+				standardgpuprograms.h
+				standardgpuprograms.cpp
 				texture.h
 				texture.cpp
+				unorderedaccessbuffer.h
+				unorderedaccessbuffer.cpp
+				unorderedaccessiblebatch.h
+				unorderedaccessiblebatch.cpp
 )
 set(SOURCE_ENT  camera.h
 				camera.cpp

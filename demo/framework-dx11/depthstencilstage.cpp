@@ -70,10 +70,10 @@ DepthStencilStage::~DepthStencilStage()
 	destroy();
 }
 
-void DepthStencilStage::initWithDescription(const Device& device, const D3D11_DEPTH_STENCIL_DESC& desc)
+void DepthStencilStage::initWithDescription(const D3D11_DEPTH_STENCIL_DESC& desc)
 {
 	m_description = desc;
-	PipelineStage::init(device);
+	PipelineStage::init();
 }
 
 void DepthStencilStage::destroy()

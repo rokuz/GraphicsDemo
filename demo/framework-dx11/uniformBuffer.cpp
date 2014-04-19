@@ -21,7 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "uniformBuffer.h"
+#include "uniformbuffer.h"
 #include "logger.h"
 #include "application.h"
 
@@ -63,7 +63,7 @@ UniformBuffer::~UniformBuffer()
 	destroy();
 }
 
-void UniformBuffer::initBuffer(size_t elemSize, size_t count)
+void UniformBuffer::initBuffer(size_t elemSize, size_t count, bool createOnCPU)
 {
 	const Device& device = Application::instance()->getDevice();
 
@@ -73,8 +73,12 @@ void UniformBuffer::initBuffer(size_t elemSize, size_t count)
 		utils::Logger::toLog("Error: could not create an uniform buffer.\n");
 		return;
 	}
-	m_bufferInMemory.resize(elemSize * count);
-	memset(m_bufferInMemory.data(), 0, m_bufferInMemory.size());
+
+	if (createOnCPU)
+	{
+		m_bufferInMemory.resize(elemSize * count);
+		memset(m_bufferInMemory.data(), 0, m_bufferInMemory.size());
+	}
 
 	if (isStructured())
 	{
@@ -109,6 +113,15 @@ void UniformBuffer::initBufferImmutable(unsigned char* dataPtr, size_t elemSize,
 	{
 		utils::Logger::toLog("Error: could not create an uniform immutable buffer.\n");
 		return;
+	}
+
+	if (isStructured())
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC svdesc = ResourceView::getDefaultShaderDesc();
+		svdesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+		svdesc.Buffer.FirstElement = 0;
+		svdesc.Buffer.NumElements = count;
+		m_view.setShaderDesc(svdesc);
 	}
 }
 

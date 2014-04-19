@@ -41,6 +41,7 @@ public:
 	static D3D11_TEXTURE2D_DESC getDefaultDepthDesc(int width, int height);
 
 	void initWithSwapChain(const Device& device);
+	void initWithDescription(const D3D11_TEXTURE2D_DESC& desc, bool withDepth);
 	
 	bool isValid() const;
 	const ResourceView& getView(int index) const;

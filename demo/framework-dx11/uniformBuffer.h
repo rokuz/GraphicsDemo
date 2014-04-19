@@ -38,8 +38,8 @@ public:
 	UniformBuffer();
 	virtual ~UniformBuffer();
 
-	D3D11_BUFFER_DESC getDefaultConstant(unsigned int size);
-	D3D11_BUFFER_DESC getDefaultStructured(unsigned int size, unsigned int structsize);
+	static D3D11_BUFFER_DESC getDefaultConstant(unsigned int size);
+	static D3D11_BUFFER_DESC getDefaultStructured(unsigned int size, unsigned int structsize);
 
 	template<typename DataType> bool initImmutable(const std::vector<DataType>& data, const D3D11_BUFFER_DESC& desc)
 	{
@@ -67,7 +67,7 @@ public:
 	{
 		destroy();
 		m_desc = desc;	
-		initBuffer(sizeof(DataType), count);
+		initBuffer(sizeof(DataType), count, true);
 
 		if (m_buffer != 0) initDestroyable();
 		return m_buffer != 0;
@@ -113,9 +113,9 @@ public:
 
 	void applyChanges();
 
-private:
+protected:
 	virtual void destroy();
-	void initBuffer(size_t elemSize, size_t count);
+	void initBuffer(size_t elemSize, size_t count, bool createOnCPU);
 	void initBufferImmutable(unsigned char* dataPtr, size_t elemSize, size_t count);
 
 	ID3D11Buffer* m_buffer;

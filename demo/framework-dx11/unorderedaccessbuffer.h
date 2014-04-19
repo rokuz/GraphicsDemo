@@ -21,45 +21,37 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "standardgpuprograms.h"
+#pragma once
+#include "uniformbuffer.h"
 
 namespace framework
 {
 
-std::shared_ptr<GpuProgram> StandardGpuPrograms::m_lineRenderer;
-std::shared_ptr<GpuProgram> StandardGpuPrograms::m_arrowRenderer;
-
-bool StandardGpuPrograms::init()
+class UnorderedAccessBuffer : public UniformBuffer
 {
-	bool result = true;
-	std::string shadersPath = "data/shaders/dx11/standard/";
+	friend class Application;
 
-	m_lineRenderer.reset(new GpuProgram());
-	m_lineRenderer->addShader(shadersPath + "line.vsh");
-	m_lineRenderer->addShader(shadersPath + "line.psh");
-	result &= m_lineRenderer->init(true);
-	if (!result) return false;
-	m_lineRenderer->bindUniform<StandardUniforms>(STD_UF::LINE_RENDERER_DATA, "lineData");
+public:
+	UnorderedAccessBuffer();
+	virtual ~UnorderedAccessBuffer();
 
-	m_arrowRenderer.reset(new GpuProgram());
-	m_arrowRenderer->addShader(shadersPath + "arrow.vsh");
-	m_arrowRenderer->addShader(shadersPath + "arrow.psh");
-	m_arrowRenderer->addShader(shadersPath + "arrow.gsh");
-	result &= m_arrowRenderer->init(true);
-	if (!result) return false;
-	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, "arrowData");
+	static D3D11_BUFFER_DESC getDefaultUnorderedAcces(unsigned int size, unsigned int structsize);
 
-	return result;
-}
+	bool initDefaultUnorderedAccess(size_t count, size_t structSize, unsigned int flags = 0)
+	{
+		D3D11_BUFFER_DESC desc = getDefaultUnorderedAcces(count, structSize);
+		return initUnorderedAccess(count, structSize, desc, flags);
+	}
 
-std::shared_ptr<GpuProgram> StandardGpuPrograms::getLineRenderer()
-{
-	return m_lineRenderer;
-}
+	bool initUnorderedAccess(size_t count, size_t structSize, const D3D11_BUFFER_DESC& desc, unsigned int flags = 0);
+	
+	unsigned int getsetUnorderedAccessViewFlags() const
+	{
+		return m_uavFlags;
+	}
 
-std::shared_ptr<GpuProgram> StandardGpuPrograms::getArrowRenderer()
-{
-	return m_arrowRenderer;
-}
+private:
+	unsigned int m_uavFlags;
+};
 
 }

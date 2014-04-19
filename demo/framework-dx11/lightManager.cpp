@@ -24,8 +24,8 @@
 #include "lightManager.h"
 #include "line3D.h"
 #include "gpuprogram.h"
-#include "standardGpuPrograms.h"
-#include "uniformBuffer.h"
+#include "standardgpuprograms.h"
+#include "uniformbuffer.h"
 #include "application.h"
 
 namespace framework

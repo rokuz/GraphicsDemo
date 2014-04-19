@@ -87,10 +87,10 @@ RasterizerStage::~RasterizerStage()
 	destroy();
 }
 
-void RasterizerStage::initWithDescription(const Device& device, const D3D11_RASTERIZER_DESC& desc)
+void RasterizerStage::initWithDescription(const D3D11_RASTERIZER_DESC& desc)
 {
 	m_description = desc;
-	PipelineStage::init(device);
+	PipelineStage::init();
 }
 
 void RasterizerStage::destroy()

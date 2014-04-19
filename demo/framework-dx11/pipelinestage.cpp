@@ -29,26 +29,29 @@
 namespace framework
 {
 
-void PipelineStage::init(const Device& device)
+void PipelineStage::init()
 {
+	const Device& device = Application::instance()->getDevice();
 	destroy();
 	onInit(device);
 	initDestroyable();
 }
 
-void PipelineStage::apply(const Device& device)
+void PipelineStage::apply()
 {
+	const Device& device = Application::instance()->getDevice();
 	onApply(device);
-	Application::instance()->getPipelineStageManager().pushPipelineStage(std::static_pointer_cast<PipelineStage>(shared_from_this()));
+	Application::instance()->getPipeline().pushPipelineStage(std::static_pointer_cast<PipelineStage>(shared_from_this()));
 }
 
-void PipelineStage::cancel(const Device& device)
+void PipelineStage::cancel()
 {
+	const Device& device = Application::instance()->getDevice();
 	onCancel(device);
-	Application::instance()->getPipelineStageManager().popPipelineStage(std::static_pointer_cast<PipelineStage>(shared_from_this()), device);
+	Application::instance()->getPipeline().popPipelineStage(std::static_pointer_cast<PipelineStage>(shared_from_this()), device);
 }
 
-PipelineStageManager::PipelineStageManager()
+Pipeline::Pipeline()
 {
 	const int STAGES_MAX_DEPTH = 10;
 	for (size_t i = 0; i < PipelineStageCount; i++)
@@ -58,7 +61,7 @@ PipelineStageManager::PipelineStageManager()
 	}
 }
 
-void PipelineStageManager::pushPipelineStage(std::shared_ptr<PipelineStage> stagePtr)
+void Pipeline::pushPipelineStage(std::shared_ptr<PipelineStage> stagePtr)
 {
 	auto type = stagePtr->GetType();
 	int index = m_indices[type];
@@ -73,7 +76,7 @@ void PipelineStageManager::pushPipelineStage(std::shared_ptr<PipelineStage> stag
 	m_indices[type]++;
 }
 
-void PipelineStageManager::popPipelineStage(std::shared_ptr<PipelineStage> stagePtr, const Device& device)
+void Pipeline::popPipelineStage(std::shared_ptr<PipelineStage> stagePtr, const Device& device)
 {
 	auto type = stagePtr->GetType();
 
@@ -102,12 +105,12 @@ void PipelineStageManager::popPipelineStage(std::shared_ptr<PipelineStage> stage
 	}
 }
 
-void PipelineStageManager::beginFrame(const Device& device, std::shared_ptr<RenderTarget> renderTarget)
+void Pipeline::beginFrame(std::shared_ptr<RenderTarget> renderTarget)
 {
-	clearRenderTarget(device, std::move(renderTarget));
+	clearRenderTarget(std::move(renderTarget));
 }
 
-void PipelineStageManager::endFrame(const Device& device)
+void Pipeline::endFrame()
 {
 	for (size_t i = 0; i < PipelineStageCount; i++)
 	{
@@ -115,11 +118,14 @@ void PipelineStageManager::endFrame(const Device& device)
 		m_indices[i] = 0;
 	}
 
+	const Device& device = Application::instance()->getDevice();
 	device.context->ClearState();
 }
 
-void PipelineStageManager::clearRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget, const vector4& color, float depth, unsigned int stencil)
+void Pipeline::clearRenderTarget(std::shared_ptr<RenderTarget> renderTarget, const vector4& color, float depth, unsigned int stencil)
 {
+	const Device& device = Application::instance()->getDevice();
+
 	ID3D11RenderTargetView* renderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
 	int cnt = std::min(renderTarget->getViewCount(), D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT);
 	for (int i = 0; i < cnt; i++)
@@ -142,8 +148,21 @@ void PipelineStageManager::clearRenderTarget(const Device& device, std::shared_p
 	}
 }
 
-void PipelineStageManager::setRenderTarget(const Device& device, std::shared_ptr<RenderTarget> renderTarget)
+void Pipeline::clearUnorderedAccessBatch(const UnorderedAccessibleBatch& uabatch, unsigned int value)
 {
+	const Device& device = Application::instance()->getDevice();
+
+	unsigned int clearValue[4] = { value, value, value, value };
+	for (int i = 0; i < uabatch.elementsNumber; i++)
+	{
+		device.context->ClearUnorderedAccessViewUint(uabatch.elements[i], clearValue);
+	}
+}
+
+void Pipeline::setRenderTarget(std::shared_ptr<RenderTarget> renderTarget)
+{
+	const Device& device = Application::instance()->getDevice();
+
 	ID3D11RenderTargetView* renderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
 	int cnt = std::min(renderTarget->getViewCount(), D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT);
 	for (int i = 0; i < cnt; i++)
@@ -152,7 +171,30 @@ void PipelineStageManager::setRenderTarget(const Device& device, std::shared_ptr
 	}
 	ID3D11DepthStencilView* depthStencil = renderTarget->isDepthUsed() ? renderTarget->getDepthView().asDepthStencilView() : 0;
 
-	device.context->OMSetRenderTargets(1, renderTargets, depthStencil);
+	device.context->OMSetRenderTargets(cnt, renderTargets, depthStencil);
+}
+
+void Pipeline::setRenderTarget(std::shared_ptr<RenderTarget> renderTarget, const UnorderedAccessibleBatch& uabatch)
+{
+	const Device& device = Application::instance()->getDevice();
+
+	ID3D11RenderTargetView* renderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
+	int cnt = std::min(renderTarget->getViewCount(), D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT);
+	for (int i = 0; i < cnt; i++)
+	{
+		renderTargets[i] = renderTarget->getView(i).asRenderTargetView();
+	}
+	ID3D11DepthStencilView* depthStencil = renderTarget->isDepthUsed() ? renderTarget->getDepthView().asDepthStencilView() : 0;
+
+	if (cnt + uabatch.elementsNumber > D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT)
+	{
+		utils::Logger::toLog("Error: setting render target failed, simultaneous render target views count exceeded.\n");
+		return;
+	}
+
+	device.context->OMSetRenderTargetsAndUnorderedAccessViews(cnt, renderTargets, depthStencil, 
+															  cnt, uabatch.elementsNumber, 
+															  uabatch.elements, uabatch.initialValues);
 }
 
 
