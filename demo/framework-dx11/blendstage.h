@@ -40,6 +40,7 @@ public:
 	void initWithDescription(const D3D11_BLEND_DESC& desc);
 	
 	static const D3D11_BLEND_DESC& getDefault();
+	static D3D11_BLEND_DESC getDisableColorWriting();
 
 	const vector4& getBlendFactor() const { return m_blendFactor; }
 	unsigned int getSampleMask() const { return m_sampleMask; }

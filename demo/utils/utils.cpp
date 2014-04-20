@@ -31,9 +31,18 @@
 #endif
 #include <locale>
 #include <memory>
+#include <time.h>
+
+#undef max
+#undef min
 
 namespace utils
 {
+
+void Utils::init()
+{
+	srand(time(0));
+}
 
 bool Utils::exists(const std::string& fileName)
 {
@@ -80,7 +89,28 @@ std::string Utils::getExtention(const std::string& fileName)
 	{
 		ext[i] = std::tolower(ext[i], loc);
 	}
-	return ext;
+	return std::move(ext);
+}
+
+std::string Utils::getPath(const std::string& fileName)
+{
+	size_t p_slash = fileName.find_last_of('/');
+	size_t p_backslash = fileName.find_last_of('\\');
+	if (p_slash == std::string::npos && p_backslash == std::string::npos)
+		return "";
+
+	size_t p = 0;
+	if (p_slash != std::string::npos && p_backslash != std::string::npos)
+		p = std::max(p_slash, p_backslash);
+	else if (p_slash != std::string::npos)
+		p = p_slash;
+	else
+		p = p_backslash;
+
+	if (p == 0) return "";
+
+	std::string path = fileName.substr(0, p + 1);
+	return std::move(path);
 }
 
 float* Utils::convert(const vector4& v)
@@ -130,6 +160,15 @@ std::wstring Utils::toUnicode( const std::string& str )
 
 	std::wstring output = buffer.get();
 	return std::move(output);
+}
+
+vector3 Utils::random(float minValue, float maxValue)
+{
+	float r1 = float(rand() % 1000) / float(999);
+	float r2 = float(rand() % 1000) / float(999);
+	float r3 = float(rand() % 1000) / float(999);
+	float d = maxValue - minValue;
+	return vector3(minValue + r1 * d, minValue + r2 * d, minValue + r3 * d);
 }
 
 }

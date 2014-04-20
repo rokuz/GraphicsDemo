@@ -33,14 +33,17 @@ namespace utils
 class Utils
 {
 public:
+	static void init();
 	static bool exists(const std::string& fileName);
 	static bool readFileToString(const std::string& fileName, std::string& out);
 	static std::string getExtention(const std::string& fileName);
+	static std::string getPath(const std::string& fileName);
 	static float* convert(const vector4& v);
 	static float* convert(const vector3& v);
 	static float* convert(const quaternion& q);
 	static std::string fromUnicode(const std::wstring& str);
 	static std::wstring toUnicode(const std::string& str);
+	static vector3 random(float minValue = 0.0f, float maxValue = 1.0f);
 };
 
 }

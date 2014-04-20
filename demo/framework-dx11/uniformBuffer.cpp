@@ -54,7 +54,8 @@ D3D11_BUFFER_DESC UniformBuffer::getDefaultStructured(unsigned int size, unsigne
 
 UniformBuffer::UniformBuffer() :
 	m_buffer(0),
-	m_isChanged(false)
+	m_isChanged(false),
+	m_checkSizeOnSet(true)
 {
 }
 

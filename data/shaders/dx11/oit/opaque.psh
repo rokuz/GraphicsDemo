@@ -1,0 +1,8 @@
+#include <common.h>
+#include <pscommon.h>
+
+float4 main(VS_OUTPUT input) : SV_TARGET
+{
+	float3 color = computeColor(input);
+    return float4(color, 1);
+}

@@ -184,10 +184,11 @@ private:
 #if defined _WIN32
 #define DECLARE_MAIN(A)										 \
 int CALLBACK WinMain(HINSTANCE hInstance,					 \
-                     HINSTANCE hPrevInstance,				 \
-                     LPSTR lpCmdLine,						 \
-                     int nCmdShow)							 \
+					HINSTANCE hPrevInstance,				 \
+					LPSTR lpCmdLine,						 \
+					int nCmdShow)							 \
 {															 \
+	utils::Utils::init();									 \
 	utils::Logger::start(utils::Logger::IDE_OUTPUT |		 \
 						 utils::Logger::FILE);				 \
     A *app = new A();										 \

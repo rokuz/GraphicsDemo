@@ -42,6 +42,7 @@ public:
 	unsigned int getStencilRef() const { return m_stencilRef; }
 
 	static const D3D11_DEPTH_STENCIL_DESC& getDefault();
+	static D3D11_DEPTH_STENCIL_DESC getDisableDepthWriting();
 
 protected:
 	virtual void onInit(const Device& device);

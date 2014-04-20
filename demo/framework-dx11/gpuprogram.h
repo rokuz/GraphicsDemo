@@ -33,6 +33,7 @@
 #include "uniformbuffer.h"
 #include "texture.h"
 #include "sampler.h"
+#include "renderTarget.h"
 
 namespace framework
 {
@@ -93,6 +94,12 @@ public:
 	}
 
 	template<typename UniformType>
+	void setUniform(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, unsigned int rtIndex = 0)
+	{
+		setUniformByIndex((int)uniform, std::move(renderTarget), rtIndex);
+	}
+
+	template<typename UniformType>
 	void setUniform(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<Sampler> sampler)
 	{
 		setUniformByIndex((int)uniform, std::move(sampler));
@@ -149,6 +156,8 @@ private:
 	void setUniformByIndex(int index, std::shared_ptr<UniformBuffer> buffer);
 	void setUniformByIndex(int index, std::shared_ptr<Texture> texture);
 	void setUniformByIndex(int index, std::shared_ptr<Sampler> sampler);
+	void setUniformByIndex(int index, std::shared_ptr<RenderTarget> renderTarget, unsigned int rtIndex);
+	void setUniformByIndex(int index, ID3D11ShaderResourceView* view);
 	const char* stringInPool(const char* str);
 	bool compareInputLayoutInfos(const std::vector<D3D11_INPUT_ELEMENT_DESC>& info1, const std::vector<D3D11_INPUT_ELEMENT_DESC>& info2);
 

@@ -58,6 +58,13 @@ const D3D11_DEPTH_STENCIL_DESC& DepthStencilStage::getDefault()
 	return desc;
 }
 
+D3D11_DEPTH_STENCIL_DESC DepthStencilStage::getDisableDepthWriting()
+{
+	D3D11_DEPTH_STENCIL_DESC desc = getDefault();
+	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	return std::move(desc);
+}
+
 DepthStencilStage::DepthStencilStage() :
 	m_state(0),
 	m_stencilRef(0)

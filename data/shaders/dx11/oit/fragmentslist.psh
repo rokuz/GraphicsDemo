@@ -1,0 +1,36 @@
+#include <common.h>
+#include <pscommon.h>
+
+struct ListNode
+{
+	uint packedColor;
+	float depth;
+	uint next;
+};
+RWTexture2D<uint> headBuffer : register( u1 );
+RWStructuredBuffer<ListNode> fragmentsList : register( u2 );
+
+uint packColor(float4 color)
+{
+	return (uint(color.r * 255) << 24) | (uint(color.g * 255) << 16) | (uint(color.b * 255) << 8) | uint(color.a * 255);
+}
+
+float4 main(VS_OUTPUT input) : SV_TARGET
+{
+	float3 color = computeColor(input);
+	uint newHeadBufferValue = fragmentsList.IncrementCounter();
+	if (newHeadBufferValue == -1) { return float4(0, 0, 0, 0); }
+	
+	uint2 upos = uint2(input.position.xy);
+	//uint addressInHeadBuffer = 4 * (1024 * upos.y + upos.x);
+	uint previosHeadBufferValue;
+	InterlockedExchange(headBuffer[upos], newHeadBufferValue, previosHeadBufferValue);
+	
+	ListNode node;
+	node.packedColor = packColor(float4(color, 0.5));
+	node.depth = input.position.z;
+	node.next = previosHeadBufferValue;
+	fragmentsList[newHeadBufferValue] = node;
+	
+	return float4(0, 0, 0, 0);
+}

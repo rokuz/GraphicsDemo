@@ -1,24 +1,27 @@
 #include "application.h"
 
 // uniforms
-DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
-	SPACE_DATA,
+DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
+	SPATIAL_DATA,
 	LIGHTS_DATA,
+	LIGHTS_COUNT,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
-	DEFAULT_SAMPLER
+	DEFAULT_SAMPLER,
+	FRAGMENTS_LIST,
+	HEAD_BUFFER
 DECLARE_UNIFORMS_END()
-#define UF framework::UniformBase<TestAppUniforms>::Uniform
+#define UF framework::UniformBase<OITAppUniforms>::Uniform
 
 // spatial data
 #pragma pack (push, 1)
-struct SpaceData
+struct SpatialData
 {
 	matrix44 modelViewProjection;
 	matrix44 model;
-	vector3 viewPosition;
-	unsigned int : 32;
+	vector3 viewDirection;
+	unsigned int lightsCount;
 };
 #pragma pack (pop)
 
@@ -36,9 +39,17 @@ const int MAX_LIGHTS_COUNT = 16;
 
 class OITApp : public framework::Application
 {
+	struct Entity;
+	struct EntityData;
+
 public:
-	OITApp(){}
-	virtual ~OITApp(){}
+	OITApp()
+	{
+		m_lightsCount = 0;
+		m_rotation = 0.0f;
+		m_pause = false;
+		m_renderDebug = false;
+	}
 
 	virtual void init()
 	{
@@ -49,9 +60,6 @@ public:
 
 	virtual void startup(CEGUI::DefaultWindow* root)
 	{
-		m_rotation = 0.0f;
-		m_pause = false;
-
 		// camera
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
@@ -72,58 +80,140 @@ public:
 		if (!m_fragmentsBuffer->initDefaultUnorderedAccess(fragmentsBufferSize, fragmentSize, fragmentsBufferFlags)) exit();
 
 		// gpu program
-		m_program.reset(new framework::GpuProgram());
-		m_program->addShader("data/shaders/dx11/template/shader.vsh");
-		m_program->addShader("data/shaders/dx11/template/shader.psh");
-		if (!m_program->init()) exit();
-		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
-		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_program->bindUniform<TestAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_program->bindUniform<TestAppUniforms>(UF::NORMAL_MAP, "normalMap");
-		m_program->bindUniform<TestAppUniforms>(UF::SPECULAR_MAP, "specularMap");
-		m_program->bindUniform<TestAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+		m_opaqueRendering.reset(new framework::GpuProgram());
+		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.vsh");
+		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.psh");
+		if (!m_opaqueRendering->init()) exit();
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
-		// geometry
-		m_geometry.reset(new framework::Geometry3D());
-		if (!m_geometry->init("data/media/spaceship/spaceship.geom")) exit();
-		m_geometry->bindToGpuProgram(m_program);
+		m_fragmentsListCreation.reset(new framework::GpuProgram());
+		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/opaque.vsh");
+		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/fragmentslist.psh");
+		if (!m_fragmentsListCreation->init()) exit();
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
 
-		// textures
-		m_texture.reset(new framework::Texture());
-		m_texture->initWithDDS("data/media/spaceship/spaceship_diff.dds");
+		// opaque entity
+		m_opaqueEntity = initEntity("data/media/spaceship/spaceship.geom",
+									"data/media/spaceship/spaceship_diff.dds",
+									"data/media/spaceship/spaceship_normal.dds",
+									"data/media/spaceship/spaceship_specular.dds");
+		m_opaqueEntity.geometry->bindToGpuProgram(m_opaqueRendering);
 
-		m_specularTexture.reset(new framework::Texture());
-		m_specularTexture->initWithDDS("data/media/spaceship/spaceship_specular.dds");
+		// transparent entity
+		m_transparentEntity = initEntity("data/media/cube/cube.geom",
+										 "data/media/cube/cube_diff.dds",
+										 "data/media/cube/cube_normal.dds",
+										 "");
+		m_transparentEntity.geometry->bindToGpuProgram(m_opaqueRendering);
 
-		m_normalTexture.reset(new framework::Texture());
-		m_normalTexture->initWithDDS("data/media/spaceship/spaceship_normal.dds");
+		m_transparentEntitiesData.resize(10);
+		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+		{
+			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-15.0f, 15.0f));
+		}
+
+		// a blend state to disable color writing
+		m_transparentBlending.reset(new framework::BlendStage());
+		D3D11_BLEND_DESC blendDesc = framework::BlendStage::getDisableColorWriting();
+		m_transparentBlending->initWithDescription(blendDesc);
+		if (!m_transparentBlending->isValid()) exit();
+
+		// a depth-stencil state to disable depth writing
+		m_transparentDepthStencil.reset(new framework::DepthStencilStage());
+		D3D11_DEPTH_STENCIL_DESC depthDesc = framework::DepthStencilStage::getDisableDepthWriting();
+		m_transparentDepthStencil->initWithDescription(depthDesc);
+		if (!m_transparentDepthStencil->isValid()) exit();
 
 		// space info buffer
-		m_spaceBuffer.reset(new framework::UniformBuffer());
-		if (!m_spaceBuffer->initDefaultConstant<SpaceData>()) exit();
+		m_spatialBuffer.reset(new framework::UniformBuffer());
+		if (!m_spatialBuffer->initDefaultConstant<SpatialData>()) exit();
 
 		// lights
+		initLights();
+	}
+
+	Entity initEntity(const std::string& geometry, 
+					  const std::string& texture, 
+					  const std::string& normalTexture, 
+					  const std::string& specularTexture)
+	{
+		Entity ent;
+
+		// geometry
+		ent.geometry.reset(new framework::Geometry3D());
+		if (!ent.geometry->init(geometry)) exit();
+		ent.geometry->bindToGpuProgram(m_opaqueRendering);
+
+		// textures
+		if (!texture.empty())
+		{
+			ent.texture.reset(new framework::Texture());
+			ent.texture->initWithDDS(texture);
+		}
+
+		if (!normalTexture.empty())
+		{
+			ent.normalTexture.reset(new framework::Texture());
+			ent.normalTexture->initWithDDS(normalTexture);
+		}
+
+		if (!specularTexture.empty())
+		{
+			ent.specularTexture.reset(new framework::Texture());
+			ent.specularTexture->initWithDDS(specularTexture);
+		}
+
+		return std::move(ent);
+	}
+
+	void initLights()
+	{
+		// directional light
 		framework::LightSource source;
 		source.type = framework::LightType::DirectLight;
 		source.position = vector3(0, 15, 0);
 		vector3 dir(1, -1, 1);
 		dir.norm();
 		source.orientation.set_from_axes(vector3(0, 0, 1), dir);
+		source.diffuseColor = vector3(0.7f, 0.7f, 0.7f);
+		source.specularColor = vector3(0.3f, 0.3f, 0.3f);
+		source.ambientColor = vector3(0.1f, 0.1f, 0.1f);
 		m_lightManager.addLightSource(source);
 
+		// directional light 2
+		framework::LightSource source2;
+		source2.type = framework::LightType::DirectLight;
+		source2.position = vector3(15, 15, 0);
+		dir = vector3(0, -1, 1);
+		dir.norm();
+		source2.diffuseColor = vector3(0.96f, 0.81f, 0.59f) * 0.5f;
+		source2.specularColor = vector3(0.1f, 0.1f, 0.1f);
+		source2.ambientColor = vector3(0.0f, 0.0f, 0.0f);
+		source2.orientation.set_from_axes(vector3(0, 0, 1), dir);
+		m_lightManager.addLightSource(source2);
+
+		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
 		if (!m_lightsBuffer->initDefaultStructured<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
 
-		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
-		for (int i = 0; i < lightsCount; i++)
+		m_lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
+		for (unsigned int i = 0; i < m_lightsCount; i++)
 		{
-			m_lightsBuffer->setElement(i, m_lightManager.getRawLightData(i));
+			m_lightsBuffer->setElement((int)i, m_lightManager.getRawLightData(i));
 		}
 		m_lightsBuffer->applyChanges();
-	}
-
-	virtual void shutdown()
-	{
 	}
 
 	virtual void onResize(int width, int height)
@@ -147,27 +237,66 @@ public:
 		batch.add(m_fragmentsBuffer);
 		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
 
-		if (m_program->use())
+		// render opaque objects
+		if (m_opaqueRendering->use())
 		{
-			SpaceData spaceData;
-			spaceData.modelViewProjection = m_mvp;
-			spaceData.model = m_model;
-			spaceData.viewPosition = m_camera.getPosition();
-			m_spaceBuffer->setData(spaceData);
-			m_spaceBuffer->applyChanges();
+			renderEntity(m_opaqueEntity, m_opaqueEntityData);
 
-			m_program->setUniform<TestAppUniforms>(UF::SPACE_DATA, m_spaceBuffer);
-			m_program->setUniform<TestAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-			m_program->setUniform<TestAppUniforms>(UF::DIFFUSE_MAP, m_texture);
-			m_program->setUniform<TestAppUniforms>(UF::NORMAL_MAP, m_normalTexture);
-			m_program->setUniform<TestAppUniforms>(UF::SPECULAR_MAP, m_specularTexture);
-			m_program->setUniform<TestAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
-
-			m_geometry->renderAllMeshes();
+			m_transparentBlending->apply();
+			m_transparentDepthStencil->apply();
+			for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+			{
+				renderEntity(m_transparentEntity, m_transparentEntitiesData[i]);
+			}
+			m_transparentDepthStencil->cancel();
+			m_transparentBlending->cancel();
 		}
 
-		//m_geometry->renderBoundingBox(m_mvp);
+		// build lists of fragments for transparent objects
+		if (m_fragmentsListCreation->use())
+		{
+			//m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer);
+			//m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer);
 
+			m_transparentBlending->apply();
+			m_transparentDepthStencil->apply();
+			for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+			{
+				renderEntity(m_transparentEntity, m_transparentEntitiesData[i]);
+			}
+			m_transparentDepthStencil->cancel();
+			m_transparentBlending->cancel();
+		}
+
+		// debug rendering
+		renderDebug();
+	}
+
+	void renderEntity(const Entity& entity, const EntityData& entityData)
+	{
+		SpatialData spatialData;
+		spatialData.modelViewProjection = entityData.mvp;
+		spatialData.model = entityData.model;
+		spatialData.viewDirection = m_camera.getOrientation().z_direction();
+		spatialData.lightsCount = m_lightsCount;
+		m_spatialBuffer->setData(spatialData);
+		m_spatialBuffer->applyChanges();
+
+		m_opaqueRendering->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
+		m_opaqueRendering->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+		m_opaqueRendering->setUniform<OITAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
+		m_opaqueRendering->setUniform<OITAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
+		m_opaqueRendering->setUniform<OITAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
+		m_opaqueRendering->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+
+		entity.geometry->renderAllMeshes();
+	}
+
+	void renderDebug()
+	{
+		if (!m_renderDebug) return;
+
+		//m_opaqueEntity.geometry->renderBoundingBox(m_mvp);
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
 		renderAxes(vp);
 		m_lightManager.renderDebugVisualization(vp);
@@ -178,6 +307,11 @@ public:
 		if (key == CEGUI::Key::Space && pressed)
 		{
 			m_pause = !m_pause;
+			return;
+		}
+		if (key == CEGUI::Key::F1 && pressed)
+		{
+			m_renderDebug = !m_renderDebug;
 			return;
 		}
 		m_camera.onKeyButton(key, scancode, pressed);
@@ -195,40 +329,71 @@ public:
 
 	void update(double elapsedTime)
 	{
+		matrix44 vp = m_camera.getView() * m_camera.getProjection();
+
 		quaternion quat;
 		quat.set_rotate_x(n_deg2rad(-90.0f));
 		quaternion quat2;
 		quat2.set_rotate_z(-n_deg2rad(m_rotation));
-		m_model = matrix44(quat * quat2);
+		m_opaqueEntityData.model = matrix44(quat * quat2);
 		quaternion quat3;
 		quat3.set_rotate_y(-n_deg2rad(m_rotation));
-		m_model.set_translation(quat3.z_direction() * 30.0f);
+		m_opaqueEntityData.model.set_translation(quat3.z_direction() * 30.0f);
+		m_opaqueEntityData.mvp = m_opaqueEntityData.model * vp;
 
-		m_mvp = (m_model * m_camera.getView()) * m_camera.getProjection();
+		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+		{
+			m_transparentEntitiesData[i].mvp = m_transparentEntitiesData[i].model * vp;
+		}
+
 		m_rotation += (m_pause ? 0 : (float)elapsedTime * 70.0f);
 	}
 
 private:
-	// texture using to store heads of dynamic lists
+	// texture to store heads of dynamic lists
 	std::shared_ptr<framework::RenderTarget> m_headBuffer;
-	// buffer using to store dynamic lists
+	// buffer to store dynamic lists
 	std::shared_ptr<framework::UnorderedAccessBuffer> m_fragmentsBuffer;
 	
-	std::shared_ptr<framework::GpuProgram> m_program;
-	std::shared_ptr<framework::Geometry3D> m_geometry;
-	std::shared_ptr<framework::Texture> m_texture;
-	std::shared_ptr<framework::Texture> m_normalTexture;
-	std::shared_ptr<framework::Texture> m_specularTexture;
+	// gpu program to render solid geometry
+	std::shared_ptr<framework::GpuProgram> m_opaqueRendering;
 
-	std::shared_ptr<framework::UniformBuffer> m_spaceBuffer;
+	std::shared_ptr<framework::GpuProgram> m_fragmentsListCreation;
+
+	std::shared_ptr<framework::BlendStage> m_transparentBlending;
+	std::shared_ptr<framework::DepthStencilStage> m_transparentDepthStencil;
+
+	// entity
+	struct Entity
+	{
+		std::shared_ptr<framework::Geometry3D> geometry;
+		std::shared_ptr<framework::Texture> texture;
+		std::shared_ptr<framework::Texture> normalTexture;
+		std::shared_ptr<framework::Texture> specularTexture;
+	};
+
+	struct EntityData
+	{
+		matrix44 model;
+		matrix44 mvp;
+	};
+
+	// opaque entity
+	Entity m_opaqueEntity;
+	EntityData m_opaqueEntityData;
+	// transparent entity
+	Entity m_transparentEntity;
+	std::vector<EntityData> m_transparentEntitiesData;
+
+	std::shared_ptr<framework::UniformBuffer> m_spatialBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
+	unsigned int m_lightsCount;
 
 	framework::FreeCamera m_camera;
-	matrix44 m_model;
-	matrix44 m_mvp;
 
 	float m_rotation;
 	bool m_pause;
+	bool m_renderDebug;
 };
 
 DECLARE_MAIN(OITApp);

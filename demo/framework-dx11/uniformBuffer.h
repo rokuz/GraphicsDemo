@@ -110,6 +110,7 @@ public:
 	ID3D11Buffer* getBuffer() { return m_buffer; }
 	ResourceView& getView() { return m_view; }
 	bool isStructured() const;
+	bool checkSizeOnSet() const { return m_checkSizeOnSet; }
 
 	void applyChanges();
 
@@ -124,6 +125,7 @@ protected:
 
 	std::vector<unsigned char> m_bufferInMemory;
 	bool m_isChanged;
+	bool m_checkSizeOnSet;
 };
 
 }

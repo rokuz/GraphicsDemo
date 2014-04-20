@@ -25,6 +25,7 @@
 
 #include <d3dcompiler.h>
 #include <algorithm>
+#include <fstream>
 #include "utils.h"
 #include "outputd3d11.h"
 #include "application.h"
@@ -107,6 +108,43 @@ DXGI_FORMAT getComponentFormat(D3D_REGISTER_COMPONENT_TYPE type, unsigned char m
 	}
 	return DXGI_FORMAT_UNKNOWN;
 }
+
+class GpuProgramInclude : public ID3DInclude
+{
+public:
+	GpuProgramInclude(const std::string& shaderPath) : m_shaderPath(shaderPath){}
+
+	HRESULT __stdcall Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes)
+	{
+		std::string path = m_shaderPath + pFileName;
+		std::ifstream includeFile(path.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+
+		if (includeFile.is_open()) 
+		{
+			unsigned int fileSize = (unsigned int)includeFile.tellg();
+			char* buf = new char[fileSize];
+			includeFile.seekg(0, std::ios::beg);
+			includeFile.read(buf, fileSize);
+			includeFile.close();
+			*ppData = buf;
+			*pBytes = fileSize;
+		}
+		else
+		{
+			return E_FAIL;
+		}
+		return S_OK;
+	}
+	HRESULT __stdcall Close(LPCVOID pData)
+	{
+		char* buf = (char*)pData;
+		delete[] buf;
+		return S_OK;
+	}
+
+private:
+	std::string m_shaderPath;
+};
 
 GpuProgram::GpuProgram() : 
 	m_vertexShader(0),
@@ -256,7 +294,10 @@ ID3DBlob* GpuProgram::compileShader(ShaderType shaderType, const std::string& fi
 	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
-	hr = D3DCompile(sourceStr.c_str(), sourceStr.length(), nullptr, defines, nullptr,
+	std::string shaderPath = utils::Utils::getPath(filename);
+	std::unique_ptr<GpuProgramInclude> includeHandler(new GpuProgramInclude(shaderPath));
+
+	hr = D3DCompile(sourceStr.c_str(), sourceStr.length(), nullptr, defines, includeHandler.get(),
 		mainFunc.c_str(), getModelByType(shaderType), flags, 0,
 		&compiledShader, &errorMessages);
 
@@ -461,7 +502,11 @@ bool GpuProgram::reflectShaders(const Device& device, bool autoInputLayout)
 					reflector->Release();
 					break;
 				}
-				if (resDesc.Type == D3D_SIT_TEXTURE || resDesc.Type == D3D_SIT_SAMPLER)
+
+				if (resDesc.Type == D3D_SIT_TEXTURE || resDesc.Type == D3D_SIT_SAMPLER ||
+					resDesc.Type == D3D_SIT_UAV_RWTYPED || resDesc.Type == D3D_SIT_UAV_RWSTRUCTURED ||
+					resDesc.Type == D3D_SIT_UAV_RWBYTEADDRESS || resDesc.Type == D3D_SIT_UAV_APPEND_STRUCTURED || 
+					resDesc.Type == D3D_SIT_UAV_CONSUME_STRUCTURED || resDesc.Type == D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER)
 				{
 					std::shared_ptr<ShaderResourceData> cbdata(new ShaderResourceData);
 					cbdata->name = resDesc.Name;
@@ -633,18 +678,22 @@ void GpuProgram::bindUniformByIndex(int index, const std::string& name)
 
 void GpuProgram::setUniformByIndex(int index, std::shared_ptr<UniformBuffer> buffer)
 {
+	if (buffer.get() == 0) return;
 	const Device& device = Application::instance()->getDevice();
 
 	// check size
-	for (size_t i = 0; i < m_data.size(); i++)
+	if (buffer->checkSizeOnSet())
 	{
-		if (!m_uniforms[i][index].expired())
+		for (size_t i = 0; i < m_data.size(); i++)
 		{
-			auto ptr = m_uniforms[i][index].lock();
-			if (ptr->sizeInBytes != buffer->getElementByteSize())
+			if (!m_uniforms[i][index].expired())
 			{
-				utils::Logger::toLogWithFormat("Error: could not set an uniform. The reason: the uniform buffer's size does not match the expected size.\n");
-				return;
+				auto ptr = m_uniforms[i][index].lock();
+				if (ptr->sizeInBytes != buffer->getElementByteSize())
+				{
+					utils::Logger::toLogWithFormat("Error: could not set an uniform. The reason: the uniform buffer's size does not match the expected size.\n");
+					return;
+				}
 			}
 		}
 	}
@@ -703,9 +752,15 @@ void GpuProgram::setUniformByIndex(int index, std::shared_ptr<UniformBuffer> buf
 
 void GpuProgram::setUniformByIndex( int index, std::shared_ptr<Texture> texture )
 {
-	const Device& device = Application::instance()->getDevice();
+	if (texture.get() == 0) return;
 
 	ID3D11ShaderResourceView* view = texture->getView();
+	setUniformByIndex(index, view);
+}
+
+void GpuProgram::setUniformByIndex(int index, ID3D11ShaderResourceView* view)
+{
+	const Device& device = Application::instance()->getDevice();
 	if (m_vertexShader != 0 && !m_uniforms[VERTEX_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[VERTEX_SHADER][index].lock();
@@ -743,6 +798,7 @@ void GpuProgram::setUniformByIndex( int index, std::shared_ptr<Texture> texture 
 
 void GpuProgram::setUniformByIndex(int index, std::shared_ptr<Sampler> sampler)
 {
+	if (sampler.get() == 0) return;
 	const Device& device = Application::instance()->getDevice();
 
 	ID3D11SamplerState* samplerState = sampler->getSampler();
@@ -776,6 +832,13 @@ void GpuProgram::setUniformByIndex(int index, std::shared_ptr<Sampler> sampler)
 		auto ptr = m_uniforms[COMPUTE_SHADER][index].lock();
 		device.context->CSSetSamplers(ptr->bindingPoint, 1, &samplerState);
 	}
+}
+void GpuProgram::setUniformByIndex(int index, std::shared_ptr<RenderTarget> renderTarget, unsigned int rtIndex)
+{
+	if (renderTarget.get() == 0) return;
+
+	ID3D11ShaderResourceView* view = renderTarget->getView(rtIndex).asShaderView();
+	setUniformByIndex(index, view);
 }
 
 int GpuProgram::generateId()

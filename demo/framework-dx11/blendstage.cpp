@@ -56,6 +56,16 @@ const D3D11_BLEND_DESC& BlendStage::getDefault()
 	return desc;
 }
 
+D3D11_BLEND_DESC BlendStage::getDisableColorWriting()
+{
+	D3D11_BLEND_DESC desc = getDefault();
+	for (int i = 0; i < 8; i++)
+	{
+		desc.RenderTarget[i].RenderTargetWriteMask = 0;
+	}
+	return std::move(desc);
+}
+
 BlendStage::BlendStage() :
 	m_state(0),
 	m_blendFactor(1, 1, 1, 1),

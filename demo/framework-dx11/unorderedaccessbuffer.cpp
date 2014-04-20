@@ -43,6 +43,7 @@ D3D11_BUFFER_DESC UnorderedAccessBuffer::getDefaultUnorderedAcces(unsigned int s
 UnorderedAccessBuffer::UnorderedAccessBuffer() :
 	m_uavFlags(0)
 {
+	m_checkSizeOnSet = false;
 }
 
 UnorderedAccessBuffer::~UnorderedAccessBuffer()

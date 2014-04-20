@@ -35,6 +35,12 @@ class DdsLoader : public Texture::Loader
 public:
     virtual bool load(Texture* texture, const std::string& fileName)
     {
+		if (fileName.empty())
+		{
+			utils::Logger::toLogWithFormat("Error: could not create a texture, file name is empty.\n", fileName.c_str());
+			return false;
+		}
+
 		if (!utils::Utils::exists(fileName))
 		{
 			utils::Logger::toLogWithFormat("Error: file '%s' has not been found.\n", fileName.c_str());
