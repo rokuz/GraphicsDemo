@@ -157,33 +157,32 @@ bool ResourceView::isValid() const
 
 void ResourceView::destroy()
 {
-	m_shaderDesc.second = false;
-	m_renderTargetDesc.second = false;
-	m_depthStencilDesc.second = false;
-	m_uavDesc.second = false;
-
 	if (m_shaderView != 0)
 	{
 		m_shaderView->Release();
 		m_shaderView = 0;
+		m_shaderDesc.second = false;
 	}
 
 	if (m_renderTargetView != 0)
 	{
 		m_renderTargetView->Release();
 		m_renderTargetView = 0;
+		m_renderTargetDesc.second = false;
 	}
 
 	if (m_depthStencilView != 0)
 	{
 		m_depthStencilView->Release();
 		m_depthStencilView = 0;
+		m_depthStencilDesc.second = false;
 	}
 
 	if (m_uaView != 0)
 	{
 		m_uaView->Release();
 		m_uaView = 0;
+		m_uavDesc.second = false;
 	}
 }
 

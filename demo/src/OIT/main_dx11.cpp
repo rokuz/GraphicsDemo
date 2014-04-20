@@ -116,7 +116,7 @@ public:
 										 "data/media/cube/cube_diff.dds",
 										 "data/media/cube/cube_normal.dds",
 										 "");
-		m_transparentEntity.geometry->bindToGpuProgram(m_opaqueRendering);
+		m_transparentEntity.geometry->bindToGpuProgram(m_fragmentsListCreation);
 
 		m_transparentEntitiesData.resize(10);
 		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
@@ -234,22 +234,13 @@ public:
 		// set render target and head/fragments buffers
 		framework::UnorderedAccessibleBatch batch;
 		batch.add(m_headBuffer);
-		batch.add(m_fragmentsBuffer);
+		batch.add(m_fragmentsBuffer, 0);
 		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
 
 		// render opaque objects
 		if (m_opaqueRendering->use())
 		{
 			renderEntity(m_opaqueEntity, m_opaqueEntityData);
-
-			m_transparentBlending->apply();
-			m_transparentDepthStencil->apply();
-			for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
-			{
-				renderEntity(m_transparentEntity, m_transparentEntitiesData[i]);
-			}
-			m_transparentDepthStencil->cancel();
-			m_transparentBlending->cancel();
 		}
 
 		// build lists of fragments for transparent objects
