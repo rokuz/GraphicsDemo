@@ -4,7 +4,7 @@ struct ListNode
 	float depth;
 	uint next;
 };
-texture2D<uint> headBuffer;
+RWTexture2D<uint> headBuffer;
 RWStructuredBuffer<ListNode> fragmentsList;
 
 cbuffer transparentData
@@ -20,17 +20,17 @@ struct VS_OUTPUT
 float4 unpackColor(uint color)
 {
 	float4 output;
-	output.r = ((color >> 24) & 0x000000ff) / 255.0f;
-	output.g = ((color >> 16) & 0x000000ff) / 255.0f;
-	output.b = ((color >> 8) & 0x000000ff) / 255.0f;
-	output.a = (color & 0x000000ff) / 255.0f;
+	output.r = float((color >> 24) & 0x000000ff) / 255.0f;
+	output.g = float((color >> 16) & 0x000000ff) / 255.0f;
+	output.b = float((color >> 8) & 0x000000ff) / 255.0f;
+	output.a = float(color & 0x000000ff) / 255.0f;
 	return output;
 }
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
-	uint3 upos = uint3(input.position.xy, 0);
-	uint head = headBuffer.Load(upos);
+	uint2 upos = uint2(input.position.xy);
+	uint head = headBuffer[upos];
 	
 	float4 color = float4(1, 0, 0, 1);
 	if (head != 0xffffffff)

@@ -303,8 +303,10 @@ public:
 			m_cullingOff->cancel();
 		}
 
+		/*useDefaultRenderTarget();
+
 		// render transparent objects
-		/*if (m_transparentRendering->use())
+		if (m_transparentRendering->use())
 		{
 			m_transparentRendering->setUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer);
 			m_transparentRendering->setUniform<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer);
