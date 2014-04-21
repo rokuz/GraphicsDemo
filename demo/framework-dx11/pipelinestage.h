@@ -76,6 +76,8 @@ public:
 	void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget);
 	void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget, const UnorderedAccessibleBatch& uabatch);
 
+	void drawPoints(unsigned int count);
+
 private:
 	void pushPipelineStage(std::shared_ptr<PipelineStage> stagePtr);
 	void popPipelineStage(std::shared_ptr<PipelineStage> stagePtr, const Device& device);

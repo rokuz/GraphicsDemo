@@ -134,34 +134,4 @@ void RasterizerStage::onApply(const Device& device)
 	}
 }
 
-void RasterizerStage::addViewport(const D3D11_VIEWPORT& viewport)
-{
-	m_viewports.push_back(viewport);
-}
-
-void RasterizerStage::clearViewports()
-{
-	m_viewports.clear();
-}
-
-int RasterizerStage::getViewportsCount() const
-{
-	return (int)m_viewports.size();
-}
-
-void RasterizerStage::addScissorRect(const D3D11_RECT& rect)
-{
-	m_scissorRects.push_back(rect);
-}
-
-void RasterizerStage::clearScissorRects()
-{
-	m_scissorRects.clear();
-}
-
-int RasterizerStage::getScissorRectsCount() const
-{
-	return (int)m_scissorRects.size();
-}
-
 }

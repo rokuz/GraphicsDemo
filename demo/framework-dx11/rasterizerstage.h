@@ -37,13 +37,10 @@ public:
 	virtual void destroy();
 
 	void initWithDescription(const D3D11_RASTERIZER_DESC& desc);
-	
-	void addViewport(const D3D11_VIEWPORT& viewport);
-	void clearViewports();
-	int getViewportsCount() const;
-	void addScissorRect(const D3D11_RECT& rect);
-	void clearScissorRects();
-	int getScissorRectsCount() const;
+
+	std::vector<D3D11_VIEWPORT>& getViewports() { return m_viewports; }
+	std::vector<D3D11_RECT>& getScissorRects() { return m_scissorRects; }
+	const D3D11_RASTERIZER_DESC& getDesc() const { return m_description; }
 
 	static const D3D11_RASTERIZER_DESC& getDefault();
 	static D3D11_VIEWPORT getDefaultViewport(int width, int height);

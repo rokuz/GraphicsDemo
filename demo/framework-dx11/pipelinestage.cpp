@@ -65,6 +65,10 @@ void Pipeline::pushPipelineStage(std::shared_ptr<PipelineStage> stagePtr)
 {
 	auto type = stagePtr->GetType();
 	int index = m_indices[type];
+	if (index > 0 && m_stages[type][index - 1] == stagePtr)
+	{
+		return;
+	}
 	if (index >= (int)m_stages[type].size())
 	{
 		m_stages[type].push_back(stagePtr);
@@ -94,11 +98,11 @@ void Pipeline::popPipelineStage(std::shared_ptr<PipelineStage> stagePtr, const D
 					if (m_stages[type][j].get() != 0)
 					{
 						if (m_stages[type][j] != stagePtr) m_stages[type][j]->onApply(device);
-						m_indices[type] = j;
+						m_indices[type] = j + 1;
 						break;
 					}
 				}
-				if (j <= 0) m_indices[type] = 0;
+				if (j < 0) m_indices[type] = 0;
 			}
 			break;
 		}
@@ -195,6 +199,13 @@ void Pipeline::setRenderTarget(std::shared_ptr<RenderTarget> renderTarget, const
 	device.context->OMSetRenderTargetsAndUnorderedAccessViews(cnt, renderTargets, depthStencil, 
 															  cnt, uabatch.elementsNumber, 
 															  uabatch.elements, uabatch.initialValues);
+}
+
+void Pipeline::drawPoints( unsigned int count )
+{
+	const Device& device = Application::instance()->getDevice();
+	device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+	device.context->Draw(count, 0);
 }
 
 

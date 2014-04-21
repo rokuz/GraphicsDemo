@@ -1,0 +1,42 @@
+struct ListNode
+{
+	uint packedColor;
+	float depth;
+	uint next;
+};
+texture2D<uint> headBuffer;
+RWStructuredBuffer<ListNode> fragmentsList;
+
+cbuffer transparentData
+{
+	float2 screenSize : packoffset(c0);
+};
+
+struct VS_OUTPUT
+{
+    float4 position : SV_POSITION;
+};
+
+float4 unpackColor(uint color)
+{
+	float4 output;
+	output.r = ((color >> 24) & 0x000000ff) / 255.0f;
+	output.g = ((color >> 16) & 0x000000ff) / 255.0f;
+	output.b = ((color >> 8) & 0x000000ff) / 255.0f;
+	output.a = (color & 0x000000ff) / 255.0f;
+	return output;
+}
+
+float4 main(VS_OUTPUT input) : SV_TARGET
+{
+	uint3 upos = uint3(input.position.xy, 0);
+	uint head = headBuffer.Load(upos);
+	
+	float4 color = float4(1, 0, 0, 1);
+	if (head != 0xffffffff)
+	{
+		ListNode node = fragmentsList[head];
+		color = unpackColor(node.packedColor);
+	}
+    return color;
+}

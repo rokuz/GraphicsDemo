@@ -41,7 +41,7 @@ namespace utils
 
 void Utils::init()
 {
-	srand(time(0));
+	srand((unsigned int)time(0));
 }
 
 bool Utils::exists(const std::string& fileName)

@@ -200,8 +200,8 @@ void Application::resize()
 
 	if (m_defaultRasterizer.get() != 0)
 	{
-		m_defaultRasterizer->clearViewports();
-		m_defaultRasterizer->addViewport(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
+		m_defaultRasterizer->getViewports().clear();
+		m_defaultRasterizer->getViewports().push_back(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
 	}
 
 	onResize(m_info.windowWidth, m_info.windowHeight);
@@ -298,7 +298,7 @@ bool Application::initDevice()
 	rastDesc.MultisampleEnable = m_info.samples > 0 ? TRUE : FALSE;
 	rastDesc.AntialiasedLineEnable = m_info.samples > 0 ? TRUE : FALSE;
 	m_defaultRasterizer->initWithDescription(rastDesc);
-	m_defaultRasterizer->addViewport(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
+	m_defaultRasterizer->getViewports().push_back(framework::RasterizerStage::getDefaultViewport(m_info.windowWidth, m_info.windowHeight));
 	if (!m_defaultRasterizer->isValid())
 	{
 		return false;

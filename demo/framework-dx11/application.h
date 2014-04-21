@@ -119,8 +119,10 @@ protected:
 
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
+
 	void useDefaultRenderTarget();
 	const std::shared_ptr<RenderTarget>& defaultRenderTarget() const { return m_defaultRenderTarget; }
+	const std::shared_ptr<RasterizerStage>& defaultRasterizer() const { return m_defaultRasterizer; }
 	void resize();
 	const std::shared_ptr<Sampler>& anisotropicSampler() const { return m_anisotropicSampler; }
 	const std::shared_ptr<Sampler>& linearSampler() const { return m_linearSampler; }

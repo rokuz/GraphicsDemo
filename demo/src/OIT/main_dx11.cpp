@@ -10,7 +10,8 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	SPECULAR_MAP,
 	DEFAULT_SAMPLER,
 	FRAGMENTS_LIST,
-	HEAD_BUFFER
+	HEAD_BUFFER,
+	TRANSPARENT_DATA
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
 
@@ -25,18 +26,20 @@ struct SpatialData
 };
 #pragma pack (pop)
 
-// fragment data
-//#pragma pack (push, 1)
-//struct FragmentData
-//{
-//	unsigned int packedColor;
-//	float depth;
-//	unsigned int next;
-//};
-//#pragma pack (pop)
+// transparent data
+#pragma pack (push, 1)
+struct TransparentData
+{
+	vector2 screenSize;
+	unsigned int : 32;
+	unsigned int : 32;
+};
+#pragma pack (pop)
 
+// constants
 const int MAX_LIGHTS_COUNT = 16;
 
+// application
 class OITApp : public framework::Application
 {
 	struct Entity;
@@ -54,7 +57,7 @@ public:
 	virtual void init()
 	{
 		m_info.title = "Order Independent Transparency (DX11)";
-		m_info.samples = 4;
+		m_info.samples = 0;
 		m_info.flags.fullscreen = 0;
 	}
 
@@ -79,7 +82,7 @@ public:
 		m_fragmentsBuffer.reset(new framework::UnorderedAccessBuffer());
 		if (!m_fragmentsBuffer->initDefaultUnorderedAccess(fragmentsBufferSize, fragmentSize, fragmentsBufferFlags)) exit();
 
-		// gpu program
+		// gpu programs
 		m_opaqueRendering.reset(new framework::GpuProgram());
 		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.vsh");
 		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.psh");
@@ -101,8 +104,15 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
+		
+		m_transparentRendering.reset(new framework::GpuProgram());
+		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.vsh");
+		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.gsh");
+		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.psh");
+		if (!m_transparentRendering->init(true)) exit();
+		m_transparentRendering->bindUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
+		m_transparentRendering->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
+		m_transparentRendering->bindUniform<OITAppUniforms>(UF::TRANSPARENT_DATA, "transparentData");
 
 		// opaque entity
 		m_opaqueEntity = initEntity("data/media/spaceship/spaceship.geom",
@@ -125,20 +135,45 @@ public:
 		}
 
 		// a blend state to disable color writing
-		m_transparentBlending.reset(new framework::BlendStage());
+		m_disableColorWriting.reset(new framework::BlendStage());
 		D3D11_BLEND_DESC blendDesc = framework::BlendStage::getDisableColorWriting();
-		m_transparentBlending->initWithDescription(blendDesc);
-		if (!m_transparentBlending->isValid()) exit();
+		m_disableColorWriting->initWithDescription(blendDesc);
+		if (!m_disableColorWriting->isValid()) exit();
 
 		// a depth-stencil state to disable depth writing
-		m_transparentDepthStencil.reset(new framework::DepthStencilStage());
+		m_disableDepthWriting.reset(new framework::DepthStencilStage());
 		D3D11_DEPTH_STENCIL_DESC depthDesc = framework::DepthStencilStage::getDisableDepthWriting();
-		m_transparentDepthStencil->initWithDescription(depthDesc);
-		if (!m_transparentDepthStencil->isValid()) exit();
+		m_disableDepthWriting->initWithDescription(depthDesc);
+		if (!m_disableDepthWriting->isValid()) exit();
 
-		// space info buffer
+		// a depth-stencil state to disable depth test
+		m_disableDepthTest.reset(new framework::DepthStencilStage());
+		depthDesc = framework::DepthStencilStage::getDefault();
+		depthDesc.DepthEnable = FALSE;
+		m_disableDepthTest->initWithDescription(depthDesc);
+		if (!m_disableDepthTest->isValid()) exit();
+
+		// a rasterizer to render without culling
+		m_cullingOff.reset(new framework::RasterizerStage());
+		D3D11_RASTERIZER_DESC rasterizerDesc = defaultRasterizer()->getDesc();
+		rasterizerDesc.CullMode = D3D11_CULL_NONE;
+		m_cullingOff->initWithDescription(rasterizerDesc);
+		if (!m_cullingOff->isValid()) exit();
+		auto viewports = defaultRasterizer()->getViewports();
+		m_cullingOff->getViewports().reserve(viewports.size());
+		m_cullingOff->getViewports() = viewports;
+
+		// spatial info buffer
 		m_spatialBuffer.reset(new framework::UniformBuffer());
 		if (!m_spatialBuffer->initDefaultConstant<SpatialData>()) exit();
+
+		// transparent data buffer
+		m_transparentDataBuffer.reset(new framework::UniformBuffer());
+		if (!m_transparentDataBuffer->initDefaultConstant<TransparentData>()) exit();
+		TransparentData tdat;
+		tdat.screenSize = vector2((float)m_info.windowWidth, (float)m_info.windowHeight);
+		m_transparentDataBuffer->setData(tdat);
+		m_transparentDataBuffer->applyChanges();
 
 		// lights
 		initLights();
@@ -219,6 +254,16 @@ public:
 	virtual void onResize(int width, int height)
 	{
 		m_camera.updateResolution(width, height);
+
+		auto viewports = defaultRasterizer()->getViewports();
+		m_cullingOff->getViewports().clear();
+		m_cullingOff->getViewports().reserve(viewports.size());
+		m_cullingOff->getViewports() = viewports;
+
+		TransparentData tdat;
+		tdat.screenSize = vector2((float)width, (float)height);
+		m_transparentDataBuffer->setData(tdat);
+		m_transparentDataBuffer->applyChanges();
 	}
 
 	virtual void render(double elapsedTime)
@@ -246,18 +291,29 @@ public:
 		// build lists of fragments for transparent objects
 		if (m_fragmentsListCreation->use())
 		{
-			//m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer);
-			//m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer);
-
-			m_transparentBlending->apply();
-			m_transparentDepthStencil->apply();
+			m_cullingOff->apply();
+			m_disableColorWriting->apply();
+			m_disableDepthWriting->apply();
 			for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
 			{
 				renderEntity(m_transparentEntity, m_transparentEntitiesData[i]);
 			}
-			m_transparentDepthStencil->cancel();
-			m_transparentBlending->cancel();
+			m_disableDepthWriting->cancel();
+			m_disableColorWriting->cancel();
+			m_cullingOff->cancel();
 		}
+
+		// render transparent objects
+		/*if (m_transparentRendering->use())
+		{
+			m_transparentRendering->setUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer);
+			m_transparentRendering->setUniform<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer);
+			m_transparentRendering->setUniform<OITAppUniforms>(UF::TRANSPARENT_DATA, m_transparentDataBuffer);
+
+			m_disableDepthTest->apply();
+			getPipeline().drawPoints(1);
+			m_disableDepthTest->cancel();
+		}*/
 
 		// debug rendering
 		renderDebug();
@@ -351,8 +407,12 @@ private:
 
 	std::shared_ptr<framework::GpuProgram> m_fragmentsListCreation;
 
-	std::shared_ptr<framework::BlendStage> m_transparentBlending;
-	std::shared_ptr<framework::DepthStencilStage> m_transparentDepthStencil;
+	std::shared_ptr<framework::GpuProgram> m_transparentRendering;
+
+	std::shared_ptr<framework::BlendStage> m_disableColorWriting;
+	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
+	std::shared_ptr<framework::RasterizerStage> m_cullingOff;
+	std::shared_ptr<framework::DepthStencilStage> m_disableDepthTest;
 
 	// entity
 	struct Entity
@@ -378,6 +438,7 @@ private:
 
 	std::shared_ptr<framework::UniformBuffer> m_spatialBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
+	std::shared_ptr<framework::UniformBuffer> m_transparentDataBuffer;
 	unsigned int m_lightsCount;
 
 	framework::FreeCamera m_camera;
