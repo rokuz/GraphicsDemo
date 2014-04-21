@@ -66,6 +66,19 @@ D3D11_BLEND_DESC BlendStage::getDisableColorWriting()
 	return std::move(desc);
 }
 
+D3D11_BLEND_DESC BlendStage::getAlphaBlending()
+{
+	D3D11_BLEND_DESC desc = getDefault();
+	for (int i = 0; i < 8; i++)
+	{
+		desc.RenderTarget[i].BlendEnable = true;
+		desc.RenderTarget[i].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		desc.RenderTarget[i].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	}
+	return std::move(desc);
+}
+
+
 BlendStage::BlendStage() :
 	m_state(0),
 	m_blendFactor(1, 1, 1, 1),

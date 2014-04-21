@@ -23,7 +23,6 @@ float4 main(VS_OUTPUT input) : SV_TARGET
 	if (newHeadBufferValue == 0xffffffff) { return float4(0, 0, 0, 0); }
 	
 	uint2 upos = uint2(input.position.xy);
-	//uint addressInHeadBuffer = 4 * (1024 * upos.y + upos.x);
 	uint previosHeadBufferValue;
 	InterlockedExchange(headBuffer[upos], newHeadBufferValue, previosHeadBufferValue);
 	

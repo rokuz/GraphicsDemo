@@ -7,11 +7,6 @@ struct ListNode
 RWTexture2D<uint> headBuffer;
 RWStructuredBuffer<ListNode> fragmentsList;
 
-cbuffer transparentData
-{
-	float2 screenSize : packoffset(c0);
-};
-
 struct VS_OUTPUT
 {
     float4 position : SV_POSITION;
@@ -24,15 +19,15 @@ float4 unpackColor(uint color)
 	output.g = float((color >> 16) & 0x000000ff) / 255.0f;
 	output.b = float((color >> 8) & 0x000000ff) / 255.0f;
 	output.a = float(color & 0x000000ff) / 255.0f;
-	return output;
+	return saturate(output);
 }
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
 	uint2 upos = uint2(input.position.xy);
 	uint head = headBuffer[upos];
-	
-	float4 color = float4(1, 0, 0, 1);
+
+	float4 color = float4(0, 0, 0, 0);
 	if (head != 0xffffffff)
 	{
 		ListNode node = fragmentsList[head];

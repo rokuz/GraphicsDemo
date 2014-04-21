@@ -41,6 +41,7 @@ public:
 	
 	static const D3D11_BLEND_DESC& getDefault();
 	static D3D11_BLEND_DESC getDisableColorWriting();
+	static D3D11_BLEND_DESC getAlphaBlending();
 
 	const vector4& getBlendFactor() const { return m_blendFactor; }
 	unsigned int getSampleMask() const { return m_sampleMask; }

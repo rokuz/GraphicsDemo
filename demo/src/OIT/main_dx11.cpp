@@ -8,10 +8,7 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
-	DEFAULT_SAMPLER,
-	FRAGMENTS_LIST,
-	HEAD_BUFFER,
-	TRANSPARENT_DATA
+	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
 
@@ -23,16 +20,6 @@ struct SpatialData
 	matrix44 model;
 	vector3 viewDirection;
 	unsigned int lightsCount;
-};
-#pragma pack (pop)
-
-// transparent data
-#pragma pack (push, 1)
-struct TransparentData
-{
-	vector2 screenSize;
-	unsigned int : 32;
-	unsigned int : 32;
 };
 #pragma pack (pop)
 
@@ -110,9 +97,6 @@ public:
 		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.gsh");
 		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.psh");
 		if (!m_transparentRendering->init(true)) exit();
-		m_transparentRendering->bindUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
-		m_transparentRendering->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
-		m_transparentRendering->bindUniform<OITAppUniforms>(UF::TRANSPARENT_DATA, "transparentData");
 
 		// opaque entity
 		m_opaqueEntity = initEntity("data/media/spaceship/spaceship.geom",
@@ -163,17 +147,15 @@ public:
 		m_cullingOff->getViewports().reserve(viewports.size());
 		m_cullingOff->getViewports() = viewports;
 
+		// a blend state to enable alpha-blending
+		m_alphaBlending.reset(new framework::BlendStage());
+		blendDesc = framework::BlendStage::getAlphaBlending();
+		m_alphaBlending->initWithDescription(blendDesc);
+		if (!m_alphaBlending->isValid()) exit();
+
 		// spatial info buffer
 		m_spatialBuffer.reset(new framework::UniformBuffer());
 		if (!m_spatialBuffer->initDefaultConstant<SpatialData>()) exit();
-
-		// transparent data buffer
-		m_transparentDataBuffer.reset(new framework::UniformBuffer());
-		if (!m_transparentDataBuffer->initDefaultConstant<TransparentData>()) exit();
-		TransparentData tdat;
-		tdat.screenSize = vector2((float)m_info.windowWidth, (float)m_info.windowHeight);
-		m_transparentDataBuffer->setData(tdat);
-		m_transparentDataBuffer->applyChanges();
 
 		// lights
 		initLights();
@@ -259,11 +241,6 @@ public:
 		m_cullingOff->getViewports().clear();
 		m_cullingOff->getViewports().reserve(viewports.size());
 		m_cullingOff->getViewports() = viewports;
-
-		TransparentData tdat;
-		tdat.screenSize = vector2((float)width, (float)height);
-		m_transparentDataBuffer->setData(tdat);
-		m_transparentDataBuffer->applyChanges();
 	}
 
 	virtual void render(double elapsedTime)
@@ -303,19 +280,15 @@ public:
 			m_cullingOff->cancel();
 		}
 
-		/*useDefaultRenderTarget();
-
 		// render transparent objects
 		if (m_transparentRendering->use())
 		{
-			m_transparentRendering->setUniform<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer);
-			m_transparentRendering->setUniform<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer);
-			m_transparentRendering->setUniform<OITAppUniforms>(UF::TRANSPARENT_DATA, m_transparentDataBuffer);
-
 			m_disableDepthTest->apply();
+			m_alphaBlending->apply();
 			getPipeline().drawPoints(1);
 			m_disableDepthTest->cancel();
-		}*/
+			m_alphaBlending->cancel();
+		}
 
 		// debug rendering
 		renderDebug();
@@ -415,6 +388,7 @@ private:
 	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
 	std::shared_ptr<framework::RasterizerStage> m_cullingOff;
 	std::shared_ptr<framework::DepthStencilStage> m_disableDepthTest;
+	std::shared_ptr<framework::BlendStage> m_alphaBlending;
 
 	// entity
 	struct Entity
@@ -440,7 +414,6 @@ private:
 
 	std::shared_ptr<framework::UniformBuffer> m_spatialBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
-	std::shared_ptr<framework::UniformBuffer> m_transparentDataBuffer;
 	unsigned int m_lightsCount;
 
 	framework::FreeCamera m_camera;
