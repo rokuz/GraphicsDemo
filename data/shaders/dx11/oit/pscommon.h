@@ -37,16 +37,16 @@ void blinn(float3 normal, float3 viewDir, out float3 diffColor, out float3 specC
 
 float3 computeColor(VS_OUTPUT input)
 {
-	float3 normalTS = normalMap.Sample(defaultSampler, input.uv0).rgb * 2.0 - 1.0;
+	float3 normalTS = normalMap.Sample(defaultSampler, input.uv0_depth.xy).rgb * 2.0 - 1.0;
 	float3x3 ts = float3x3(input.tangent, cross(input.normal, input.tangent), input.normal);
 	float3 normal = -normalize(mul(normalTS, ts));
 	
 	float3 diffColor, specColor, ambColor;
 	blinn(normal, viewDirection, diffColor, specColor, ambColor);
 	
-	float3 diffTex = diffuseMap.Sample(defaultSampler, input.uv0).rgb;
+	float3 diffTex = diffuseMap.Sample(defaultSampler, input.uv0_depth.xy).rgb;
 	float3 diffuse = diffTex * diffColor;
-	float3 specular = specularMap.Sample(defaultSampler, input.uv0).rgb * specColor;
+	float3 specular = specularMap.Sample(defaultSampler, input.uv0_depth.xy).rgb * specColor;
 	float3 ambient = diffTex * ambColor;
 	
 	return saturate(ambient + diffuse + specular);

@@ -10,7 +10,7 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
     float4 position : SV_POSITION;
-	float2 uv0 : TEXCOORD0;
+	float3 uv0_depth : TEXCOORD0;
 	float3 tangent : TEXCOORD1;
 	float3 normal : TEXCOORD2;
 };

@@ -22,16 +22,47 @@ float4 unpackColor(uint color)
 	return saturate(output);
 }
 
+/*public static void insertionSort(int[] arr) {
+    for(int i = 1; i < arr.length; i++){
+        int currElem = arr[i];
+        int prevKey = i - 1;
+        while(prevKey >= 0 && arr[prevKey] > currElem){
+            arr[prevKey+1] = arr[prevKey];
+            prevKey--; 
+        }
+        arr[prevKey+1] = currElem;
+    }
+}*/
+
+/*void insertionSort(uint startIndex)
+{
+	uint index = fragmentsList[startIndex].next;
+	[unroll(15)]
+	while (index != 0xffffffff)
+	{
+		uint nextIndex = fragmentsList[index].next;
+		
+		
+		index = nextIndex;
+	}
+}*/
+
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
 	uint2 upos = uint2(input.position.xy);
-	uint head = headBuffer[upos];
+	uint index = headBuffer[upos];
 
-	float4 color = float4(0, 0, 0, 0);
-	if (head != 0xffffffff)
+	float3 color = float3(0, 0, 0);
+	float alpha = 1;
+	
+	[unroll(16)]
+	while (index != 0xffffffff)
 	{
-		ListNode node = fragmentsList[head];
-		color = unpackColor(node.packedColor);
+		ListNode node = fragmentsList[index];
+		float4 c = unpackColor(node.packedColor);
+		alpha *= (1.0 - c.a);
+		color = lerp(color, c.rgb, c.a);
+		index = node.next;
 	}
-    return color;
+    return float4(color, alpha);
 }

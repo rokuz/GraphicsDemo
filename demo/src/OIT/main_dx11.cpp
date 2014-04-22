@@ -112,7 +112,7 @@ public:
 										 "");
 		m_transparentEntity.geometry->bindToGpuProgram(m_fragmentsListCreation);
 
-		m_transparentEntitiesData.resize(10);
+		m_transparentEntitiesData.resize(1);
 		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
 		{
 			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-15.0f, 15.0f));
@@ -150,6 +150,11 @@ public:
 		// a blend state to enable alpha-blending
 		m_alphaBlending.reset(new framework::BlendStage());
 		blendDesc = framework::BlendStage::getAlphaBlending();
+		for (int i = 0; i < 8; i++)
+		{
+			blendDesc.RenderTarget[i].SrcBlend = D3D11_BLEND_ONE;
+			blendDesc.RenderTarget[i].DestBlend = D3D11_BLEND_SRC_ALPHA;
+		}
 		m_alphaBlending->initWithDescription(blendDesc);
 		if (!m_alphaBlending->isValid()) exit();
 

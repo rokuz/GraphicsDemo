@@ -26,11 +26,39 @@ float4 main(VS_OUTPUT input) : SV_TARGET
 	uint previosHeadBufferValue;
 	InterlockedExchange(headBuffer[upos], newHeadBufferValue, previosHeadBufferValue);
 	
+	float currentDepth = input.uv0_depth.z;
 	ListNode node;
 	node.packedColor = packColor(float4(color, 0.5));
-	node.depth = input.position.z;
+	node.depth = currentDepth;
 	node.next = previosHeadBufferValue;
-	fragmentsList[newHeadBufferValue] = node;
+	
+	if (previosHeadBufferValue == 0xffffffff)
+	{
+		fragmentsList[newHeadBufferValue] = node;
+	}
+	else
+	{
+		fragmentsList[newHeadBufferValue].next = previosHeadBufferValue;
+		
+		uint newIndex = newHeadBufferValue;
+		uint nextIndex = previosHeadBufferValue;
+		
+		[unroll(15)]
+		while (nextIndex != 0xffffffff)
+		{
+			ListNode n = fragmentsList[nextIndex];
+			if (currentDepth < n.depth)
+			{
+				fragmentsList[newIndex].packedColor = n.packedColor;
+				fragmentsList[newIndex].depth = n.depth;
+				newIndex = nextIndex;
+			}
+			nextIndex = n.next;
+		}
+		
+		fragmentsList[newIndex].packedColor = node.packedColor;
+		fragmentsList[newIndex].depth = node.depth;
+	}
 	
 	return float4(0, 0, 0, 0);
 }
