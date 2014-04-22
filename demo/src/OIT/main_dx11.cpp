@@ -112,7 +112,7 @@ public:
 										 "");
 		m_transparentEntity.geometry->bindToGpuProgram(m_fragmentsListCreation);
 
-		m_transparentEntitiesData.resize(1);
+		m_transparentEntitiesData.resize(10);
 		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
 		{
 			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-15.0f, 15.0f));
