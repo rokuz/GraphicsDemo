@@ -39,6 +39,7 @@ public:
 		m_rotation = 0.0f;
 		m_pause = false;
 		m_renderDebug = false;
+		m_fragmentsBufferSize = 0;
 	}
 
 	virtual void init()
@@ -53,6 +54,9 @@ public:
 		// camera
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
+		// overlays
+		initOverlays(root);
+
 		// head buffer
 		m_headBuffer.reset(new framework::RenderTarget());
 		auto headBufferDesc = framework::RenderTarget::getDefaultDesc(m_info.windowWidth, 
@@ -63,11 +67,11 @@ public:
 		if (!m_headBuffer->isValid()) exit();
 
 		// fragments buffer
-		unsigned int fragmentsBufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight * 8;
+		m_fragmentsBufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight * 8;
 		unsigned int fragmentSize = 4 + 4 + 4; // color + depth + next
 		unsigned int fragmentsBufferFlags = D3D11_BUFFER_UAV_FLAG::D3D11_BUFFER_UAV_FLAG_COUNTER;
 		m_fragmentsBuffer.reset(new framework::UnorderedAccessBuffer());
-		if (!m_fragmentsBuffer->initDefaultUnorderedAccess(fragmentsBufferSize, fragmentSize, fragmentsBufferFlags)) exit();
+		if (!m_fragmentsBuffer->initDefaultUnorderedAccess(m_fragmentsBufferSize, fragmentSize, fragmentsBufferFlags)) exit();
 
 		// gpu programs
 		m_opaqueRendering.reset(new framework::GpuProgram());
@@ -238,6 +242,20 @@ public:
 		m_lightsBuffer->applyChanges();
 	}
 
+	void initOverlays(CEGUI::DefaultWindow* root)
+	{
+		CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
+		m_overlay = (CEGUI::Window*)winMgr.createWindow(getGuiFullName("/Label").c_str());
+		root->addChild(m_overlay);
+
+		m_overlay->setPosition(CEGUI::UVector2(CEGUI::UDim(1.0f, -300.0f), CEGUI::UDim(1.0f, -150.0f)));
+		m_overlay->setSize(CEGUI::USize(cegui_absdim(300.0f), cegui_absdim(150.0f)));
+		m_overlay->setProperty("HorzFormatting", "RightAligned");
+		m_overlay->setProperty("VertFormatting", "BottomAligned");
+		m_overlay->setText("Fragments buffer usage = 0%\nLost fragments = 0");
+		m_overlay->setVisible(m_renderDebug);
+	}
+
 	virtual void onResize(int width, int height)
 	{
 		m_camera.updateResolution(width, height);
@@ -323,6 +341,18 @@ public:
 	{
 		if (!m_renderDebug) return;
 
+		unsigned int bufferUsage = m_fragmentsBuffer->getActualSize();
+		unsigned int lostFragments = 0;
+		double usage = ((double)bufferUsage / (double)m_fragmentsBufferSize) * 100.0;
+		if (usage > 100.0)
+		{
+			usage = 100.0;
+			lostFragments = bufferUsage - m_fragmentsBufferSize;
+		}
+		static char buf[100];
+		sprintf(buf, "Fragments buffer usage = %d%%\nLost fragments = %d", (int)usage, lostFragments);
+		m_overlay->setText(buf);
+
 		//m_opaqueEntity.geometry->renderBoundingBox(m_mvp);
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
 		renderAxes(vp);
@@ -339,6 +369,7 @@ public:
 		if (key == CEGUI::Key::F1 && pressed)
 		{
 			m_renderDebug = !m_renderDebug;
+			m_overlay->setVisible(m_renderDebug);
 			return;
 		}
 		m_camera.onKeyButton(key, scancode, pressed);
@@ -426,6 +457,9 @@ private:
 	float m_rotation;
 	bool m_pause;
 	bool m_renderDebug;
+	unsigned int m_fragmentsBufferSize;
+
+	CEGUI::Window* m_overlay;
 };
 
 DECLARE_MAIN(OITApp);

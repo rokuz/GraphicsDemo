@@ -41,7 +41,8 @@ D3D11_BUFFER_DESC UnorderedAccessBuffer::getDefaultUnorderedAcces(unsigned int s
 }
 
 UnorderedAccessBuffer::UnorderedAccessBuffer() :
-	m_uavFlags(0)
+	m_uavFlags(0),
+	m_stagingBuffer(0)
 {
 	m_checkSizeOnSet = false;
 }
@@ -49,6 +50,17 @@ UnorderedAccessBuffer::UnorderedAccessBuffer() :
 UnorderedAccessBuffer::~UnorderedAccessBuffer()
 {
 	destroy();
+}
+
+void UnorderedAccessBuffer::destroy()
+{
+	if (m_stagingBuffer != 0)
+	{
+		m_stagingBuffer->Release();
+		m_stagingBuffer = 0;
+	}
+
+	UniformBuffer::destroy();
 }
 
 bool UnorderedAccessBuffer::initUnorderedAccess(size_t count, size_t structSize, const D3D11_BUFFER_DESC& desc, unsigned int flags)
@@ -84,8 +96,35 @@ bool UnorderedAccessBuffer::initUnorderedAccess(size_t count, size_t structSize,
 		m_view.init(device, m_buffer, m_desc.BindFlags);
 	}
 
+	D3D11_BUFFER_DESC stagingDesc;
+	stagingDesc.ByteWidth = 4;
+	stagingDesc.BindFlags = 0;
+	stagingDesc.MiscFlags = 0;
+	stagingDesc.Usage = D3D11_USAGE_STAGING;
+	stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	hr = device.device->CreateBuffer(&stagingDesc, nullptr, &m_stagingBuffer);
+	if (hr != S_OK)
+	{
+		destroy();
+		utils::Logger::toLog("Error: could not create an unordered access buffer, staging buffer creation failed.\n");
+		return false;
+	}
+
 	if (m_buffer != 0) initDestroyable();
 	return m_buffer != 0;
+}
+
+unsigned int UnorderedAccessBuffer::getActualSize()
+{
+	const Device& device = Application::instance()->getDevice();
+
+	device.context->CopyStructureCount(m_stagingBuffer, 0, m_view.asUAView());
+	D3D11_MAPPED_SUBRESOURCE subresource;
+	device.context->Map(m_stagingBuffer, 0, D3D11_MAP_READ, 0, &subresource);
+	unsigned int numActiveElements = *(unsigned int*)subresource.pData;
+	device.context->Unmap(m_stagingBuffer, 0);
+
+	return numActiveElements;
 }
 
 }

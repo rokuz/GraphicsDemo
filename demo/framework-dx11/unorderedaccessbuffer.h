@@ -50,8 +50,14 @@ public:
 		return m_uavFlags;
 	}
 
+	unsigned int getActualSize();
+
+protected:
+	virtual void destroy();
+
 private:
 	unsigned int m_uavFlags;
+	ID3D11Buffer* m_stagingBuffer;
 };
 
 }
