@@ -4,7 +4,7 @@
 struct ListNode
 {
 	uint packedColor;
-	float depth;
+	uint depthAndCoverage;
 	uint next;
 };
 globallycoherent RWTexture2D<uint> headBuffer;
@@ -16,7 +16,7 @@ uint packColor(float4 color)
 }
 
 [earlydepthstencil]
-float4 main(VS_OUTPUT input) : SV_TARGET
+float4 main(VS_OUTPUT input, uint coverage : SV_COVERAGE) : SV_TARGET
 {
 	float3 color = computeColor(input);
 	uint newHeadBufferValue = fragmentsList.IncrementCounter();
@@ -26,10 +26,10 @@ float4 main(VS_OUTPUT input) : SV_TARGET
 	uint previosHeadBufferValue;
 	InterlockedExchange(headBuffer[upos], newHeadBufferValue, previosHeadBufferValue);
 	
-	float currentDepth = input.uv0_depth.z;
+	uint currentDepth = f32tof16(input.uv0_depth.z);
 	ListNode node;
 	node.packedColor = packColor(float4(color, 0.3));
-	node.depth = currentDepth;
+	node.depthAndCoverage = currentDepth | (coverage << 16);
 	node.next = previosHeadBufferValue;
 	fragmentsList[newHeadBufferValue] = node;
 	

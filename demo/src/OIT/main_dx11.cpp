@@ -45,7 +45,7 @@ public:
 	virtual void init()
 	{
 		m_info.title = "Order Independent Transparency (DX11)";
-		m_info.samples = 0;
+		m_info.samples = 4;
 		m_info.flags.fullscreen = 0;
 	}
 
@@ -119,7 +119,7 @@ public:
 		m_transparentEntitiesData.resize(10);
 		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
 		{
-			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-15.0f, 15.0f));
+			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-25.0f, 25.0f));
 		}
 
 		// a blend state to disable color writing
@@ -354,9 +354,9 @@ public:
 		m_overlay->setText(buf);
 
 		//m_opaqueEntity.geometry->renderBoundingBox(m_mvp);
-		matrix44 vp = m_camera.getView() * m_camera.getProjection();
-		renderAxes(vp);
-		m_lightManager.renderDebugVisualization(vp);
+		//matrix44 vp = m_camera.getView() * m_camera.getProjection();
+		//renderAxes(vp);
+		//m_lightManager.renderDebugVisualization(vp);
 	}
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)

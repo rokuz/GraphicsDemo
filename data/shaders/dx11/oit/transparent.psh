@@ -1,7 +1,7 @@
 struct ListNode
 {
 	uint packedColor;
-	float depth;
+	uint depthAndCoverage;
 	uint next;
 };
 RWTexture2D<uint> headBuffer;
@@ -30,7 +30,7 @@ float4 unpackColor(uint color)
 	return saturate(output);
 }
 
-void insertionSort(uint startIndex, out NodeData arr[MAX_FRAGMENTS], out int counter)
+void insertionSort(uint startIndex, uint sampleIndex, out NodeData arr[MAX_FRAGMENTS], out int counter)
 {
 	counter = 0;
 	uint index = startIndex;
@@ -38,16 +38,22 @@ void insertionSort(uint startIndex, out NodeData arr[MAX_FRAGMENTS], out int cou
 	{
 		if (index != 0xffffffff)
 		{
-			arr[i].packedColor = fragmentsList[index].packedColor;
-			arr[i].depth = fragmentsList[index].depth;
-			index = fragmentsList[index].next;
-			counter++;
+			uint coverage = (fragmentsList[index].depthAndCoverage >> 16);
+			if (coverage & (1 << sampleIndex))
+			{
+				arr[counter].packedColor = fragmentsList[index].packedColor;
+				arr[counter].depth = f16tof32(fragmentsList[index].depthAndCoverage & 0x0000ffff);
+				counter++;
+			}
+			index = fragmentsList[index].next;			
 		}
-		else
-		{
-			arr[i].packedColor = 0;
-			arr[i].depth = 0;
-		}
+	}
+	
+	[unroll(MAX_FRAGMENTS)]
+	for (int f = counter; f < MAX_FRAGMENTS; f++)
+	{
+		arr[f].packedColor = 0;
+		arr[f].depth = 0;
 	}
 	
     for (int k = 1; k < MAX_FRAGMENTS; k++) 
@@ -66,17 +72,17 @@ void insertionSort(uint startIndex, out NodeData arr[MAX_FRAGMENTS], out int cou
     }
 }
 
-float4 main(VS_OUTPUT input) : SV_TARGET
+float4 main(VS_OUTPUT input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
 {
 	uint2 upos = uint2(input.position.xy);
 	uint index = headBuffer[upos];
-
+	
 	float3 color = float3(0, 0, 0);
 	float alpha = 1;
 	
 	NodeData arr[MAX_FRAGMENTS];
 	int counter;
-	insertionSort(index, arr, counter);
+	insertionSort(index, sampleIndex, arr, counter);
 	for (int i = 0; i < counter; i++)
 	{
 		float4 c = unpackColor(arr[i].packedColor);
