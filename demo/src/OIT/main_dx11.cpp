@@ -8,6 +8,7 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
+	SKYBOX_MAP,
 	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
@@ -61,7 +62,7 @@ public:
 		}
 		else
 		{
-			m_info.samples = 4;
+			m_info.samples = 0;
 		}
 
 		auto fullscreen = params.find("fullscreen");
@@ -125,10 +126,19 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
-		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.vsh");
-		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.gsh");
+		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.vsh");
+		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.gsh");
 		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.psh");
 		if (!m_transparentRendering->init(true)) exit();
+
+		m_skyboxRendering.reset(new framework::GpuProgram());
+		m_skyboxRendering->addShader("data/shaders/dx11/oit/screenquad.vsh");
+		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.gsh");
+		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.psh");
+		if (!m_skyboxRendering->init(true)) exit();
+		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
+		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
+		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		// opaque entity
 		m_opaqueEntity = initEntity("data/media/spaceship/spaceship.geom",
@@ -147,8 +157,13 @@ public:
 		m_transparentEntitiesData.resize(10);
 		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
 		{
-			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-25.0f, 25.0f));
+			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-40.0f, 40.0f));
+			m_transparentEntitiesData[i].model.pos_component().y = 0;
 		}
+
+		// skybox texture
+		m_skyboxTexture.reset(new framework::Texture());
+		if (!m_skyboxTexture->initWithDDS("data/media/textures/nightsky2.dds")) exit();
 
 		// a blend state to disable color writing
 		m_disableColorWriting.reset(new framework::BlendStage());
@@ -284,16 +299,6 @@ public:
 		m_overlay->setVisible(m_renderDebug);
 	}
 
-	virtual void onResize(int width, int height)
-	{
-		m_camera.updateResolution(width, height);
-
-		auto viewports = defaultRasterizer()->getViewports();
-		m_cullingOff->getViewports().clear();
-		m_cullingOff->getViewports().reserve(viewports.size());
-		m_cullingOff->getViewports() = viewports;
-	}
-
 	virtual void render(double elapsedTime)
 	{
 		m_camera.update(elapsedTime);
@@ -309,6 +314,26 @@ public:
 		batch.add(m_headBuffer);
 		batch.add(m_fragmentsBuffer, 0);
 		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
+
+		// render skybox
+		m_disableDepthTest->apply();
+		if (m_skyboxRendering->use())
+		{
+			SpatialData spatialData;
+			matrix44 model;
+			model.set_translation(m_camera.getPosition());
+			spatialData.modelViewProjection = model * m_camera.getView() * m_camera.getProjection();
+			spatialData.viewDirection = m_camera.getOrientation().z_direction();
+			m_spatialBuffer->setData(spatialData);
+			m_spatialBuffer->applyChanges();
+
+			m_skyboxRendering->setUniform<OITAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
+			m_skyboxRendering->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+			m_skyboxRendering->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
+
+			getPipeline().drawPoints(1);
+		}
+		m_disableDepthTest->cancel();
 
 		// render opaque objects
 		if (m_opaqueRendering->use())
@@ -448,6 +473,8 @@ private:
 	// gpu program to render transparent geometry by fragments list
 	std::shared_ptr<framework::GpuProgram> m_transparentRendering;
 
+	std::shared_ptr<framework::GpuProgram> m_skyboxRendering;
+
 	std::shared_ptr<framework::BlendStage> m_disableColorWriting;
 	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
 	std::shared_ptr<framework::RasterizerStage> m_cullingOff;
@@ -479,6 +506,8 @@ private:
 	std::shared_ptr<framework::UniformBuffer> m_spatialBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 	unsigned int m_lightsCount;
+
+	std::shared_ptr<framework::Texture> m_skyboxTexture;
 
 	framework::FreeCamera m_camera;
 
