@@ -32,6 +32,7 @@
 #include <locale>
 #include <memory>
 #include <time.h>
+#include <list>
 
 #undef max
 #undef min
@@ -169,6 +170,55 @@ vector3 Utils::random(float minValue, float maxValue)
 	float r3 = float(rand() % 1000) / float(999);
 	float d = maxValue - minValue;
 	return vector3(minValue + r1 * d, minValue + r2 * d, minValue + r3 * d);
+}
+
+std::map<std::string, int> Utils::parseCommandLine(const std::string& commandLine)
+{
+	std::map<std::string, int> result;
+	if (commandLine.size() < 2) return std::move(result);
+
+	std::list<size_t> offsets;
+	size_t offset = 0;
+	while (offset < commandLine.size())
+	{
+		offset = commandLine.find("--", offset);
+		if (offset == std::string::npos) break;
+		offsets.push_back(offset);
+
+		offset += 2;
+	}
+
+	for (auto it = offsets.begin(); it != offsets.end(); ++it)
+	{
+		size_t start = (*it) + 2;
+		auto it_next = it; it_next++;
+		size_t end = it_next == offsets.end() ? commandLine.size() : (*it_next);
+		std::string str = commandLine.substr(start, end - start);
+		
+		size_t p = str.find_first_of(' ');
+		if (p == std::string::npos)
+		{
+			result[str] = 0;
+		}
+		else
+		{
+			std::string s = str.substr(0, p);
+			size_t p2 = str.find_first_not_of(' ', p);
+			if (p2 == std::string::npos)
+			{
+				result[s] = 0;
+			}
+			else
+			{
+				size_t p3 = str.find_first_of(' ', p2);
+				std::string v = str.substr(p2, p3);
+				int iv = atoi(v.c_str());
+				result[s] = iv;
+			}
+		}
+	}
+
+	return std::move(result);
 }
 
 }

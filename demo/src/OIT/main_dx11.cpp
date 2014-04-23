@@ -42,11 +42,37 @@ public:
 		m_fragmentsBufferSize = 0;
 	}
 
-	virtual void init()
+	virtual void init(const std::map<std::string, int>& params)
 	{
 		m_info.title = "Order Independent Transparency (DX11)";
-		m_info.samples = 4;
-		m_info.flags.fullscreen = 0;
+
+		auto w = params.find("w");
+		auto h = params.find("h");
+		if (w != params.end() && h != params.end())
+		{
+			m_info.windowWidth = w->second;
+			m_info.windowHeight = h->second;
+		}
+
+		auto msaa = params.find("msaa");
+		if (msaa != params.end())
+		{
+			m_info.samples = msaa->second;
+		}
+		else
+		{
+			m_info.samples = 4;
+		}
+
+		auto fullscreen = params.find("fullscreen");
+		if (fullscreen != params.end())
+		{
+			m_info.flags.fullscreen = (fullscreen->second != 0 ? 1 : 0);
+		}
+		else
+		{
+			m_info.flags.fullscreen = 0;
+		}
 	}
 
 	virtual void startup(CEGUI::DefaultWindow* root)
@@ -66,7 +92,7 @@ public:
 		m_headBuffer->initWithDescription(headBufferDesc, false);
 		if (!m_headBuffer->isValid()) exit();
 
-		// fragments buffer
+		// fragments buffer (we use buffer 8 time more than screen size)
 		m_fragmentsBufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight * 8;
 		unsigned int fragmentSize = 4 + 4 + 4; // color + depth + next
 		unsigned int fragmentsBufferFlags = D3D11_BUFFER_UAV_FLAG::D3D11_BUFFER_UAV_FLAG_COUNTER;
@@ -413,11 +439,11 @@ private:
 	// buffer to store dynamic lists
 	std::shared_ptr<framework::UnorderedAccessBuffer> m_fragmentsBuffer;
 	
-	// gpu program to render solid geometry
+	// gpu program to render opaque geometry
 	std::shared_ptr<framework::GpuProgram> m_opaqueRendering;
-
+	// gpu program to create fragments list
 	std::shared_ptr<framework::GpuProgram> m_fragmentsListCreation;
-
+	// gpu program to render transparent geometry by fragments list
 	std::shared_ptr<framework::GpuProgram> m_transparentRendering;
 
 	std::shared_ptr<framework::BlendStage> m_disableColorWriting;

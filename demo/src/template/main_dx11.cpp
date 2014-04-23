@@ -28,7 +28,7 @@ public:
 	TestApp(){}
 	virtual ~TestApp(){}
 
-	virtual void init()
+	virtual void init(const std::map<std::string, int>& params)
 	{
 		m_info.title = "Template application (DX11)";
 		m_info.samples = 4;

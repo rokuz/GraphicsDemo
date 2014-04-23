@@ -72,7 +72,7 @@ Application* Application::instance()
 	return m_self;
 }
 
-int Application::run(Application* self)
+int Application::run(Application* self, const std::string& commandLine)
 {
 	m_self = self;
 
@@ -88,7 +88,8 @@ int Application::run(Application* self)
 		return EXIT_FAILURE;
 	}
 
-	init();
+	auto params = utils::Utils::parseCommandLine(commandLine);
+	init(params);
 	m_isRunning = true;
 
 	// create a window
@@ -122,6 +123,12 @@ int Application::run(Application* self)
 
 	// user-defined initialization
 	startup(m_rootWindow);
+
+	// set fullscreen
+	if (m_info.flags.fullscreen)
+	{
+		m_device.swapChain->SetFullscreenState(TRUE, NULL);
+	}
 
 	mainLoop();
 
@@ -380,11 +387,10 @@ bool Application::initSwapChain(Device& device)
 	}
 
 	state.BufferUsage = DXGI_USAGE_SHADER_INPUT | DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	state.BufferCount = 2;
+	state.BufferCount = 1;
 	state.OutputWindow = m_window.getHandle();
-	state.Windowed = ((bool)m_info.flags.fullscreen == false);
+	state.Windowed = TRUE;
 	state.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
 	state.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	// initialization
@@ -408,7 +414,12 @@ bool Application::initSwapChain(Device& device)
 
 void Application::destroyDevice()
 {
-	if (m_device.swapChain != 0) { m_device.swapChain->Release(); m_device.swapChain = 0; }
+	if (m_device.swapChain != 0) 
+	{ 
+		m_device.swapChain->SetFullscreenState(FALSE, NULL);
+		m_device.swapChain->Release(); 
+		m_device.swapChain = 0; 
+	}
 	if (m_device.context != 0) 
 	{ 
 		m_device.context->ClearState();

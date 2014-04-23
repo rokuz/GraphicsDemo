@@ -24,6 +24,7 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 #include <string>
+#include <map>
 #include "vector.h"
 #include "quaternion.h"
 
@@ -44,6 +45,7 @@ public:
 	static std::string fromUnicode(const std::wstring& str);
 	static std::wstring toUnicode(const std::string& str);
 	static vector3 random(float minValue = 0.0f, float maxValue = 1.0f);
+	static std::map<std::string, int> parseCommandLine(const std::string& commandLine);
 };
 
 }

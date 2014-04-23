@@ -71,7 +71,7 @@ public:
 	Application();
 	virtual ~Application(){}
 
-	virtual void init(){}
+	virtual void init(const std::map<std::string, int>& params){}
 	virtual void startup(CEGUI::DefaultWindow* root){}
 	virtual void render(double elapsedTime){}
 	virtual void shutdown(){}
@@ -81,7 +81,7 @@ public:
 	virtual void onMouseMove(double xpos, double ypos){}
 
 	static Application* instance();
-	int run(Application* self);
+	int run(Application* self, const std::string& commandLine);
 
 	const Device& getDevice() const { return m_device; }
 	std::weak_ptr<GpuProgram> getUsingGpuProgram() const { return m_usingGpuProgram; }
@@ -194,7 +194,7 @@ int CALLBACK WinMain(HINSTANCE hInstance,					 \
 	utils::Logger::start(utils::Logger::IDE_OUTPUT |		 \
 						 utils::Logger::FILE);				 \
     A *app = new A();										 \
-    int result = app->run(app);								 \
+	int result = app->run(app, lpCmdLine);					 \
     delete app;												 \
 	utils::Logger::finish();								 \
     return result;											 \

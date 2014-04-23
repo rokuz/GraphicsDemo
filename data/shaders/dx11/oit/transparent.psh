@@ -19,6 +19,13 @@ struct VS_OUTPUT
 };
 
 static const int MAX_FRAGMENTS = 16;
+static const NodeData INITIAL_SORTED_FRAGMENTS[MAX_FRAGMENTS] = 
+{ 
+	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
+	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
+	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
+	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0
+};
 
 float4 unpackColor(uint color)
 {
@@ -30,7 +37,7 @@ float4 unpackColor(uint color)
 	return saturate(output);
 }
 
-void insertionSort(uint startIndex, uint sampleIndex, out NodeData arr[MAX_FRAGMENTS], out int counter)
+void insertionSort(uint startIndex, uint sampleIndex, inout NodeData sortedFragments[MAX_FRAGMENTS], out int counter)
 {
 	counter = 0;
 	uint index = startIndex;
@@ -41,34 +48,27 @@ void insertionSort(uint startIndex, uint sampleIndex, out NodeData arr[MAX_FRAGM
 			uint coverage = (fragmentsList[index].depthAndCoverage >> 16);
 			if (coverage & (1 << sampleIndex))
 			{
-				arr[counter].packedColor = fragmentsList[index].packedColor;
-				arr[counter].depth = f16tof32(fragmentsList[index].depthAndCoverage & 0x0000ffff);
+				sortedFragments[counter].packedColor = fragmentsList[index].packedColor;
+				sortedFragments[counter].depth = f16tof32(fragmentsList[index].depthAndCoverage);
 				counter++;
 			}
 			index = fragmentsList[index].next;			
 		}
 	}
 	
-	[unroll(MAX_FRAGMENTS)]
-	for (int f = counter; f < MAX_FRAGMENTS; f++)
-	{
-		arr[f].packedColor = 0;
-		arr[f].depth = 0;
-	}
-	
     for (int k = 1; k < MAX_FRAGMENTS; k++) 
 	{
         int j = k;
-        NodeData t = arr[k];
+        NodeData t = sortedFragments[k];
 		
-        while (arr[j - 1].depth < t.depth) 
+        while (sortedFragments[j - 1].depth < t.depth) 
 		{
-            arr[j] = arr[j - 1];
+            sortedFragments[j] = sortedFragments[j - 1];
             j--;
             if (j <= 0) { break; }
         }
 		
-		if (j != k) { arr[j] = t; }
+		if (j != k) { sortedFragments[j] = t; }
     }
 }
 
@@ -80,12 +80,12 @@ float4 main(VS_OUTPUT input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
 	float3 color = float3(0, 0, 0);
 	float alpha = 1;
 	
-	NodeData arr[MAX_FRAGMENTS];
+	NodeData sortedFragments[MAX_FRAGMENTS] = INITIAL_SORTED_FRAGMENTS;
 	int counter;
-	insertionSort(index, sampleIndex, arr, counter);
+	insertionSort(index, sampleIndex, sortedFragments, counter);
 	for (int i = 0; i < counter; i++)
 	{
-		float4 c = unpackColor(arr[i].packedColor);
+		float4 c = unpackColor(sortedFragments[i].packedColor);
 		alpha *= (1.0 - c.a);
 		color = lerp(color, c.rgb, c.a);
 	}
