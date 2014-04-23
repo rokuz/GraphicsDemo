@@ -56,6 +56,7 @@ Application::Application() :
 	m_guiRenderer(0), 
 	m_rootWindow(0), 
 	m_fpsLabel(0), 
+	m_legendLabel(0),
 	m_fpsStorage(0), 
 	m_timeSinceLastFpsUpdate(0),
 	m_averageFps(0), 
@@ -547,17 +548,35 @@ void Application::initGui()
 
 	m_fpsLabel = (CEGUI::Window*)winMgr.createWindow(getGuiFullName("/Label").c_str());
 	m_rootWindow->addChild(m_fpsLabel);
-
 	m_fpsLabel->setPosition(CEGUI::UVector2(CEGUI::UDim(1.0f, -150.0f), cegui_reldim(0.0)));
 	m_fpsLabel->setSize(CEGUI::USize(cegui_absdim(150.0f), cegui_absdim(25.0f)));
 	m_fpsLabel->setProperty("HorzFormatting", "RightAligned");
 	m_fpsLabel->setText("0 fps");
+
+	m_legendLabel = (CEGUI::Window*)winMgr.createWindow(getGuiFullName("/Label").c_str());
+	m_rootWindow->addChild(m_legendLabel);
+	m_legendLabel->setPosition(CEGUI::UVector2(CEGUI::UDim(0.0f, 0.0f), CEGUI::UDim(0.0f, 0.0f)));
+	m_legendLabel->setSize(CEGUI::USize(cegui_absdim(500.0f), cegui_absdim(500.0f)));
+	m_legendLabel->setProperty("HorzFormatting", "LeftAligned");
+	m_legendLabel->setProperty("VertFormatting", "TopAligned");
+	m_legendLabel->setVisible(!m_legend.empty());
+	m_legendLabel->setText(m_legend.c_str());
 }
 
 void Application::destroyGui()
 {
 	CEGUI::System::destroy();
 	CEGUI::Direct3D11Renderer::destroy(static_cast<CEGUI::Direct3D11Renderer&>(*m_guiRenderer));
+}
+
+void Application::setLegend(const std::string& legend)
+{
+	m_legend = legend;
+	if (m_legendLabel != 0)
+	{
+		m_legendLabel->setVisible(!m_legend.empty());
+		m_legendLabel->setText(m_legend.c_str());
+	}
 }
 
 bool Application::isFeatureLevelSupported(D3D_FEATURE_LEVEL level)

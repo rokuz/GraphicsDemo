@@ -117,6 +117,8 @@ protected:
 
 	static std::string getGuiFullName(const std::string& name);
 
+	void setLegend(const std::string& legend);
+
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
 
@@ -137,9 +139,11 @@ private:
 	CEGUI::Renderer* m_guiRenderer;
 	CEGUI::DefaultWindow* m_rootWindow;
 	CEGUI::Window* m_fpsLabel;
+	CEGUI::Window* m_legendLabel;
 	double m_timeSinceLastFpsUpdate;
 	double m_averageFps;
 	size_t m_framesCounter;
+	std::string m_legend;
 	Pipeline m_pipeline;
 	std::weak_ptr<GpuProgram> m_usingGpuProgram;
 

@@ -73,6 +73,8 @@ public:
 		{
 			m_info.flags.fullscreen = 0;
 		}
+
+		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 	}
 
 	virtual void startup(CEGUI::DefaultWindow* root)
