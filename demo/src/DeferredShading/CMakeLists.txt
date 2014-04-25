@@ -1,0 +1,5 @@
+set(DEMO_NAME DeferredShading)
+set(SOURCE_OGL "skipped")
+set(SOURCE_DX11 main_dx11.cpp)
+
+INIT_DEMO(${DEMO_NAME} ${SOURCE_OGL} ${SOURCE_DX11})

@@ -24,6 +24,7 @@
 #pragma once
 #include "structs.h"
 #include <utility>
+#include <vector>
 
 namespace framework
 {
@@ -39,8 +40,6 @@ class ResourceView
 	static D3D11_DEPTH_STENCIL_VIEW_DESC getDefaultDepthStencilDesc();
 	static D3D11_UNORDERED_ACCESS_VIEW_DESC getDefaultUAVDesc();
 
-	ResourceView();
-	~ResourceView();
 	void setShaderDesc(const D3D11_SHADER_RESOURCE_VIEW_DESC& desc);
 	void setRenderTargetDesc(const D3D11_RENDER_TARGET_VIEW_DESC& desc);
 	void setDepthStencilDesc(const D3D11_DEPTH_STENCIL_VIEW_DESC& desc);
@@ -50,6 +49,9 @@ class ResourceView
 	bool isValid() const;
 
 public:
+	ResourceView();
+	~ResourceView();
+
 	ID3D11ShaderResourceView* asShaderView() const { return m_shaderView; }
 	ID3D11RenderTargetView* asRenderTargetView() const { return m_renderTargetView; }
 	ID3D11DepthStencilView* asDepthStencilView() const { return m_depthStencilView; }

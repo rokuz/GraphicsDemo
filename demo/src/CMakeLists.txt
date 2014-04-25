@@ -72,3 +72,4 @@ endmacro(INIT_DEMO)
 #list of demos
 add_subdirectory(template)
 add_subdirectory(OIT)
+add_subdirectory(DeferredShading)

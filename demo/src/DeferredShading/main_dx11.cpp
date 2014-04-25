@@ -1,7 +1,7 @@
 #include "application.h"
 
 // uniforms
-DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
+DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
 	SPATIAL_DATA,
 	LIGHTS_DATA,
 	LIGHTS_COUNT,
@@ -11,7 +11,7 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	SKYBOX_MAP,
 	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
-#define UF framework::UniformBase<OITAppUniforms>::Uniform
+#define UF framework::UniformBase<DSAppUniforms>::Uniform
 
 // spatial data
 #pragma pack (push, 1)
@@ -28,24 +28,22 @@ struct SpatialData
 const int MAX_LIGHTS_COUNT = 16;
 
 // application
-class OITApp : public framework::Application
+class DeferredShadingApp : public framework::Application
 {
 	struct Entity;
 	struct EntityData;
 
 public:
-	OITApp()
+	DeferredShadingApp()
 	{
 		m_lightsCount = 0;
-		m_rotation = 0.0f;
 		m_pause = false;
 		m_renderDebug = false;
-		m_fragmentsBufferSize = 0;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
 	{
-		m_info.title = "Order Independent Transparency (DX11)";
+		m_info.title = "Deferred shading (DX11)";
 
 		auto w = params.find("w");
 		auto h = params.find("h");
@@ -75,7 +73,7 @@ public:
 			m_info.flags.fullscreen = 0;
 		}
 
-		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
+		//setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 	}
 
 	virtual void startup(CEGUI::DefaultWindow* root)
@@ -86,79 +84,38 @@ public:
 		// overlays
 		initOverlays(root);
 
-		// head buffer
-		m_headBuffer.reset(new framework::RenderTarget());
-		auto headBufferDesc = framework::RenderTarget::getDefaultDesc(m_info.windowWidth, 
-																	  m_info.windowHeight, 
-																	  DXGI_FORMAT_R32_UINT);
-		headBufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-		m_headBuffer->initWithDescription(headBufferDesc, false);
-		if (!m_headBuffer->isValid()) exit();
-
-		// fragments buffer (we use buffer 8 time more than screen size)
-		m_fragmentsBufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight * 8;
-		unsigned int fragmentSize = 4 + 4 + 4; // color + depth + next
-		unsigned int fragmentsBufferFlags = D3D11_BUFFER_UAV_FLAG::D3D11_BUFFER_UAV_FLAG_COUNTER;
-		m_fragmentsBuffer.reset(new framework::UnorderedAccessBuffer());
-		if (!m_fragmentsBuffer->initDefaultUnorderedAccess(m_fragmentsBufferSize, fragmentSize, fragmentsBufferFlags)) exit();
-
 		// gpu programs
 		m_opaqueRendering.reset(new framework::GpuProgram());
 		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.vsh");
 		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.psh");
 		if (!m_opaqueRendering->init()) exit();
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
-
-		m_fragmentsListCreation.reset(new framework::GpuProgram());
-		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/opaque.vsh");
-		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/fragmentslist.psh");
-		if (!m_fragmentsListCreation->init()) exit();
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
-		
-		m_transparentRendering.reset(new framework::GpuProgram());
-		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.vsh");
-		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.gsh");
-		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.psh");
-		if (!m_transparentRendering->init(true)) exit();
+		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::SPATIAL_DATA, "spatialData");
+		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_skyboxRendering.reset(new framework::GpuProgram());
 		m_skyboxRendering->addShader("data/shaders/dx11/oit/screenquad.vsh");
 		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.gsh");
 		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.psh");
 		if (!m_skyboxRendering->init(true)) exit();
-		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
-		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
-		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SPATIAL_DATA, "spatialData");
+		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
+		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
-		// opaque entity
-		m_opaqueEntity = initEntity("data/media/spaceship/spaceship.geom",
-									"data/media/spaceship/spaceship_diff.dds",
-									"data/media/spaceship/spaceship_normal.dds",
-									"data/media/spaceship/spaceship_specular.dds");
-		m_opaqueEntity.geometry->bindToGpuProgram(m_opaqueRendering);
+		// entity
+		m_entity = initEntity("data/media/cube/cube.geom",
+							  "data/media/cube/cube_diff.dds",
+							  "data/media/cube/cube_normal.dds",
+							  "");
+		m_entity.geometry->bindToGpuProgram(m_opaqueRendering);
 
-		// transparent entity
-		m_transparentEntity = initEntity("data/media/cube/cube.geom",
-										 "data/media/cube/cube_diff.dds",
-										 "data/media/cube/cube_normal.dds",
-										 "");
-		m_transparentEntity.geometry->bindToGpuProgram(m_fragmentsListCreation);
-
-		m_transparentEntitiesData.resize(10);
-		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+		m_entitiesData.resize(25);
+		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
-			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-40.0f, 40.0f));
-			m_transparentEntitiesData[i].model.pos_component().y = 0;
+			m_entitiesData[i].model.set_translation(utils::Utils::random(-100.0f, 100.0f));
 		}
 
 		// skybox texture
@@ -304,16 +261,7 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
-		// clear only head buffer
-		framework::UnorderedAccessibleBatch clearbatch;
-		clearbatch.add(m_headBuffer);
-		getPipeline().clearUnorderedAccessBatch(clearbatch);
-		
-		// set render target and head/fragments buffers
-		framework::UnorderedAccessibleBatch batch;
-		batch.add(m_headBuffer);
-		batch.add(m_fragmentsBuffer, 0);
-		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
+		useDefaultRenderTarget();
 
 		// render skybox
 		m_disableDepthTest->apply();
@@ -327,9 +275,9 @@ public:
 			m_spatialBuffer->setData(spatialData);
 			m_spatialBuffer->applyChanges();
 
-			m_skyboxRendering->setUniform<OITAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
-			m_skyboxRendering->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
-			m_skyboxRendering->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
+			m_skyboxRendering->setUniform<DSAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
+			m_skyboxRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+			m_skyboxRendering->setUniform<DSAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
 
 			getPipeline().drawPoints(1);
 		}
@@ -338,32 +286,10 @@ public:
 		// render opaque objects
 		if (m_opaqueRendering->use())
 		{
-			renderEntity(m_opaqueEntity, m_opaqueEntityData);
-		}
-
-		// build lists of fragments for transparent objects
-		if (m_fragmentsListCreation->use())
-		{
-			m_cullingOff->apply();
-			m_disableColorWriting->apply();
-			m_disableDepthWriting->apply();
-			for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
-				renderEntity(m_transparentEntity, m_transparentEntitiesData[i]);
+				renderEntity(m_entity, m_entitiesData[i]);
 			}
-			m_disableDepthWriting->cancel();
-			m_disableColorWriting->cancel();
-			m_cullingOff->cancel();
-		}
-
-		// render transparent objects
-		if (m_transparentRendering->use())
-		{
-			m_disableDepthTest->apply();
-			m_alphaBlending->apply();
-			getPipeline().drawPoints(1);
-			m_disableDepthTest->cancel();
-			m_alphaBlending->cancel();
 		}
 
 		// debug rendering
@@ -380,12 +306,12 @@ public:
 		m_spatialBuffer->setData(spatialData);
 		m_spatialBuffer->applyChanges();
 
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+		m_opaqueRendering->setUniform<DSAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
+		m_opaqueRendering->setUniform<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+		m_opaqueRendering->setUniform<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
+		m_opaqueRendering->setUniform<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
+		m_opaqueRendering->setUniform<DSAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
+		m_opaqueRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
 
 		entity.geometry->renderAllMeshes();
 	}
@@ -394,22 +320,13 @@ public:
 	{
 		if (!m_renderDebug) return;
 
-		unsigned int bufferUsage = m_fragmentsBuffer->getActualSize();
-		unsigned int lostFragments = 0;
-		double usage = ((double)bufferUsage / (double)m_fragmentsBufferSize) * 100.0;
-		if (usage > 100.0)
-		{
-			usage = 100.0;
-			lostFragments = bufferUsage - m_fragmentsBufferSize;
-		}
-		static char buf[100];
-		sprintf(buf, "Fragments buffer usage = %d%%\nLost fragments = %d", (int)usage, lostFragments);
-		m_overlay->setText(buf);
+		//static char buf[100];
+		//sprintf(buf, "", );
+		//m_overlay->setText(buf);
 
-		//m_opaqueEntity.geometry->renderBoundingBox(m_mvp);
-		//matrix44 vp = m_camera.getView() * m_camera.getProjection();
-		//renderAxes(vp);
-		//m_lightManager.renderDebugVisualization(vp);
+		matrix44 vp = m_camera.getView() * m_camera.getProjection();
+		renderAxes(vp);
+		m_lightManager.renderDebugVisualization(vp);
 	}
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)
@@ -441,41 +358,18 @@ public:
 	void update(double elapsedTime)
 	{
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
-
-		quaternion quat;
-		quat.set_rotate_x(n_deg2rad(-90.0f));
-		quaternion quat2;
-		quat2.set_rotate_z(-n_deg2rad(m_rotation));
-		m_opaqueEntityData.model = matrix44(quat * quat2);
-		quaternion quat3;
-		quat3.set_rotate_y(-n_deg2rad(m_rotation));
-		m_opaqueEntityData.model.set_translation(quat3.z_direction() * 30.0f);
-		m_opaqueEntityData.mvp = m_opaqueEntityData.model * vp;
-
-		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
-			m_transparentEntitiesData[i].mvp = m_transparentEntitiesData[i].model * vp;
+			m_entitiesData[i].mvp = m_entitiesData[i].model * vp;
 		}
-
-		m_rotation += (m_pause ? 0 : (float)elapsedTime * 70.0f);
 	}
 
 private:
-	// texture to store heads of dynamic lists
-	std::shared_ptr<framework::RenderTarget> m_headBuffer;
-	// buffer to store dynamic lists
-	std::shared_ptr<framework::UnorderedAccessBuffer> m_fragmentsBuffer;
-	
 	// gpu program to render opaque geometry
 	std::shared_ptr<framework::GpuProgram> m_opaqueRendering;
-	// gpu program to create fragments list
-	std::shared_ptr<framework::GpuProgram> m_fragmentsListCreation;
-	// gpu program to render transparent geometry by fragments list
-	std::shared_ptr<framework::GpuProgram> m_transparentRendering;
-	// gpu program to render skybox
+
 	std::shared_ptr<framework::GpuProgram> m_skyboxRendering;
 
-	// pipeline stages
 	std::shared_ptr<framework::BlendStage> m_disableColorWriting;
 	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
 	std::shared_ptr<framework::RasterizerStage> m_cullingOff;
@@ -498,11 +392,8 @@ private:
 	};
 
 	// opaque entity
-	Entity m_opaqueEntity;
-	EntityData m_opaqueEntityData;
-	// transparent entity
-	Entity m_transparentEntity;
-	std::vector<EntityData> m_transparentEntitiesData;
+	Entity m_entity;
+	std::vector<EntityData> m_entitiesData;
 
 	std::shared_ptr<framework::UniformBuffer> m_spatialBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
@@ -512,12 +403,10 @@ private:
 
 	framework::FreeCamera m_camera;
 
-	float m_rotation;
 	bool m_pause;
 	bool m_renderDebug;
-	unsigned int m_fragmentsBufferSize;
 
 	CEGUI::Window* m_overlay;
 };
 
-DECLARE_MAIN(OITApp);
+DECLARE_MAIN(DeferredShadingApp);

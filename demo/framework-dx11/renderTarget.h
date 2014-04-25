@@ -25,6 +25,7 @@
 #include "structs.h"
 #include "destroyable.h"
 #include "resourceview.h"
+#include <vector>
 
 namespace framework
 {
@@ -42,6 +43,7 @@ public:
 
 	void initWithSwapChain(const Device& device);
 	void initWithDescription(const D3D11_TEXTURE2D_DESC& desc, bool withDepth);
+	void initWithDescriptions(const std::vector<D3D11_TEXTURE2D_DESC>& descs, bool withDepth);
 	
 	bool isValid() const;
 	const ResourceView& getView(int index) const;
@@ -52,11 +54,13 @@ public:
 
 private:
 	virtual void destroy();
+	bool createDepth(size_t index);
+	bool createView(size_t index);
 
 	bool m_isSwapChain;
-	ID3D11Texture2D* m_colorBuffer;
-	D3D11_TEXTURE2D_DESC m_colorBufferDesc;
-	ResourceView m_view;
+	std::vector<ID3D11Texture2D*> m_colorBuffer;
+	std::vector<D3D11_TEXTURE2D_DESC> m_colorBufferDesc;
+	std::vector<ResourceView> m_view;
 	bool m_useDepth;
 	ID3D11Texture2D* m_depthBuffer;
 	D3D11_TEXTURE2D_DESC m_depthBufferDesc;
