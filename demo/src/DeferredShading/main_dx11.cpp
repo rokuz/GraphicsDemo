@@ -86,8 +86,8 @@ public:
 
 		// gpu programs
 		m_opaqueRendering.reset(new framework::GpuProgram());
-		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.vsh");
-		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.psh");
+		m_opaqueRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.vsh");
+		m_opaqueRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.psh");
 		if (!m_opaqueRendering->init()) exit();
 		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");
@@ -97,9 +97,9 @@ public:
 		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_skyboxRendering.reset(new framework::GpuProgram());
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/screenquad.vsh");
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.gsh");
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.psh");
+		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/screenquad.vsh");
+		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.gsh");
+		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.psh");
 		if (!m_skyboxRendering->init(true)) exit();
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
