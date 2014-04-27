@@ -164,12 +164,12 @@ LightRawData LightManager::getRawLightData(size_t index)
 	if (index >= m_lightSources.size())
 	{
 		result.position = vector3(0, 0, 0);
-		result.direction = vector3(0, 0, 0);
+		result.direction = vector3(0, 0, 1);
 		result.lightType = (unsigned int)LightType::OmniLight;
 		result.diffuseColor = vector3(1, 1, 1);
 		result.falloff = 1000.0f;
 		result.ambientColor = vector3(0.3f, 0.3f, 0.3f);
-		result.angle = 60.0f;
+		result.angle = n_deg2rad(60.0f);
 		result.specularColor = vector3(1, 1, 1);
 		
 		return result;
@@ -183,7 +183,7 @@ LightRawData LightManager::getRawLightData(size_t index)
 	result.diffuseColor = source.diffuseColor;
 	result.falloff = source.falloff;
 	result.ambientColor = source.ambientColor;
-	result.angle = source.angle;
+	result.angle = n_deg2rad(source.angle);
 	result.specularColor = source.specularColor;
 
 	return result;

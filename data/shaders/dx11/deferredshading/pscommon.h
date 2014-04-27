@@ -18,7 +18,40 @@ texture2D normalMap : register(t2);
 texture2D specularMap : register(t3);
 SamplerState defaultSampler;
 
-void blinn(float3 normal, float worldPos, out float3 diffColor, out float3 specColor, out float3 ambColor)
+void processLight(const uint lightIndex, float3 worldPos, out float3 lightDir, out float lightPower)
+{
+	[branch]
+	if (lightsData[lightIndex].lightType == 0) // omni light
+	{
+		float3 ldv = worldPos - lightsData[lightIndex].position;
+		lightDir = normalize(ldv);
+		float falloff = 1.0 - saturate(length(ldv) / (lightsData[lightIndex].falloff + 1e-7));
+		lightPower = falloff * falloff;
+	}
+	else if (lightsData[lightIndex].lightType == 1) // spot light
+	{
+		float3 ldv = worldPos - lightsData[lightIndex].position;
+		lightDir = normalize(ldv);
+		
+		float cosAng = dot(lightDir, lightsData[lightIndex].direction);
+		float cosOuter = cos(lightsData[lightIndex].angle);
+		lightPower = smoothstep(cosOuter, cosOuter + 0.1, cosAng);
+		
+		[branch]
+		if (lightPower > 1e-5)
+		{
+			float falloff = 1.0 - saturate(length(ldv) / (lightsData[lightIndex].falloff + 1e-7));
+			lightPower *= (falloff * falloff);
+		}
+	}
+	else // direct light
+	{
+		lightDir = lightsData[lightIndex].direction;
+		lightPower = 1;
+	}
+}
+
+void blinn(float3 normal, float3 worldPos, out float3 diffColor, out float3 specColor, out float3 ambColor)
 {
 	const float specPower = 30.0;
 	
@@ -31,34 +64,15 @@ void blinn(float3 normal, float worldPos, out float3 diffColor, out float3 specC
 	{
 		float3 lightDir;
 		float lightPower;
+		processLight(i, worldPos, lightDir, lightPower);
 		
-		[branch]
-		if (lightsData[i].lightType == 0) // omni light
-		{
-			float3 ldv = worldPos - lightsData[i].position;
-			lightDir = normalize(ldv);
-			float falloff = 1.0 - saturate(length(ldv) / (lightsData[i].falloff + 1e-7));
-			lightPower = falloff * falloff;
-		}
-		else if (lightsData[i].lightType == 1) // spot light
-		{
-			float3 ldv = worldPos - lightsData[i].position;
-			lightDir = normalize(ldv);
-			float falloff = 1.0 - saturate(length(ldv) / (lightsData[i].falloff + 1e-7));
-			lightPower = falloff * falloff;
-		}
-		else // direct light
-		{
-			lightDir = lightsData[i].direction;
-			lightPower = 1;
-		}
 		float ndol = max(0.0, dot(lightDir, normal));
-		diffColor += lightsData[i].diffuseColor * ndol;
+		diffColor += lightsData[i].diffuseColor * ndol * lightPower;
 		
 		float3 h = normalize(viewDir + lightDir);
-		specColor += lightsData[i].specularColor * pow (max(dot(normal, h), 0.0), specPower);
+		specColor += lightsData[i].specularColor * pow (max(dot(normal, h), 0.0), specPower) * lightPower;
 		
-		ambColor += lightsData[i].ambientColor;
+		ambColor += lightsData[i].ambientColor * lightPower;
 	}
 }
 

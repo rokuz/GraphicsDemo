@@ -223,7 +223,7 @@ public:
 		// directional light
 		framework::LightSource source;
 		source.type = framework::LightType::DirectLight;
-		source.position = vector3(0, 15, 0);
+		source.position = vector3(-11, 11, -1);
 		vector3 dir(1, -1, 1);
 		dir.norm();
 		source.orientation.set_from_axes(vector3(0, 0, 1), dir);
@@ -232,16 +232,14 @@ public:
 		source.ambientColor = vector3(0.3f, 0.3f, 0.3f);
 		m_lightManager.addLightSource(source);
 
-		// directional light 2
+		// omni light
 		framework::LightSource source2;
-		source2.type = framework::LightType::DirectLight;
+		source2.type = framework::LightType::OmniLight;
 		source2.position = vector3(15, 15, 0);
-		dir = vector3(0, -1, 1);
-		dir.norm();
-		source2.diffuseColor = vector3(0.96f, 0.81f, 0.59f) * 0.5f;
+		source2.diffuseColor = vector3(0.96f, 0.81f, 0.59f);
 		source2.specularColor = vector3(0.1f, 0.1f, 0.1f);
 		source2.ambientColor = vector3(0.0f, 0.0f, 0.0f);
-		source2.orientation.set_from_axes(vector3(0, 0, 1), dir);
+		source2.falloff = 40.0f;
 		m_lightManager.addLightSource(source2);
 
 		// light buffer
