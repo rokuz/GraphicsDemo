@@ -1,8 +1,3 @@
-texture2D diffuseMap;
-texture2D normalMap;
-texture2D specularMap;
-SamplerState defaultSampler;
-
 struct LightData
 {
 	float3 positionOrDirection;
@@ -14,6 +9,11 @@ struct LightData
 	float3 specularColor;
 };
 StructuredBuffer<LightData> lightsData;
+
+texture2D diffuseMap;
+texture2D normalMap;
+texture2D specularMap;
+SamplerState defaultSampler;
 
 void blinn(float3 normal, float3 viewDir, out float3 diffColor, out float3 specColor, out float3 ambColor)
 {

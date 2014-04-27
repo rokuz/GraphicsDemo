@@ -7,18 +7,23 @@ struct VS_INPUT
 	float3 binormal : BINORMAL;
 };
 
-struct VS_OUTPUT
+struct VS_OUTPUT_GBUF
 {
     float4 position : SV_POSITION;
-	float3 uv0_depth : TEXCOORD0;
+	float2 uv0 : TEXCOORD0;
 	float3 tangent : TEXCOORD1;
 	float3 normal : TEXCOORD2;
+	float3 worldPos : TEXCOORD3;
 };
 
-cbuffer spatialData
+cbuffer entityData
 {
 	matrix modelViewProjection : packoffset(c0);
 	matrix model : packoffset(c4);
-	float3 viewDirection : packoffset(c8);
-	uint lightsCount : packoffset(c8.w);
+};
+
+cbuffer onFrameData
+{
+	float3 viewPosition : packoffset(c0);
+	uint lightsCount : packoffset(c0.w);
 };

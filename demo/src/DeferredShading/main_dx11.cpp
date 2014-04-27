@@ -2,7 +2,8 @@
 
 // uniforms
 DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
-	SPATIAL_DATA,
+	ENTITY_DATA,
+	ONFRAME_DATA,
 	LIGHTS_DATA,
 	LIGHTS_COUNT,
 	DIFFUSE_MAP,
@@ -13,13 +14,20 @@ DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<DSAppUniforms>::Uniform
 
-// spatial data
+// entity data
 #pragma pack (push, 1)
-struct SpatialData
+struct EntityDataRaw
 {
 	matrix44 modelViewProjection;
 	matrix44 model;
-	vector3 viewDirection;
+};
+#pragma pack (pop)
+
+// on frame data
+#pragma pack (push, 1)
+struct OnFrameDataRaw
+{
+	vector3 viewPosition;
 	unsigned int lightsCount;
 };
 #pragma pack (pop)
@@ -89,7 +97,8 @@ public:
 		m_opaqueRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.vsh");
 		m_opaqueRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.psh");
 		if (!m_opaqueRendering->init()) exit();
-		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::SPATIAL_DATA, "spatialData");
+		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
+		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
 		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");
 		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalMap");
@@ -101,7 +110,7 @@ public:
 		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.gsh");
 		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.psh");
 		if (!m_skyboxRendering->init(true)) exit();
-		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SPATIAL_DATA, "spatialData");
+		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
@@ -109,13 +118,14 @@ public:
 		m_entity = initEntity("data/media/cube/cube.geom",
 							  "data/media/cube/cube_diff.dds",
 							  "data/media/cube/cube_normal.dds",
-							  "");
+							  "data/media/textures/fullspecular.dds");
 		m_entity.geometry->bindToGpuProgram(m_opaqueRendering);
 
-		m_entitiesData.resize(25);
+		m_entitiesData.resize(1);
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
-			m_entitiesData[i].model.set_translation(utils::Utils::random(-100.0f, 100.0f));
+			m_entitiesData[i].model.set_translation(vector3(0,0,0));
+			//m_entitiesData[i].model.set_translation(utils::Utils::random(-100.0f, 100.0f));
 		}
 
 		// skybox texture
@@ -162,9 +172,13 @@ public:
 		m_alphaBlending->initWithDescription(blendDesc);
 		if (!m_alphaBlending->isValid()) exit();
 
-		// spatial info buffer
-		m_spatialBuffer.reset(new framework::UniformBuffer());
-		if (!m_spatialBuffer->initDefaultConstant<SpatialData>()) exit();
+		// entity's data buffer
+		m_entityDataBuffer.reset(new framework::UniformBuffer());
+		if (!m_entityDataBuffer->initDefaultConstant<EntityDataRaw>()) exit();
+
+		// on-frame data buffer
+		m_onFrameDataBuffer.reset(new framework::UniformBuffer());
+		if (!m_onFrameDataBuffer->initDefaultConstant<OnFrameDataRaw>()) exit();
 
 		// lights
 		initLights();
@@ -214,7 +228,7 @@ public:
 		dir.norm();
 		source.orientation.set_from_axes(vector3(0, 0, 1), dir);
 		source.diffuseColor = vector3(0.7f, 0.7f, 0.7f);
-		source.specularColor = vector3(0.3f, 0.3f, 0.3f);
+		source.specularColor = vector3(0.9f, 0.9f, 0.9f);
 		source.ambientColor = vector3(0.1f, 0.1f, 0.1f);
 		m_lightManager.addLightSource(source);
 
@@ -252,7 +266,7 @@ public:
 		m_overlay->setSize(CEGUI::USize(cegui_absdim(300.0f), cegui_absdim(150.0f)));
 		m_overlay->setProperty("HorzFormatting", "RightAligned");
 		m_overlay->setProperty("VertFormatting", "BottomAligned");
-		m_overlay->setText("Fragments buffer usage = 0%\nLost fragments = 0");
+		m_overlay->setText("");
 		m_overlay->setVisible(m_renderDebug);
 	}
 
@@ -263,25 +277,15 @@ public:
 
 		useDefaultRenderTarget();
 
+		// set up on-frame data
+		OnFrameDataRaw onFrameData;
+		onFrameData.viewPosition = m_camera.getPosition();
+		onFrameData.lightsCount = m_lightsCount;
+		m_onFrameDataBuffer->setData(onFrameData);
+		m_onFrameDataBuffer->applyChanges();
+
 		// render skybox
-		m_disableDepthTest->apply();
-		if (m_skyboxRendering->use())
-		{
-			SpatialData spatialData;
-			matrix44 model;
-			model.set_translation(m_camera.getPosition());
-			spatialData.modelViewProjection = model * m_camera.getView() * m_camera.getProjection();
-			spatialData.viewDirection = m_camera.getOrientation().z_direction();
-			m_spatialBuffer->setData(spatialData);
-			m_spatialBuffer->applyChanges();
-
-			m_skyboxRendering->setUniform<DSAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
-			m_skyboxRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
-			m_skyboxRendering->setUniform<DSAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
-
-			getPipeline().drawPoints(1);
-		}
-		m_disableDepthTest->cancel();
+		renderSkybox();
 
 		// render opaque objects
 		if (m_opaqueRendering->use())
@@ -296,17 +300,37 @@ public:
 		renderDebug();
 	}
 
+	void renderSkybox()
+	{
+		m_disableDepthTest->apply();
+		if (m_skyboxRendering->use())
+		{
+			EntityDataRaw entityDataRaw;
+			matrix44 model;
+			model.set_translation(m_camera.getPosition());
+			entityDataRaw.modelViewProjection = model * m_camera.getView() * m_camera.getProjection();
+			m_entityDataBuffer->setData(entityDataRaw);
+			m_entityDataBuffer->applyChanges();
+
+			m_skyboxRendering->setUniform<DSAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
+			m_skyboxRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+			m_skyboxRendering->setUniform<DSAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+
+			getPipeline().drawPoints(1);
+		}
+		m_disableDepthTest->cancel();
+	}
+
 	void renderEntity(const Entity& entity, const EntityData& entityData)
 	{
-		SpatialData spatialData;
-		spatialData.modelViewProjection = entityData.mvp;
-		spatialData.model = entityData.model;
-		spatialData.viewDirection = m_camera.getOrientation().z_direction();
-		spatialData.lightsCount = m_lightsCount;
-		m_spatialBuffer->setData(spatialData);
-		m_spatialBuffer->applyChanges();
+		EntityDataRaw entityDataRaw;
+		entityDataRaw.modelViewProjection = entityData.mvp;
+		entityDataRaw.model = entityData.model;
+		m_entityDataBuffer->setData(entityDataRaw);
+		m_entityDataBuffer->applyChanges();
 
-		m_opaqueRendering->setUniform<DSAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
+		m_opaqueRendering->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+		m_opaqueRendering->setUniform<DSAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
 		m_opaqueRendering->setUniform<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
 		m_opaqueRendering->setUniform<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
 		m_opaqueRendering->setUniform<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
@@ -395,7 +419,8 @@ private:
 	Entity m_entity;
 	std::vector<EntityData> m_entitiesData;
 
-	std::shared_ptr<framework::UniformBuffer> m_spatialBuffer;
+	std::shared_ptr<framework::UniformBuffer> m_entityDataBuffer;
+	std::shared_ptr<framework::UniformBuffer> m_onFrameDataBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 	unsigned int m_lightsCount;
 
