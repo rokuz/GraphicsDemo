@@ -362,7 +362,7 @@ bool Application::initSwapChain(Device& device)
 	DXGI_SWAP_CHAIN_DESC state;
 	state.BufferDesc.Width = m_info.windowWidth;
 	state.BufferDesc.Height = m_info.windowHeight;
-	state.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	state.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	state.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	state.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 	if ((bool)m_info.flags.vsync)

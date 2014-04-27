@@ -12,6 +12,5 @@ SamplerState defaultSampler;
 float4 main(VS_OUTPUT_SKYBOX input) : SV_TARGET
 {
 	float3 color = saturate(skyboxMap.Sample(defaultSampler, input.uv));
-	float lum = (0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b) * 0.7;
-	return float4(color * lum, 1);
+	return float4(color, 1);
 }

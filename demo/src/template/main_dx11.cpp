@@ -80,6 +80,9 @@ public:
 		vector3 dir(1, -1, 1);
 		dir.norm();
 		source.orientation.set_from_axes(vector3(0, 0, 1), dir);
+		source.diffuseColor = vector3(1.0f, 1.0f, 1.0f);
+		source.specularColor = vector3(0.5f, 0.5f, 0.5f);
+		source.ambientColor = vector3(0.3f, 0.3f, 0.3f);
 		m_lightManager.addLightSource(source);
 
 		m_lightsBuffer.reset(new framework::UniformBuffer());

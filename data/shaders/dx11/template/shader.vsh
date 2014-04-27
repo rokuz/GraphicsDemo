@@ -31,7 +31,7 @@ VS_OUTPUT main(VS_INPUT input)
 	output.normal = mul(normalize(input.normal), (float3x3)model);
 	output.tangent = mul(normalize(input.tangent), (float3x3)model);
 	float3 worldPos = mul(float4(input.position, 1), model);
-	output.viewDirection = normalize(viewPosition - worldPos);
+	output.viewDirection = normalize(worldPos - viewPosition);
 	
 	return output;
 }

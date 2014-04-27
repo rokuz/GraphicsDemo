@@ -6,7 +6,7 @@ DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
-	VIEW_DIRECTION,
+	VIEW_POSITION,
 	LIGHTS_DATA_BUFFER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<TestAppUniforms>::Uniform
@@ -49,7 +49,7 @@ public:
 		m_program->bindUniform<TestAppUniforms>(UF::DIFFUSE_MAP, "diffuseSampler");
 		m_program->bindUniform<TestAppUniforms>(UF::NORMAL_MAP, "normalSampler");
 		m_program->bindUniform<TestAppUniforms>(UF::SPECULAR_MAP, "specularSampler");
-		m_program->bindUniform<TestAppUniforms>(UF::VIEW_DIRECTION, "viewDirection");
+		m_program->bindUniform<TestAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_program->bindUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");
 
 		// lights
@@ -59,6 +59,9 @@ public:
 		vector3 dir(1, -1, 1);
 		dir.norm();
 		source.orientation.set_from_axes(vector3(0, 0, 1), dir);
+		source.diffuseColor = vector3(1.0f, 1.0f, 1.0f);
+		source.specularColor = vector3(0.3f, 0.3f, 0.3f);
+		source.ambientColor = vector3(0.1f, 0.1f, 0.1f);
 		m_lightManager.addLightSource(source);
 
 		m_lightsBuffer.reset(new framework::UniformBuffer());
@@ -112,7 +115,7 @@ public:
 		{
 			m_program->setMatrix<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);
 			m_program->setMatrix<TestAppUniforms>(UF::MODEL_MATRIX, model);
-			m_program->setVector<TestAppUniforms>(UF::VIEW_DIRECTION, m_camera.getOrientation().z_direction());
+			m_program->setVector<TestAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 			m_program->setUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, *m_lightsBuffer, 0);
 
 			m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));

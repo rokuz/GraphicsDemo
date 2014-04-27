@@ -61,13 +61,15 @@ struct LightSource
 #pragma pack (push, 1)
 struct LightRawData
 {
-	float positionOrDirection[3];
+	vector3 position;
 	unsigned int lightType;
-	float diffuseColor[3];
+	vector3 direction;
 	float falloff;
-	float ambientColor[3];
+	vector3 diffuseColor;
 	float angle;
-	float specularColor[3];
+	vector3 ambientColor;
+	unsigned int : 32;
+	vector3 specularColor;
 	unsigned int : 32;
 };
 #pragma pack (pop)

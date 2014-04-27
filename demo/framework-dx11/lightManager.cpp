@@ -163,34 +163,28 @@ LightRawData LightManager::getRawLightData(size_t index)
 	LightRawData result;
 	if (index >= m_lightSources.size())
 	{
-		result.positionOrDirection[0] = result.positionOrDirection[1] = result.positionOrDirection[2] = 0;
+		result.position = vector3(0, 0, 0);
+		result.direction = vector3(0, 0, 0);
 		result.lightType = (unsigned int)LightType::OmniLight;
-		result.diffuseColor[0] = result.diffuseColor[1] = result.diffuseColor[2] = 1.0f;
+		result.diffuseColor = vector3(1, 1, 1);
 		result.falloff = 1000.0f;
-		result.ambientColor[0] = result.ambientColor[1] = result.ambientColor[2] = 0.3f;
+		result.ambientColor = vector3(0.3f, 0.3f, 0.3f);
 		result.angle = 60.0f;
-		result.specularColor[0] = result.specularColor[1] = result.specularColor[2] = 1.0f;
+		result.specularColor = vector3(1, 1, 1);
 		
 		return result;
 	}
 
 	const LightSource& source = getLightSource(index);
 	vector3 dir = source.orientation.z_direction();
-	result.positionOrDirection[0] = source.type == LightType::DirectLight ? dir.x : source.position.x;
-	result.positionOrDirection[1] = source.type == LightType::DirectLight ? dir.y : source.position.y;
-	result.positionOrDirection[2] = source.type == LightType::DirectLight ? dir.z : source.position.z;
+	result.position = source.position;
+	result.direction = dir;
 	result.lightType = (unsigned int)source.type;
-	result.diffuseColor[0] = source.diffuseColor.x;
-	result.diffuseColor[1] = source.diffuseColor.y;
-	result.diffuseColor[2] = source.diffuseColor.z;
+	result.diffuseColor = source.diffuseColor;
 	result.falloff = source.falloff;
-	result.ambientColor[0] = source.ambientColor.x;
-	result.ambientColor[1] = source.ambientColor.y;
-	result.ambientColor[2] = source.ambientColor.z;
+	result.ambientColor = source.ambientColor;
 	result.angle = source.angle;
-	result.specularColor[0] = source.specularColor.x;
-	result.specularColor[1] = source.specularColor.y;
-	result.specularColor[2] = source.specularColor.z;
+	result.specularColor = source.specularColor;
 
 	return result;
 }

@@ -11,10 +11,12 @@ out VS_OUT
 	vec2 uv0;
 	vec3 ts0;
 	vec3 ts1;
+	vec3 viewDir;
 } vs_out;
 
 uniform mat4 modelViewProjectionMatrix;
 uniform mat4 modelMatrix;
+uniform vec3 viewPosition;
 
 void main()
 {
@@ -28,4 +30,6 @@ void main()
 	mat3 ts = inverse(mat3(tangentWS, binormalWS, normalWS));
 	vs_out.ts0 = ts[0];
 	vs_out.ts1 = ts[2];
+	vec3 worldPos = (modelMatrix * vec4(position, 1)).xyz;
+	vs_out.viewDir = normalize(worldPos - viewPosition);
 }

@@ -1,12 +1,15 @@
 struct LightData
 {
-	float3 positionOrDirection;
+	float3 position;
 	uint lightType;
-	float3 diffuseColor;
+	float3 direction;
 	float falloff;
-	float3 ambientColor;
+	float3 diffuseColor;
 	float angle;
+	float3 ambientColor;
+	uint dummy;
 	float3 specularColor;
+	uint dummy2;
 };
 StructuredBuffer<LightData> lightsData : register(t0);
 
@@ -24,10 +27,10 @@ void blinn(float3 normal, float3 viewDir, out float3 diffColor, out float3 specC
 	ambColor = float3(0, 0, 0);
 	for (uint i = 0; i < lightsCount; i++)
 	{
-		float ndol = max(0.0, dot(lightsData[i].positionOrDirection, normal));
+		float ndol = max(0.0, dot(lightsData[i].direction, normal));
 		diffColor += lightsData[i].diffuseColor * ndol;
 		
-		float3 h = normalize(viewDir + lightsData[i].positionOrDirection);
+		float3 h = normalize(viewDir + lightsData[i].direction);
 		specColor += lightsData[i].specularColor * pow (max(dot(normal, h), 0.0), specPower);
 		
 		ambColor += lightsData[i].ambientColor;
