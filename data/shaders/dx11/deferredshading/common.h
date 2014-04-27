@@ -16,14 +16,19 @@ struct VS_OUTPUT_GBUF
 	float3 worldPos : TEXCOORD3;
 };
 
-cbuffer entityData
+cbuffer onFrameData : register(b0)
 {
-	matrix modelViewProjection : packoffset(c0);
-	matrix model : packoffset(c4);
+	float3 viewPosition;
+	uint lightsCount;
+	uint2 screenSize;
+	uint2 onFrameData_dummy;
 };
 
-cbuffer onFrameData
+cbuffer entityData : register(b1)
 {
-	float3 viewPosition : packoffset(c0);
-	uint lightsCount : packoffset(c0.w);
+	matrix modelViewProjection;
+	matrix model;
+	float specularPower;
+	uint materialId;
+	uint2 entityData_dummy1;
 };

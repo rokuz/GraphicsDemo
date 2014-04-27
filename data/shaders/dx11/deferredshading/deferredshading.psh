@@ -1,0 +1,136 @@
+#include <common.h>
+
+struct LightData
+{
+	float3 position;
+	uint lightType;
+	float3 direction;
+	float falloff;
+	float3 diffuseColor;
+	float angle;
+	float3 ambientColor;
+	uint dummy;
+	float3 specularColor;
+	uint dummy2;
+};
+StructuredBuffer<LightData> lightsData : register(t0);
+
+struct GBufferElement
+{
+	float3 worldPos;		// 12
+	float3 normal;			// 12
+	float specularPower;	// 4
+	uint coverageAndMatId;	// 4
+	uint diffuseColor;		// 4
+	uint specularColor;		// 4
+};
+globallycoherent RWTexture2D<uint> maskBuffer : register(u1);
+globallycoherent RWStructuredBuffer<GBufferElement> gbuffer : register(u2);
+
+static const uint MAX_LIGHTS_COUNT = 16;
+
+void processLight(const uint lightIndex, float3 worldPos, out float3 lightDir, out float lightPower)
+{
+	[branch]
+	if (lightsData[lightIndex].lightType == 0) // omni light
+	{
+		float3 ldv = worldPos - lightsData[lightIndex].position;
+		lightDir = normalize(ldv);
+		float falloff = 1.0 - saturate(length(ldv) / (lightsData[lightIndex].falloff + 1e-7));
+		lightPower = falloff * falloff;
+	}
+	else if (lightsData[lightIndex].lightType == 1) // spot light
+	{
+		float3 ldv = worldPos - lightsData[lightIndex].position;
+		lightDir = normalize(ldv);
+		
+		float cosAng = dot(lightDir, lightsData[lightIndex].direction);
+		float cosOuter = cos(lightsData[lightIndex].angle);
+		lightPower = smoothstep(cosOuter, cosOuter + 0.1, cosAng);
+		
+		[branch]
+		if (lightPower > 1e-5)
+		{
+			float falloff = 1.0 - saturate(length(ldv) / (lightsData[lightIndex].falloff + 1e-7));
+			lightPower *= (falloff * falloff);
+		}
+	}
+	else // direct light
+	{
+		lightDir = lightsData[lightIndex].direction;
+		lightPower = 1;
+	}
+}
+
+void blinn(in float3 normal, in float3 worldPos, in float specPower, out float3 diffColor, out float3 specColor, out float3 ambColor)
+{
+	float3 viewDir = normalize(worldPos - viewPosition);
+
+	diffColor = float3(0, 0, 0);
+	specColor = float3(0, 0, 0);
+	ambColor = float3(0, 0, 0);
+	
+	[unroll(MAX_LIGHTS_COUNT)]
+	for (uint i = 0; i < lightsCount; i++)
+	{
+		float3 lightDir;
+		float lightPower;
+		processLight(i, worldPos, lightDir, lightPower);
+		
+		float ndol = max(0.0, dot(lightDir, normal));
+		diffColor += lightsData[i].diffuseColor * ndol * lightPower;
+		
+		float3 h = normalize(viewDir + lightDir);
+		specColor += lightsData[i].specularColor * pow(max(dot(normal, h), 0.0), specPower) * lightPower;
+		
+		ambColor += lightsData[i].ambientColor * lightPower;
+	}
+}
+
+struct PS_INPUT_DS
+{
+    float4 position : SV_POSITION;
+};
+
+float4 unpackColor(uint color)
+{
+	float4 output;
+	output.r = float((color >> 24) & 0x000000ff) / 255.0f;
+	output.g = float((color >> 16) & 0x000000ff) / 255.0f;
+	output.b = float((color >> 8) & 0x000000ff) / 255.0f;
+	output.a = float(color & 0x000000ff) / 255.0f;
+	return saturate(output);
+}
+
+float4 main(PS_INPUT_DS input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
+{
+	uint2 upos = uint2(input.position.xy);
+	if (maskBuffer[upos] == 0xffffffff) return float4(0, 0, 0, 0);
+	
+	uint gbufPos = upos.y * screenSize.x + upos.x;
+	GBufferElement elem = gbuffer[gbufPos];
+	
+	// unpack everything from g-buffer
+	uint coverage = (elem.coverageAndMatId >> 16);
+	//if ((coverage & (1 << sampleIndex)) == 0)
+	//{
+	//	return float4(0, 0, 0, 0);
+	//}
+	
+	uint matId = elem.coverageAndMatId & 0x0000ffff;
+	float4 diffTex = unpackColor(elem.diffuseColor);
+	float4 specularTex = unpackColor(elem.specularColor);
+	float specularPower = elem.specularPower;
+	float3 normal = elem.normal;
+	float3 worldPos = elem.worldPos;
+	
+	// lighting
+	float3 diffColor, specColor, ambColor;
+	blinn(normal, worldPos, specularPower, diffColor, specColor, ambColor);
+	
+	float3 diffuse = diffTex * diffColor;
+	float3 specular = specularTex.rgb * specColor;
+	float3 ambient = diffTex * ambColor;
+	
+    return float4(saturate(ambient + diffuse + specular), diffTex.a);
+}

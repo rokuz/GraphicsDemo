@@ -20,6 +20,10 @@ struct EntityDataRaw
 {
 	matrix44 modelViewProjection;
 	matrix44 model;
+	float specularPower;
+	unsigned int materialId;
+	unsigned int : 32;
+	unsigned int : 32;
 };
 #pragma pack (pop)
 
@@ -29,6 +33,10 @@ struct OnFrameDataRaw
 {
 	vector3 viewPosition;
 	unsigned int lightsCount;
+	unsigned int screenWidth;
+	unsigned int screenHeight;
+	unsigned int : 32;
+	unsigned int : 32;
 };
 #pragma pack (pop)
 
@@ -92,18 +100,32 @@ public:
 		// overlays
 		initOverlays(root);
 
+		// mask buffer
+		m_maskBuffer.reset(new framework::RenderTarget());
+		auto maskBufferDesc = framework::RenderTarget::getDefaultDesc(m_info.windowWidth,
+																	  m_info.windowHeight,
+																	  DXGI_FORMAT_R32_UINT);
+		maskBufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+		m_maskBuffer->initWithDescription(maskBufferDesc, false);
+		if (!m_maskBuffer->isValid()) exit();
+
+		// g-buffer
+		unsigned int gbufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight;
+		unsigned int gbufferElemSize = 12 + 12 + 4 + 4 + 4 + 4;
+		m_gbuffer.reset(new framework::UnorderedAccessBuffer());
+		if (!m_gbuffer->initDefaultUnorderedAccess(gbufferSize, gbufferElemSize)) exit();
+
 		// gpu programs
-		m_opaqueRendering.reset(new framework::GpuProgram());
-		m_opaqueRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.vsh");
-		m_opaqueRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.psh");
-		if (!m_opaqueRendering->init()) exit();
-		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
-		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
-		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalMap");
-		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularMap");
-		m_opaqueRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+		m_gbufferRendering.reset(new framework::GpuProgram());
+		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.vsh");
+		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.psh");
+		if (!m_gbufferRendering->init()) exit();
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_skyboxRendering.reset(new framework::GpuProgram());
 		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/screenquad.vsh");
@@ -112,14 +134,23 @@ public:
 		if (!m_skyboxRendering->init(true)) exit();
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
+		//m_skyboxRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+
+		m_deferredShading.reset(new framework::GpuProgram());
+		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.vsh");
+		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.gsh");
+		m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.psh");
+		if (!m_deferredShading->init(true)) exit();
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
 
 		// entity
 		m_entity = initEntity("data/media/cube/cube.geom",
 							  "data/media/cube/cube_diff.dds",
 							  "data/media/cube/cube_normal.dds",
 							  "data/media/textures/full_specular.dds");
-		m_entity.geometry->bindToGpuProgram(m_opaqueRendering);
+		m_entity.geometry->bindToGpuProgram(m_gbufferRendering);
 
 		m_entitiesData.resize(1);
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
@@ -151,24 +182,9 @@ public:
 		m_disableDepthTest->initWithDescription(depthDesc);
 		if (!m_disableDepthTest->isValid()) exit();
 
-		// a rasterizer to render without culling
-		m_cullingOff.reset(new framework::RasterizerStage());
-		D3D11_RASTERIZER_DESC rasterizerDesc = defaultRasterizer()->getDesc();
-		rasterizerDesc.CullMode = D3D11_CULL_NONE;
-		m_cullingOff->initWithDescription(rasterizerDesc);
-		if (!m_cullingOff->isValid()) exit();
-		auto viewports = defaultRasterizer()->getViewports();
-		m_cullingOff->getViewports().reserve(viewports.size());
-		m_cullingOff->getViewports() = viewports;
-
 		// a blend state to enable alpha-blending
 		m_alphaBlending.reset(new framework::BlendStage());
 		blendDesc = framework::BlendStage::getAlphaBlending();
-		for (int i = 0; i < 8; i++)
-		{
-			blendDesc.RenderTarget[i].SrcBlend = D3D11_BLEND_ONE;
-			blendDesc.RenderTarget[i].DestBlend = D3D11_BLEND_SRC_ALPHA;
-		}
 		m_alphaBlending->initWithDescription(blendDesc);
 		if (!m_alphaBlending->isValid()) exit();
 
@@ -194,7 +210,6 @@ public:
 		// geometry
 		ent.geometry.reset(new framework::Geometry3D());
 		if (!ent.geometry->init(geometry)) exit();
-		ent.geometry->bindToGpuProgram(m_opaqueRendering);
 
 		// textures
 		if (!texture.empty())
@@ -279,19 +294,47 @@ public:
 		OnFrameDataRaw onFrameData;
 		onFrameData.viewPosition = m_camera.getPosition();
 		onFrameData.lightsCount = m_lightsCount;
+		onFrameData.screenWidth = m_info.windowWidth;
+		onFrameData.screenHeight = m_info.windowHeight;
 		m_onFrameDataBuffer->setData(onFrameData);
 		m_onFrameDataBuffer->applyChanges();
+
+		// clear only mask buffer
+		framework::UnorderedAccessibleBatch clearbatch;
+		clearbatch.add(m_maskBuffer);
+		getPipeline().clearUnorderedAccessBatch(clearbatch);
+
+		// set render target and mask/g- buffers
+		framework::UnorderedAccessibleBatch batch;
+		batch.add(m_maskBuffer);
+		batch.add(m_gbuffer);
+		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
 
 		// render skybox
 		renderSkybox();
 
-		// render opaque objects
-		if (m_opaqueRendering->use())
+		// render to g-buffer
+		if (m_gbufferRendering->use())
 		{
+			m_disableColorWriting->apply();
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				renderEntity(m_entity, m_entitiesData[i]);
 			}
+			m_disableColorWriting->cancel();
+		}
+
+		// deferred shading pass
+		if (m_deferredShading->use())
+		{
+			m_deferredShading->setUniform<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+			m_deferredShading->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+
+			m_disableDepthTest->apply();
+			m_alphaBlending->apply();
+			getPipeline().drawPoints(1);
+			m_disableDepthTest->cancel();
+			m_alphaBlending->cancel();
 		}
 
 		// debug rendering
@@ -300,9 +343,10 @@ public:
 
 	void renderSkybox()
 	{
-		m_disableDepthTest->apply();
 		if (m_skyboxRendering->use())
 		{
+			m_disableDepthTest->apply();
+
 			EntityDataRaw entityDataRaw;
 			matrix44 model;
 			model.set_translation(m_camera.getPosition());
@@ -313,10 +357,12 @@ public:
 			m_skyboxRendering->setUniform<DSAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
 			m_skyboxRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
 			m_skyboxRendering->setUniform<DSAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+			//m_skyboxRendering->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
 
 			getPipeline().drawPoints(1);
+
+			m_disableDepthTest->cancel();
 		}
-		m_disableDepthTest->cancel();
 	}
 
 	void renderEntity(const Entity& entity, const EntityData& entityData)
@@ -324,16 +370,17 @@ public:
 		EntityDataRaw entityDataRaw;
 		entityDataRaw.modelViewProjection = entityData.mvp;
 		entityDataRaw.model = entityData.model;
+		entityDataRaw.specularPower = entityData.specularPower;
+		entityDataRaw.materialId = entityData.materialId;
 		m_entityDataBuffer->setData(entityDataRaw);
 		m_entityDataBuffer->applyChanges();
 
-		m_opaqueRendering->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
-		m_opaqueRendering->setUniform<DSAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-		m_opaqueRendering->setUniform<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-		m_opaqueRendering->setUniform<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
-		m_opaqueRendering->setUniform<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
-		m_opaqueRendering->setUniform<DSAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
-		m_opaqueRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+		m_gbufferRendering->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+		m_gbufferRendering->setUniform<DSAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+		m_gbufferRendering->setUniform<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
+		m_gbufferRendering->setUniform<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
+		m_gbufferRendering->setUniform<DSAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
+		m_gbufferRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
 
 		entity.geometry->renderAllMeshes();
 	}
@@ -387,14 +434,18 @@ public:
 	}
 
 private:
-	// gpu program to render opaque geometry
-	std::shared_ptr<framework::GpuProgram> m_opaqueRendering;
+	std::shared_ptr<framework::RenderTarget> m_maskBuffer;
+	std::shared_ptr<framework::UnorderedAccessBuffer> m_gbuffer;
 
+	// gpu program to render in g-buffer
+	std::shared_ptr<framework::GpuProgram> m_gbufferRendering;
+	// gpu program to render skybox
 	std::shared_ptr<framework::GpuProgram> m_skyboxRendering;
+	//
+	std::shared_ptr<framework::GpuProgram> m_deferredShading;
 
 	std::shared_ptr<framework::BlendStage> m_disableColorWriting;
 	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
-	std::shared_ptr<framework::RasterizerStage> m_cullingOff;
 	std::shared_ptr<framework::DepthStencilStage> m_disableDepthTest;
 	std::shared_ptr<framework::BlendStage> m_alphaBlending;
 
@@ -411,6 +462,10 @@ private:
 	{
 		matrix44 model;
 		matrix44 mvp;
+		float specularPower;
+		unsigned int materialId;
+
+		EntityData() : specularPower(30.0f), materialId(1){}
 	};
 
 	// opaque entity
