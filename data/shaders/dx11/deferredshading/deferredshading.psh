@@ -15,19 +15,11 @@ struct LightData
 };
 StructuredBuffer<LightData> lightsData : register(t0);
 
-struct GBufferElement
-{
-	float3 worldPos;		// 12
-	float3 normal;			// 12
-	float specularPower;	// 4
-	uint coverageAndMatId;	// 4
-	uint diffuseColor;		// 4
-	uint specularColor;		// 4
-};
-globallycoherent RWTexture2D<uint> maskBuffer : register(u1);
-globallycoherent RWStructuredBuffer<GBufferElement> gbuffer : register(u2);
+Texture2D<float4> dataBlockMap1 : register(t1);
+Texture2D<float4> dataBlockMap2 : register(t2);
+Texture2D<uint3> dataBlockMap3 : register(t3);
 
-static const uint MAX_LIGHTS_COUNT = 16;
+//static const uint MAX_LIGHTS_COUNT = 16;
 
 void processLight(const uint lightIndex, float3 worldPos, out float3 lightDir, out float lightPower)
 {
@@ -70,7 +62,7 @@ void blinn(in float3 normal, in float3 worldPos, in float specPower, out float3 
 	specColor = float3(0, 0, 0);
 	ambColor = float3(0, 0, 0);
 	
-	[unroll(MAX_LIGHTS_COUNT)]
+	//[unroll(MAX_LIGHTS_COUNT)]
 	for (uint i = 0; i < lightsCount; i++)
 	{
 		float3 lightDir;
@@ -92,6 +84,12 @@ struct PS_INPUT_DS
     float4 position : SV_POSITION;
 };
 
+struct PS_OUTPUT_DS
+{
+    float4 color : SV_TARGET;
+	//uint coverage : SV_COVERAGE;
+};
+
 float4 unpackColor(uint color)
 {
 	float4 output;
@@ -102,27 +100,28 @@ float4 unpackColor(uint color)
 	return saturate(output);
 }
 
-float4 main(PS_INPUT_DS input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
+PS_OUTPUT_DS main(PS_INPUT_DS input, uint sampleIndex : SV_SAMPLEINDEX)
 {
-	uint2 upos = uint2(input.position.xy);
-	if (maskBuffer[upos] == 0xffffffff) return float4(0, 0, 0, 0);
+	PS_OUTPUT_DS output;
 	
-	uint gbufPos = upos.y * screenSize.x + upos.x;
-	GBufferElement elem = gbuffer[gbufPos];
+	uint3 dataBlock3 = dataBlockMap3.Load(int3(input.position.xy, 0));
+	uint matId = dataBlock3.x & 0x0000ffff;
+	uint coverage = (dataBlock3.x >> 16);
+	int coverageTest = coverage & (1 << sampleIndex);
+	if (matId == 0 || coverageTest == 0)
+	{
+		output.color = float4(0,0,0,0);
+		return output;
+	}
+
+	float4 dataBlock1 = dataBlockMap1.Load(int3(input.position.xy, 0));
+	float3 dataBlock2 = dataBlockMap2.Load(int3(input.position.xy, 0));
+	float3 worldPos = dataBlock1.xyz;
+	float3 normal = dataBlock2.xyz;
 	
-	// unpack everything from g-buffer
-	uint coverage = (elem.coverageAndMatId >> 16);
-	//if ((coverage & (1 << sampleIndex)) == 0)
-	//{
-	//	return float4(0, 0, 0, 0);
-	//}
-	
-	uint matId = elem.coverageAndMatId & 0x0000ffff;
-	float4 diffTex = unpackColor(elem.diffuseColor);
-	float4 specularTex = unpackColor(elem.specularColor);
-	float specularPower = elem.specularPower;
-	float3 normal = elem.normal;
-	float3 worldPos = elem.worldPos;
+	float4 diffTex = unpackColor(dataBlock3.y);
+	float4 specularTex = unpackColor(dataBlock3.z);
+	float specularPower = dataBlock1.w;
 	
 	// lighting
 	float3 diffColor, specColor, ambColor;
@@ -132,5 +131,7 @@ float4 main(PS_INPUT_DS input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
 	float3 specular = specularTex.rgb * specColor;
 	float3 ambient = diffTex * ambColor;
 	
-    return float4(saturate(ambient + diffuse + specular), diffTex.a);
+	output.color = float4(saturate(ambient + diffuse + specular), diffTex.a);
+	
+    return output;
 }

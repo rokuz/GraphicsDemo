@@ -145,6 +145,8 @@ int Application::run(Application* self, const std::string& commandLine)
 
 void Application::mainLoop()
 {
+	if (!m_isRunning) return;
+
 	do
 	{
 		// process events from the window

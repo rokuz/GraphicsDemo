@@ -10,7 +10,10 @@ DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
 	NORMAL_MAP,
 	SPECULAR_MAP,
 	SKYBOX_MAP,
-	DEFAULT_SAMPLER
+	DEFAULT_SAMPLER,
+	DATABLOCK_MAP1,
+	DATABLOCK_MAP2,
+	DATABLOCK_MAP3
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<DSAppUniforms>::Uniform
 
@@ -100,20 +103,15 @@ public:
 		// overlays
 		initOverlays(root);
 
-		// mask buffer
-		m_maskBuffer.reset(new framework::RenderTarget());
-		auto maskBufferDesc = framework::RenderTarget::getDefaultDesc(m_info.windowWidth,
-																	  m_info.windowHeight,
-																	  DXGI_FORMAT_R32_UINT);
-		maskBufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-		m_maskBuffer->initWithDescription(maskBufferDesc, false);
-		if (!m_maskBuffer->isValid()) exit();
-
 		// g-buffer
-		unsigned int gbufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight;
-		unsigned int gbufferElemSize = 12 + 12 + 4 + 4 + 4 + 4;
-		m_gbuffer.reset(new framework::UnorderedAccessBuffer());
-		if (!m_gbuffer->initDefaultUnorderedAccess(gbufferSize, gbufferElemSize)) exit();
+		m_gbuffer.reset(new framework::RenderTarget());
+		std::vector<D3D11_TEXTURE2D_DESC> descs;
+		descs.reserve(3);
+		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_FLOAT));
+		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_FLOAT));
+		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_UINT));
+		m_gbuffer->initWithDescriptions(descs, true);
+		if (!m_gbuffer->isValid()) exit();
 
 		// gpu programs
 		m_gbufferRendering.reset(new framework::GpuProgram());
@@ -121,7 +119,7 @@ public:
 		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.psh");
 		if (!m_gbufferRendering->init()) exit();
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
+		//m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularMap");
@@ -144,6 +142,9 @@ public:
 		if (!m_deferredShading->init(true)) exit();
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP1, "dataBlockMap1");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP2, "dataBlockMap2");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP3, "dataBlockMap3");
 
 		// entity
 		m_entity = initEntity("data/media/cube/cube.geom",
@@ -152,11 +153,11 @@ public:
 							  "data/media/textures/full_specular.dds");
 		m_entity.geometry->bindToGpuProgram(m_gbufferRendering);
 
-		m_entitiesData.resize(1);
+		m_entitiesData.resize(25);
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
-			m_entitiesData[i].model.set_translation(vector3(0,0,0));
-			//m_entitiesData[i].model.set_translation(utils::Utils::random(-100.0f, 100.0f));
+			//m_entitiesData[i].model.set_translation(vector3(0,0,0));
+			m_entitiesData[i].model.set_translation(utils::Utils::random(-70.0f, 70.0f));
 		}
 
 		// skybox texture
@@ -288,8 +289,6 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
-		useDefaultRenderTarget();
-
 		// set up on-frame data
 		OnFrameDataRaw onFrameData;
 		onFrameData.viewPosition = m_camera.getPosition();
@@ -299,36 +298,31 @@ public:
 		m_onFrameDataBuffer->setData(onFrameData);
 		m_onFrameDataBuffer->applyChanges();
 
-		// clear only mask buffer
-		framework::UnorderedAccessibleBatch clearbatch;
-		clearbatch.add(m_maskBuffer);
-		getPipeline().clearUnorderedAccessBatch(clearbatch);
-
-		// set render target and mask/g- buffers
-		framework::UnorderedAccessibleBatch batch;
-		batch.add(m_maskBuffer);
-		batch.add(m_gbuffer);
-		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
-
-		// render skybox
-		renderSkybox();
+		getPipeline().clearRenderTarget(m_gbuffer);
+		getPipeline().setRenderTarget(m_gbuffer);
 
 		// render to g-buffer
 		if (m_gbufferRendering->use())
 		{
-			m_disableColorWriting->apply();
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				renderEntity(m_entity, m_entitiesData[i]);
 			}
-			m_disableColorWriting->cancel();
 		}
+
+		useDefaultRenderTarget();
+
+		// render skybox
+		renderSkybox();
 
 		// deferred shading pass
 		if (m_deferredShading->use())
 		{
 			m_deferredShading->setUniform<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
 			m_deferredShading->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP1, m_gbuffer, 0);
+			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP2, m_gbuffer, 1);
+			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP3, m_gbuffer, 2);
 
 			m_disableDepthTest->apply();
 			m_alphaBlending->apply();
@@ -375,7 +369,7 @@ public:
 		m_entityDataBuffer->setData(entityDataRaw);
 		m_entityDataBuffer->applyChanges();
 
-		m_gbufferRendering->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+		//m_gbufferRendering->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
 		m_gbufferRendering->setUniform<DSAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
 		m_gbufferRendering->setUniform<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
 		m_gbufferRendering->setUniform<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
@@ -434,8 +428,7 @@ public:
 	}
 
 private:
-	std::shared_ptr<framework::RenderTarget> m_maskBuffer;
-	std::shared_ptr<framework::UnorderedAccessBuffer> m_gbuffer;
+	std::shared_ptr<framework::RenderTarget> m_gbuffer;
 
 	// gpu program to render in g-buffer
 	std::shared_ptr<framework::GpuProgram> m_gbufferRendering;

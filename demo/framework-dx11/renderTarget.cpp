@@ -218,6 +218,7 @@ bool RenderTarget::createView(size_t index)
 
 bool RenderTarget::isValid() const
 {
+	if (m_colorBuffer.empty()) return false;
 	for (size_t i = 0; i < m_colorBuffer.size(); i++)
 	{
 		if (m_colorBuffer[i] == 0) return false;
@@ -228,7 +229,7 @@ bool RenderTarget::isValid() const
 
 const ResourceView& RenderTarget::getView(int index) const
 {
-	return m_view[0];
+	return m_view[index];
 }
 
 int RenderTarget::getViewCount() const

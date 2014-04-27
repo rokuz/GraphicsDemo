@@ -1,45 +1,36 @@
 #include <common.h>
 
-struct GBufferElement
-{
-	float3 worldPos;		// 12
-	float3 normal;			// 12
-	float specularPower;	// 4
-	uint coverageAndMatId;	// 4
-	uint diffuseColor;		// 4
-	uint specularColor;		// 4
-};
-globallycoherent RWTexture2D<uint> maskBuffer : register(u1);
-globallycoherent RWStructuredBuffer<GBufferElement> gbuffer : register(u2);
-
 texture2D diffuseMap : register(t0);
 texture2D normalMap : register(t1);
 texture2D specularMap : register(t2);
 SamplerState defaultSampler;
+
+struct PS_OUTPUT_GBUF
+{
+	float4 dataBlock1 : SV_Target0;
+	float3 dataBlock2 : SV_Target1;
+	uint3 dataBlock3 : SV_Target2;
+};
 
 uint packColor(float4 color)
 {
 	return (uint(color.r * 255) << 24) | (uint(color.g * 255) << 16) | (uint(color.b * 255) << 8) | uint(color.a * 255);
 }
 
-float4 main(VS_OUTPUT_GBUF input, uint coverage : SV_COVERAGE) : SV_Target0
+PS_OUTPUT_GBUF main(VS_OUTPUT_GBUF input, uint coverage : SV_COVERAGE)
 {
+	PS_OUTPUT_GBUF output = (PS_OUTPUT_GBUF)0;
+	
 	float3 normalTS = normalize(normalMap.Sample(defaultSampler, input.uv0.xy).rgb * 2.0 - 1.0);
 	float3x3 ts = float3x3(input.tangent, cross(input.normal, input.tangent), input.normal);
 	float3 normal = -normalize(mul(normalTS, ts));
+	
+	output.dataBlock1.xyz = input.worldPos;
+	output.dataBlock1.w = specularPower;
+	output.dataBlock2 = normal;
+	output.dataBlock3.x = (materialId & 0x0000ffff) | (coverage << 16);
+	output.dataBlock3.y = packColor(diffuseMap.Sample(defaultSampler, input.uv0.xy));
+	output.dataBlock3.z = packColor(specularMap.Sample(defaultSampler, input.uv0.xy));
 
-	GBufferElement elem;
-	elem.worldPos = input.worldPos;
-	elem.normal = normal;
-	elem.specularPower = specularPower;
-	elem.coverageAndMatId = (materialId & 0x0000ffff) | (coverage << 16);
-	elem.diffuseColor = packColor(diffuseMap.Sample(defaultSampler, input.uv0.xy));
-	elem.specularColor = packColor(specularMap.Sample(defaultSampler, input.uv0.xy));
-	
-	uint2 upos = uint2(input.position.xy);
-	maskBuffer[upos] = 0;
-	uint gbufPos = upos.y * screenSize.x + upos.x;
-	gbuffer[gbufPos] = elem;
-	
-    return float4(0, 0, 0, 0);
+    return output;
 }
