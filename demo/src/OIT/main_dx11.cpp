@@ -19,8 +19,9 @@ struct SpatialData
 {
 	matrix44 modelViewProjection;
 	matrix44 model;
-	vector3 viewDirection;
+	vector3 viewPosition;
 	unsigned int lightsCount;
+	vector4 color;
 };
 #pragma pack (pop)
 
@@ -120,7 +121,7 @@ public:
 		if (!m_fragmentsListCreation->init()) exit();
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
@@ -149,16 +150,17 @@ public:
 
 		// transparent entity
 		m_transparentEntity = initEntity("data/media/cube/cube.geom",
-										 "data/media/cube/cube_diff.dds",
-										 "data/media/cube/cube_normal.dds",
-										 "");
+										 "",//"data/media/cube/cube_diff.dds",
+										 "data/media/cube/cube_normal.dds", //"data/media/textures/no_bump.dds",
+										 "data/media/textures/no_specular.dds");
 		m_transparentEntity.geometry->bindToGpuProgram(m_fragmentsListCreation);
 
 		m_transparentEntitiesData.resize(10);
 		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
 		{
-			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-40.0f, 40.0f));
-			m_transparentEntitiesData[i].model.pos_component().y = 0;
+			m_transparentEntitiesData[i].color = utils::Utils::random();
+			m_transparentEntitiesData[i].color.w = utils::Utils::random(0.1f, 0.7f).x;
+			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-15.0f, 15.0f));
 		}
 
 		// skybox texture
@@ -323,7 +325,7 @@ public:
 			matrix44 model;
 			model.set_translation(m_camera.getPosition());
 			spatialData.modelViewProjection = model * m_camera.getView() * m_camera.getProjection();
-			spatialData.viewDirection = m_camera.getOrientation().z_direction();
+			spatialData.viewPosition = m_camera.getPosition();
 			m_spatialBuffer->setData(spatialData);
 			m_spatialBuffer->applyChanges();
 
@@ -375,8 +377,9 @@ public:
 		SpatialData spatialData;
 		spatialData.modelViewProjection = entityData.mvp;
 		spatialData.model = entityData.model;
-		spatialData.viewDirection = m_camera.getOrientation().z_direction();
+		spatialData.viewPosition = m_camera.getPosition();
 		spatialData.lightsCount = m_lightsCount;
+		spatialData.color = entityData.color;
 		m_spatialBuffer->setData(spatialData);
 		m_spatialBuffer->applyChanges();
 
@@ -495,6 +498,7 @@ private:
 	{
 		matrix44 model;
 		matrix44 mvp;
+		vector4 color;
 	};
 
 	// opaque entity

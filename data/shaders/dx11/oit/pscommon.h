@@ -8,11 +8,11 @@ struct LightData
 	float angle;
 	float3 specularColor;
 };
-StructuredBuffer<LightData> lightsData;
+StructuredBuffer<LightData> lightsData : register(t0);
 
-texture2D diffuseMap;
-texture2D normalMap;
-texture2D specularMap;
+texture2D diffuseMap : register(t1);
+texture2D normalMap : register(t2);
+texture2D specularMap : register(t3);
 SamplerState defaultSampler;
 
 void blinn(float3 normal, float3 viewDir, out float3 diffColor, out float3 specColor, out float3 ambColor)
@@ -27,26 +27,26 @@ void blinn(float3 normal, float3 viewDir, out float3 diffColor, out float3 specC
 		float ndol = max(0.0, dot(lightsData[i].positionOrDirection, normal));
 		diffColor += lightsData[i].diffuseColor * ndol;
 		
-		float k = 1.0 / length(viewDir + lightsData[i].positionOrDirection);
-		float3 h = (viewDir + lightsData[i].positionOrDirection) * k;
+		float3 h = normalize(viewDir + lightsData[i].positionOrDirection);
 		specColor += lightsData[i].specularColor * pow (max(dot(normal, h), 0.0), specPower);
 		
 		ambColor += lightsData[i].ambientColor;
 	}
 }
 
-float3 computeColor(VS_OUTPUT input)
+float3 computeColor(VS_OUTPUT input, const bool useDiffTex)
 {
-	float3 normalTS = normalMap.Sample(defaultSampler, input.uv0_depth.xy).rgb * 2.0 - 1.0;
+	float3 normalTS = normalize(normalMap.Sample(defaultSampler, input.uv0.xy).rgb * 2.0 - 1.0);
 	float3x3 ts = float3x3(input.tangent, cross(input.normal, input.tangent), input.normal);
 	float3 normal = -normalize(mul(normalTS, ts));
 	
+	float3 viewDir = normalize(input.worldPos.xyz - viewPosition);
 	float3 diffColor, specColor, ambColor;
-	blinn(normal, viewDirection, diffColor, specColor, ambColor);
+	blinn(normal, viewDir, diffColor, specColor, ambColor);
 	
-	float3 diffTex = diffuseMap.Sample(defaultSampler, input.uv0_depth.xy).rgb;
+	float3 diffTex = useDiffTex ? diffuseMap.Sample(defaultSampler, input.uv0.xy).rgb : objectColor;
 	float3 diffuse = diffTex * diffColor;
-	float3 specular = specularMap.Sample(defaultSampler, input.uv0_depth.xy).rgb * specColor;
+	float3 specular = specularMap.Sample(defaultSampler, input.uv0.xy).rgb * specColor;
 	float3 ambient = diffTex * ambColor;
 	
 	return saturate(ambient + diffuse + specular);
