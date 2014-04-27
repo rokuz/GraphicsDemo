@@ -118,7 +118,7 @@ public:
 		m_entity = initEntity("data/media/cube/cube.geom",
 							  "data/media/cube/cube_diff.dds",
 							  "data/media/cube/cube_normal.dds",
-							  "data/media/textures/fullspecular.dds");
+							  "data/media/textures/full_specular.dds");
 		m_entity.geometry->bindToGpuProgram(m_opaqueRendering);
 
 		m_entitiesData.resize(1);
