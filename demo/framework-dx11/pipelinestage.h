@@ -75,6 +75,7 @@ public:
 	void clearUnorderedAccessBatch(const UnorderedAccessibleBatch& uabatch, unsigned int value = -1);
 	void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget);
 	void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget, const UnorderedAccessibleBatch& uabatch);
+	void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget, std::shared_ptr<RenderTarget> depthStencil);
 
 	void drawPoints(unsigned int count);
 

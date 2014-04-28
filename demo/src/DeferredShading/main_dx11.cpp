@@ -38,13 +38,13 @@ struct OnFrameDataRaw
 	unsigned int lightsCount;
 	unsigned int screenWidth;
 	unsigned int screenHeight;
-	unsigned int : 32;
+	unsigned int samplesCount;
 	unsigned int : 32;
 };
 #pragma pack (pop)
 
 // constants
-const int MAX_LIGHTS_COUNT = 16;
+const int MAX_LIGHTS_COUNT = 64;
 
 // application
 class DeferredShadingApp : public framework::Application
@@ -58,6 +58,7 @@ public:
 		m_lightsCount = 0;
 		m_pause = false;
 		m_renderDebug = false;
+		m_additionalLights = 50;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
@@ -92,7 +93,15 @@ public:
 			m_info.flags.fullscreen = 0;
 		}
 
-		//setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
+		auto lights = params.find("lights");
+		if (lights != params.end())
+		{
+			m_additionalLights = lights->second;
+			if (m_additionalLights < 0) m_additionalLights = 0;
+			if (m_additionalLights > MAX_LIGHTS_COUNT - 1) m_additionalLights = MAX_LIGHTS_COUNT - 1;
+		}
+
+		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 	}
 
 	virtual void startup(CEGUI::DefaultWindow* root)
@@ -110,6 +119,12 @@ public:
 		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_FLOAT));
 		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_FLOAT));
 		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_UINT));
+		auto defDesc = defaultRenderTarget()->getDesc(0);
+		for (size_t i = 0; i < descs.size(); i++)
+		{
+			descs[i].SampleDesc.Count = defDesc.SampleDesc.Count;
+			descs[i].SampleDesc.Quality = defDesc.SampleDesc.Quality;
+		}
 		m_gbuffer->initWithDescriptions(descs, true);
 		if (!m_gbuffer->isValid()) exit();
 
@@ -132,13 +147,19 @@ public:
 		if (!m_skyboxRendering->init(true)) exit();
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
-		//m_skyboxRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_deferredShading.reset(new framework::GpuProgram());
 		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.vsh");
 		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.gsh");
-		m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.psh");
+		if (m_info.samples == 0)
+		{
+			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.psh");
+		}
+		else
+		{
+			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading_msaa.psh");
+		}
 		if (!m_deferredShading->init(true)) exit();
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
@@ -156,7 +177,6 @@ public:
 		m_entitiesData.resize(25);
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
-			//m_entitiesData[i].model.set_translation(vector3(0,0,0));
 			m_entitiesData[i].model.set_translation(utils::Utils::random(-70.0f, 70.0f));
 		}
 
@@ -170,15 +190,9 @@ public:
 		m_disableColorWriting->initWithDescription(blendDesc);
 		if (!m_disableColorWriting->isValid()) exit();
 
-		// a depth-stencil state to disable depth writing
-		m_disableDepthWriting.reset(new framework::DepthStencilStage());
-		D3D11_DEPTH_STENCIL_DESC depthDesc = framework::DepthStencilStage::getDisableDepthWriting();
-		m_disableDepthWriting->initWithDescription(depthDesc);
-		if (!m_disableDepthWriting->isValid()) exit();
-
 		// a depth-stencil state to disable depth test
 		m_disableDepthTest.reset(new framework::DepthStencilStage());
-		depthDesc = framework::DepthStencilStage::getDefault();
+		D3D11_DEPTH_STENCIL_DESC depthDesc = framework::DepthStencilStage::getDefault();
 		depthDesc.DepthEnable = FALSE;
 		m_disableDepthTest->initWithDescription(depthDesc);
 		if (!m_disableDepthTest->isValid()) exit();
@@ -256,7 +270,14 @@ public:
 		source2.specularColor = vector3(0.1f, 0.1f, 0.1f);
 		source2.ambientColor = vector3(0.0f, 0.0f, 0.0f);
 		source2.falloff = 40.0f;
-		m_lightManager.addLightSource(source2);
+
+		// additional lights
+		for (int i = 0; i < m_additionalLights; i++)
+		{
+			framework::LightSource sourceN = source2;
+			sourceN.position = utils::Utils::random(-70.0f, 70.0f);
+			m_lightManager.addLightSource(sourceN);
+		}
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
@@ -295,11 +316,12 @@ public:
 		onFrameData.lightsCount = m_lightsCount;
 		onFrameData.screenWidth = m_info.windowWidth;
 		onFrameData.screenHeight = m_info.windowHeight;
+		onFrameData.samplesCount = m_info.samples;
 		m_onFrameDataBuffer->setData(onFrameData);
 		m_onFrameDataBuffer->applyChanges();
 
 		getPipeline().clearRenderTarget(m_gbuffer);
-		getPipeline().setRenderTarget(m_gbuffer);
+		getPipeline().setRenderTarget(m_gbuffer, defaultRenderTarget());
 
 		// render to g-buffer
 		if (m_gbufferRendering->use())
@@ -351,7 +373,6 @@ public:
 			m_skyboxRendering->setUniform<DSAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
 			m_skyboxRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
 			m_skyboxRendering->setUniform<DSAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-			//m_skyboxRendering->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
 
 			getPipeline().drawPoints(1);
 
@@ -383,9 +404,9 @@ public:
 	{
 		if (!m_renderDebug) return;
 
-		//static char buf[100];
-		//sprintf(buf, "", );
-		//m_overlay->setText(buf);
+		static char buf[100];
+		sprintf(buf, "MSAA = %dx\nLights count = %d\n", m_info.samples, m_lightsCount);
+		m_overlay->setText(buf);
 
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
 		renderAxes(vp);
@@ -434,11 +455,10 @@ private:
 	std::shared_ptr<framework::GpuProgram> m_gbufferRendering;
 	// gpu program to render skybox
 	std::shared_ptr<framework::GpuProgram> m_skyboxRendering;
-	//
+	// gpu program to deferred shading
 	std::shared_ptr<framework::GpuProgram> m_deferredShading;
 
 	std::shared_ptr<framework::BlendStage> m_disableColorWriting;
-	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
 	std::shared_ptr<framework::DepthStencilStage> m_disableDepthTest;
 	std::shared_ptr<framework::BlendStage> m_alphaBlending;
 
@@ -476,6 +496,7 @@ private:
 
 	bool m_pause;
 	bool m_renderDebug;
+	int m_additionalLights;
 
 	CEGUI::Window* m_overlay;
 };

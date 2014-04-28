@@ -178,6 +178,22 @@ void Pipeline::setRenderTarget(std::shared_ptr<RenderTarget> renderTarget)
 	device.context->OMSetRenderTargets(cnt, renderTargets, depthStencil);
 }
 
+void Pipeline::setRenderTarget(std::shared_ptr<RenderTarget> renderTarget, std::shared_ptr<RenderTarget> depthStencil)
+{
+	const Device& device = Application::instance()->getDevice();
+
+	ID3D11RenderTargetView* renderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
+	int cnt = std::min(renderTarget->getViewCount(), D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT);
+	for (int i = 0; i < cnt; i++)
+	{
+		renderTargets[i] = renderTarget->getView(i).asRenderTargetView();
+	}
+
+	ID3D11DepthStencilView* dsv = depthStencil->isDepthUsed() ? depthStencil->getDepthView().asDepthStencilView() : 0;
+
+	device.context->OMSetRenderTargets(cnt, renderTargets, dsv);
+}
+
 void Pipeline::setRenderTarget(std::shared_ptr<RenderTarget> renderTarget, const UnorderedAccessibleBatch& uabatch)
 {
 	const Device& device = Application::instance()->getDevice();

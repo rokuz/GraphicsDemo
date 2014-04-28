@@ -1,118 +1,18 @@
 #include <common.h>
-
-struct LightData
-{
-	float3 position;
-	uint lightType;
-	float3 direction;
-	float falloff;
-	float3 diffuseColor;
-	float angle;
-	float3 ambientColor;
-	uint dummy;
-	float3 specularColor;
-	uint dummy2;
-};
-StructuredBuffer<LightData> lightsData : register(t0);
+#include <dscommon.h>
 
 Texture2D<float4> dataBlockMap1 : register(t1);
 Texture2D<float4> dataBlockMap2 : register(t2);
 Texture2D<uint3> dataBlockMap3 : register(t3);
 
-//static const uint MAX_LIGHTS_COUNT = 16;
-
-void processLight(const uint lightIndex, float3 worldPos, out float3 lightDir, out float lightPower)
-{
-	[branch]
-	if (lightsData[lightIndex].lightType == 0) // omni light
-	{
-		float3 ldv = worldPos - lightsData[lightIndex].position;
-		lightDir = normalize(ldv);
-		float falloff = 1.0 - saturate(length(ldv) / (lightsData[lightIndex].falloff + 1e-7));
-		lightPower = falloff * falloff;
-	}
-	else if (lightsData[lightIndex].lightType == 1) // spot light
-	{
-		float3 ldv = worldPos - lightsData[lightIndex].position;
-		lightDir = normalize(ldv);
-		
-		float cosAng = dot(lightDir, lightsData[lightIndex].direction);
-		float cosOuter = cos(lightsData[lightIndex].angle);
-		lightPower = smoothstep(cosOuter, cosOuter + 0.1, cosAng);
-		
-		[branch]
-		if (lightPower > 1e-5)
-		{
-			float falloff = 1.0 - saturate(length(ldv) / (lightsData[lightIndex].falloff + 1e-7));
-			lightPower *= (falloff * falloff);
-		}
-	}
-	else // direct light
-	{
-		lightDir = lightsData[lightIndex].direction;
-		lightPower = 1;
-	}
-}
-
-void blinn(in float3 normal, in float3 worldPos, in float specPower, out float3 diffColor, out float3 specColor, out float3 ambColor)
-{
-	float3 viewDir = normalize(worldPos - viewPosition);
-
-	diffColor = float3(0, 0, 0);
-	specColor = float3(0, 0, 0);
-	ambColor = float3(0, 0, 0);
-	
-	//[unroll(MAX_LIGHTS_COUNT)]
-	for (uint i = 0; i < lightsCount; i++)
-	{
-		float3 lightDir;
-		float lightPower;
-		processLight(i, worldPos, lightDir, lightPower);
-		
-		float ndol = max(0.0, dot(lightDir, normal));
-		diffColor += lightsData[i].diffuseColor * ndol * lightPower;
-		
-		float3 h = normalize(viewDir + lightDir);
-		specColor += lightsData[i].specularColor * pow(max(dot(normal, h), 0.0), specPower) * lightPower;
-		
-		ambColor += lightsData[i].ambientColor * lightPower;
-	}
-}
-
-struct PS_INPUT_DS
-{
-    float4 position : SV_POSITION;
-};
-
-struct PS_OUTPUT_DS
-{
-    float4 color : SV_TARGET;
-	//uint coverage : SV_COVERAGE;
-};
-
-float4 unpackColor(uint color)
-{
-	float4 output;
-	output.r = float((color >> 24) & 0x000000ff) / 255.0f;
-	output.g = float((color >> 16) & 0x000000ff) / 255.0f;
-	output.b = float((color >> 8) & 0x000000ff) / 255.0f;
-	output.a = float(color & 0x000000ff) / 255.0f;
-	return saturate(output);
-}
-
-PS_OUTPUT_DS main(PS_INPUT_DS input, uint sampleIndex : SV_SAMPLEINDEX)
+PS_OUTPUT_DS main(PS_INPUT_DS input)
 {
 	PS_OUTPUT_DS output;
 	
+	// clip empty fragments
 	uint3 dataBlock3 = dataBlockMap3.Load(int3(input.position.xy, 0));
-	uint matId = dataBlock3.x & 0x0000ffff;
-	uint coverage = (dataBlock3.x >> 16);
-	int coverageTest = coverage & (1 << sampleIndex);
-	if (matId == 0 || coverageTest == 0)
-	{
-		output.color = float4(0,0,0,0);
-		return output;
-	}
+	int matId = dataBlock3.x & 0x0000ffff;
+	clip(matId - 1);
 
 	float4 dataBlock1 = dataBlockMap1.Load(int3(input.position.xy, 0));
 	float3 dataBlock2 = dataBlockMap2.Load(int3(input.position.xy, 0));

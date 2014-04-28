@@ -52,6 +52,8 @@ public:
 	bool isDepthUsed() const;
 	const ResourceView& getDepthView() const;
 
+	const D3D11_TEXTURE2D_DESC& getDesc(int index) const;
+
 private:
 	virtual void destroy();
 	bool createDepth(size_t index);

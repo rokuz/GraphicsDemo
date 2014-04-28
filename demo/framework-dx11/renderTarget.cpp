@@ -247,6 +247,11 @@ const ResourceView& RenderTarget::getDepthView() const
 	return m_depthView;
 }
 
+const D3D11_TEXTURE2D_DESC& RenderTarget::getDesc(int index) const
+{
+	return m_colorBufferDesc[index];
+}
+
 void RenderTarget::destroy()
 {
 	for (size_t i = 0; i < m_view.size(); i++)

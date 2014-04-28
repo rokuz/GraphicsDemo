@@ -21,7 +21,8 @@ cbuffer onFrameData : register(b0)
 	float3 viewPosition;
 	uint lightsCount;
 	uint2 screenSize;
-	uint2 onFrameData_dummy;
+	uint samplesCount;
+	uint onFrameData_dummy;
 };
 
 cbuffer entityData : register(b1)
