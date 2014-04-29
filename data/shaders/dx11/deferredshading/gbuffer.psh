@@ -8,13 +8,17 @@ SamplerState defaultSampler;
 struct PS_OUTPUT_GBUF
 {
 	float4 dataBlock1 : SV_Target0;
-	float3 dataBlock2 : SV_Target1;
-	uint3 dataBlock3 : SV_Target2;
+	uint3 dataBlock2 : SV_Target1;
 };
 
 uint packColor(float4 color)
 {
 	return (uint(color.r * 255) << 24) | (uint(color.g * 255) << 16) | (uint(color.b * 255) << 8) | uint(color.a * 255);
+}
+
+float2 packNormal(float3 normal)
+{
+	return float2(atan2(normal.y, normal.x), normal.z);
 }
 
 PS_OUTPUT_GBUF main(VS_OUTPUT_GBUF input, uint coverage : SV_COVERAGE)
@@ -25,12 +29,10 @@ PS_OUTPUT_GBUF main(VS_OUTPUT_GBUF input, uint coverage : SV_COVERAGE)
 	float3x3 ts = float3x3(input.tangent, cross(input.normal, input.tangent), input.normal);
 	float3 normal = -normalize(mul(normalTS, ts));
 	
-	output.dataBlock1.xyz = input.worldPos;
-	output.dataBlock1.w = specularPower;
-	output.dataBlock2 = normal;
-	output.dataBlock3.x = (materialId & 0x0000ffff) | (coverage << 16);
-	output.dataBlock3.y = packColor(diffuseMap.Sample(defaultSampler, input.uv0.xy));
-	output.dataBlock3.z = packColor(specularMap.Sample(defaultSampler, input.uv0.xy));
+	output.dataBlock1 = float4(length(input.worldViewPos), packNormal(normal), specularPower);
+	output.dataBlock2.x = (materialId & 0x0000ffff) | (coverage << 16);
+	output.dataBlock2.y = packColor(diffuseMap.Sample(defaultSampler, input.uv0.xy));
+	output.dataBlock2.z = packColor(specularMap.Sample(defaultSampler, input.uv0.xy));
 
     return output;
 }

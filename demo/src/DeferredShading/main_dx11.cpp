@@ -12,8 +12,7 @@ DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
 	SKYBOX_MAP,
 	DEFAULT_SAMPLER,
 	DATABLOCK_MAP1,
-	DATABLOCK_MAP2,
-	DATABLOCK_MAP3
+	DATABLOCK_MAP2
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<DSAppUniforms>::Uniform
 
@@ -23,6 +22,7 @@ struct EntityDataRaw
 {
 	matrix44 modelViewProjection;
 	matrix44 model;
+	matrix44 modelView;
 	float specularPower;
 	unsigned int materialId;
 	unsigned int : 32;
@@ -36,9 +36,11 @@ struct OnFrameDataRaw
 {
 	vector3 viewPosition;
 	unsigned int lightsCount;
-	unsigned int screenWidth;
-	unsigned int screenHeight;
+	matrix44 viewInverse;
+	matrix44 projectionInverse;
 	unsigned int samplesCount;
+	unsigned int : 32;
+	unsigned int : 32;
 	unsigned int : 32;
 };
 #pragma pack (pop)
@@ -117,7 +119,6 @@ public:
 		std::vector<D3D11_TEXTURE2D_DESC> descs;
 		descs.reserve(3);
 		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_FLOAT));
-		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_FLOAT));
 		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_UINT));
 		auto defDesc = defaultRenderTarget()->getDesc(0);
 		for (size_t i = 0; i < descs.size(); i++)
@@ -125,7 +126,7 @@ public:
 			descs[i].SampleDesc.Count = defDesc.SampleDesc.Count;
 			descs[i].SampleDesc.Quality = defDesc.SampleDesc.Quality;
 		}
-		m_gbuffer->initWithDescriptions(descs, true);
+		m_gbuffer->initWithDescriptions(descs, false);
 		if (!m_gbuffer->isValid()) exit();
 
 		// gpu programs
@@ -151,7 +152,7 @@ public:
 
 		m_deferredShading.reset(new framework::GpuProgram());
 		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.vsh");
-		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.gsh");
+		m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.gsh");
 		if (m_info.samples == 0)
 		{
 			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.psh");
@@ -165,7 +166,6 @@ public:
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP1, "dataBlockMap1");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP2, "dataBlockMap2");
-		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP3, "dataBlockMap3");
 
 		// entity
 		m_entity = initEntity("data/media/cube/cube.geom",
@@ -314,8 +314,12 @@ public:
 		OnFrameDataRaw onFrameData;
 		onFrameData.viewPosition = m_camera.getPosition();
 		onFrameData.lightsCount = m_lightsCount;
-		onFrameData.screenWidth = m_info.windowWidth;
-		onFrameData.screenHeight = m_info.windowHeight;
+		matrix44 view = m_camera.getView();
+		view.invert();
+		matrix44 proj = m_camera.getProjection();
+		proj.invert();
+		onFrameData.viewInverse = view;
+		onFrameData.projectionInverse = proj;
 		onFrameData.samplesCount = m_info.samples;
 		m_onFrameDataBuffer->setData(onFrameData);
 		m_onFrameDataBuffer->applyChanges();
@@ -344,7 +348,6 @@ public:
 			m_deferredShading->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
 			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP1, m_gbuffer, 0);
 			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP2, m_gbuffer, 1);
-			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP3, m_gbuffer, 2);
 
 			m_disableDepthTest->apply();
 			m_alphaBlending->apply();
@@ -385,6 +388,7 @@ public:
 		EntityDataRaw entityDataRaw;
 		entityDataRaw.modelViewProjection = entityData.mvp;
 		entityDataRaw.model = entityData.model;
+		entityDataRaw.modelView = entityData.mv;
 		entityDataRaw.specularPower = entityData.specularPower;
 		entityDataRaw.materialId = entityData.materialId;
 		m_entityDataBuffer->setData(entityDataRaw);
@@ -441,11 +445,36 @@ public:
 
 	void update(double elapsedTime)
 	{
-		matrix44 vp = m_camera.getView() * m_camera.getProjection();
+		matrix44 view = m_camera.getView();
+		matrix44 vp = view * m_camera.getProjection();
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
 			m_entitiesData[i].mvp = m_entitiesData[i].model * vp;
+			m_entitiesData[i].mv = m_entitiesData[i].model * view;
 		}
+
+		/*m_lightsCount = 0;
+		for (size_t i = 0; i < m_lightManager.getLightSourcesCount(); i++)
+		{
+			auto lightSource = m_lightManager.getLightSource(i);
+			if (lightSource.type != framework::DirectLight)
+			{
+				bbox3 box(lightSource.position, vector3(lightSource.falloff, lightSource.falloff, lightSource.falloff));
+				if (box.clipstatus(vp) != bbox3::Outside)
+				{
+					m_lightsBuffer->setElement(m_lightsCount, m_lightManager.getRawLightData(i));
+					m_lightsCount++;
+					if (m_lightsCount == MAX_LIGHTS_COUNT) break;
+				}
+			}
+			else
+			{
+				m_lightsBuffer->setElement(m_lightsCount, m_lightManager.getRawLightData(i));
+				m_lightsCount++;
+				if (m_lightsCount == MAX_LIGHTS_COUNT) break;
+			}
+		}
+		m_lightsBuffer->applyChanges();*/
 	}
 
 private:
@@ -475,6 +504,7 @@ private:
 	{
 		matrix44 model;
 		matrix44 mvp;
+		matrix44 mv;
 		float specularPower;
 		unsigned int materialId;
 

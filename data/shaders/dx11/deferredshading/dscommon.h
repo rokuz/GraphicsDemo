@@ -78,6 +78,7 @@ void blinn(in float3 normal, in float3 worldPos, in float specPower, out float3 
 struct PS_INPUT_DS
 {
     float4 position : SV_POSITION;
+	float3 viewRay : TEXCOORD0;
 };
 
 struct PS_OUTPUT_DS
@@ -93,4 +94,17 @@ float4 unpackColor(uint color)
 	output.b = float((color >> 8) & 0x000000ff) / 255.0f;
 	output.a = float(color & 0x000000ff) / 255.0f;
 	return saturate(output);
+}
+
+float3 unpackNormal(float2 normal)
+{
+	float2 theta;
+	sincos(normal.x, theta.x, theta.y);
+	float2 phi = float2(sqrt(1.0f - normal.y * normal.y), normal.y);
+	return float3(theta.y * phi.x, theta.x * phi.x, phi.y);
+}
+
+float4 unpackPosition(float3 viewRay, float l)
+{
+	return float4(viewRay * l, 1);
 }

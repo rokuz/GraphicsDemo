@@ -13,22 +13,24 @@ struct VS_OUTPUT_GBUF
 	float2 uv0 : TEXCOORD0;
 	float3 tangent : TEXCOORD1;
 	float3 normal : TEXCOORD2;
-	float3 worldPos : TEXCOORD3;
+	float3 worldViewPos : TEXCOORD3;
 };
 
 cbuffer onFrameData : register(b0)
 {
 	float3 viewPosition;
 	uint lightsCount;
-	uint2 screenSize;
+	matrix viewInverse;
+	matrix projectionInverse;
 	uint samplesCount;
-	uint onFrameData_dummy;
+	uint3 onFrameData_dummy;
 };
 
 cbuffer entityData : register(b1)
 {
 	matrix modelViewProjection;
 	matrix model;
+	matrix modelView;
 	float specularPower;
 	uint materialId;
 	uint2 entityData_dummy1;

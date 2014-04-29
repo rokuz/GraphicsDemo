@@ -7,7 +7,7 @@ VS_OUTPUT_GBUF main(VS_INPUT input)
     output.uv0 = input.uv0;
 	output.normal = mul(normalize(input.normal), (float3x3)model);
 	output.tangent = mul(normalize(input.tangent), (float3x3)model);
-	output.worldPos = mul(float4(input.position, 1), model).xyz;
+	output.worldViewPos = mul(float4(input.position, 1), modelView).xyz;
 	
 	return output;
 }
