@@ -45,11 +45,13 @@
 #include "CEGUI/CEGUI.h"
 #include "CEGUI/RendererModules/OpenGL/GL3Renderer.h"
 
+#include "logger.h"
+#include "utils.h"
+#include "timer.h"
+#include "profiler.h"
 #include "matrix.h"
 
 #include "destroyable.h"
-#include "logger.h"
-#include "utils.h"
 #include "geometry3D.h"
 #include "line3D.h"
 #include "texture.h"
@@ -166,18 +168,26 @@ int CALLBACK WinMain(HINSTANCE hInstance,           \
                      LPSTR lpCmdLine,               \
                      int nCmdShow)                  \
 {                                                   \
+	utils::Utils::init();							\
+	utils::Logger::start(utils::Logger::IDE_OUTPUT |\
+						 utils::Logger::FILE);		\
     A *app = new A();                               \
     int result = app->run(app);                     \
     delete app;                                     \
+	utils::Logger::finish();					    \
     return result;                                  \
 }
 #elif defined __APPLE__
 #define DECLARE_MAIN(a)                             \
 int main(int argc, const char ** argv)              \
 {                                                   \
+	utils::Utils::init();							\
+	utils::Logger::start(utils::Logger::IDE_OUTPUT |\
+						 utils::Logger::FILE);		\
     A *app = new A();                               \
     int result = app->run(app);                     \
     delete app;                                     \
+	utils::Logger::finish();					    \
     return result;                                  \
 }
 #else
