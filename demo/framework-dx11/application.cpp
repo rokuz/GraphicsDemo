@@ -149,6 +149,8 @@ void Application::mainLoop()
 
 	do
 	{
+		TRACE_BLOCK("_Frame");
+
 		// process events from the window
 		m_window.pollEvents();
 
@@ -389,7 +391,7 @@ bool Application::initSwapChain(Device& device)
 		state.SampleDesc.Quality = 0;
 	}
 
-	state.BufferUsage = DXGI_USAGE_SHADER_INPUT | DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	state.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	state.BufferCount = 1;
 	state.OutputWindow = m_window.getHandle();
 	state.Windowed = TRUE;
@@ -444,6 +446,8 @@ void Application::destroyDevice()
 
 void Application::present()
 {
+	TRACE_FUNCTION
+
 	if (m_device.swapChain != 0)
 	{
 		m_device.swapChain->Present(0, 0);
@@ -486,6 +490,7 @@ std::string Application::getGuiFullName(const std::string& name)
 
 void Application::renderGui(double elapsedTime)
 {
+	TRACE_FUNCTION
 	useDefaultRenderTarget();
 
 	CEGUI::System& gui_system(CEGUI::System::getSingleton());

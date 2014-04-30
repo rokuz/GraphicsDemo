@@ -72,6 +72,7 @@ public:
 	void bindToGpuProgram(std::shared_ptr<GpuProgram> program);
 
 	const std::vector<D3D11_INPUT_ELEMENT_DESC>& getInputLayoutInfo() const { return m_inputLayoutInfo; }
+	const bbox3& getBoundingBox() const { return m_boundingBox; }
     
     size_t getMeshesCount() const;
 	void renderMesh(size_t index);

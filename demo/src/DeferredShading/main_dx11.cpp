@@ -61,6 +61,7 @@ public:
 		m_pause = false;
 		m_renderDebug = false;
 		m_additionalLights = 50;
+		m_visibleObjects = 0;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
@@ -213,6 +214,17 @@ public:
 
 		// lights
 		initLights();
+
+		utils::Profiler::instance().run();
+	}
+
+	virtual void shutdown()
+	{
+		if (utils::Profiler::instance().isRun())
+		{
+			utils::Profiler::instance().stop();
+			utils::Profiler::instance().saveToFile();
+		}
 	}
 
 	Entity initEntity(const std::string& geometry, 
@@ -307,6 +319,7 @@ public:
 
 	virtual void render(double elapsedTime)
 	{
+		TRACE_FUNCTION
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
@@ -330,6 +343,7 @@ public:
 		// render to g-buffer
 		if (m_gbufferRendering->use())
 		{
+			TRACE_BLOCK("_GBuffer")
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				renderEntity(m_entity, m_entitiesData[i]);
@@ -344,6 +358,7 @@ public:
 		// deferred shading pass
 		if (m_deferredShading->use())
 		{
+			TRACE_BLOCK("_DeferredShading")
 			m_deferredShading->setUniform<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
 			m_deferredShading->setUniform<DSAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
 			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP1, m_gbuffer, 0);
@@ -385,6 +400,8 @@ public:
 
 	void renderEntity(const Entity& entity, const EntityData& entityData)
 	{
+		if (!entityData.isVisible) return;
+
 		EntityDataRaw entityDataRaw;
 		entityDataRaw.modelViewProjection = entityData.mvp;
 		entityDataRaw.model = entityData.model;
@@ -409,7 +426,7 @@ public:
 		if (!m_renderDebug) return;
 
 		static char buf[100];
-		sprintf(buf, "MSAA = %dx\nLights count = %d\n", m_info.samples, m_lightsCount);
+		sprintf(buf, "MSAA = %dx\nVisible lights = %d\nVisible objects = %d", m_info.samples, m_lightsCount, m_visibleObjects);
 		m_overlay->setText(buf);
 
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
@@ -447,13 +464,24 @@ public:
 	{
 		matrix44 view = m_camera.getView();
 		matrix44 vp = view * m_camera.getProjection();
+
+		// clip objects by frustum
+		m_visibleObjects = 0;
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
-			m_entitiesData[i].mvp = m_entitiesData[i].model * vp;
-			m_entitiesData[i].mv = m_entitiesData[i].model * view;
+			bbox3 box = m_entity.geometry->getBoundingBox();
+			box.transform(m_entitiesData[i].model);
+			m_entitiesData[i].isVisible = (box.clipstatus(vp) != bbox3::Outside);
+			if (m_entitiesData[i].isVisible)
+			{
+				m_entitiesData[i].mvp = m_entitiesData[i].model * vp;
+				m_entitiesData[i].mv = m_entitiesData[i].model * view;
+				m_visibleObjects++;
+			}
 		}
 
-		/*m_lightsCount = 0;
+		// clip lights by frustum
+		m_lightsCount = 0;
 		for (size_t i = 0; i < m_lightManager.getLightSourcesCount(); i++)
 		{
 			auto lightSource = m_lightManager.getLightSource(i);
@@ -474,7 +502,7 @@ public:
 				if (m_lightsCount == MAX_LIGHTS_COUNT) break;
 			}
 		}
-		m_lightsBuffer->applyChanges();*/
+		m_lightsBuffer->applyChanges();
 	}
 
 private:
@@ -507,8 +535,9 @@ private:
 		matrix44 mv;
 		float specularPower;
 		unsigned int materialId;
+		bool isVisible;
 
-		EntityData() : specularPower(30.0f), materialId(1){}
+		EntityData() : specularPower(30.0f), materialId(1), isVisible(true){}
 	};
 
 	// opaque entity
@@ -527,6 +556,7 @@ private:
 	bool m_pause;
 	bool m_renderDebug;
 	int m_additionalLights;
+	int m_visibleObjects;
 
 	CEGUI::Window* m_overlay;
 };

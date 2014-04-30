@@ -37,6 +37,7 @@
 #include "logger.h"
 #include "utils.h"
 #include "timer.h"
+#include "profiler.h"
 
 #include "window.h"
 #include "outputd3d11.h"

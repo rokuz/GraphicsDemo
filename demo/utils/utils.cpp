@@ -22,6 +22,7 @@
  */
 
 #include "utils.h"
+#include "profiler.h"
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN 1
@@ -43,6 +44,7 @@ namespace utils
 void Utils::init()
 {
 	srand((unsigned int)time(0));
+	Profiler::instance();
 }
 
 bool Utils::exists(const std::string& fileName)

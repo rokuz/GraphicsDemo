@@ -2,4 +2,5 @@ CEGUI.log
 build*
 deps
 log.txt
+profiler.txt
 tools
