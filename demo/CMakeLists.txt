@@ -32,6 +32,7 @@ project(${PROJECT_NAME})
 add_subdirectory(mathlib)
 add_subdirectory(utils)
 add_subdirectory(geomlib)
+add_subdirectory(guilib)
 
 if( GRAPHICS_API STREQUAL GRAPHICS_API_OGL )
 add_subdirectory(framework-gl)

@@ -21,34 +21,27 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
-#include <map>
-#include "vector.h"
-#include "quaternion.h"
-#include "inputkeys.h"
+#include "widget.h"
 
-namespace utils
+namespace gui
 {
 
-class Utils
+Widget::Widget()
 {
-public:
-	static void init();
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
-	static std::string getExtention(const std::string& fileName);
-	static std::string getPath(const std::string& fileName);
-	static float* convert(const vector4& v);
-	static float* convert(const vector3& v);
-	static float* convert(const quaternion& q);
-	static std::string fromUnicode(const std::wstring& str);
-	static std::wstring toUnicode(const std::string& str);
-	static vector3 random(float minValue = 0.0f, float maxValue = 1.0f);
-	static std::map<std::string, int> parseCommandLine(const std::string& commandLine);
-};
+}
+
+void Widget::addChild(WidgetWeakPtr_T widget)
+{
+}
+
+void Widget::removeChild(WidgetWeakPtr_T widget)
+{
 
 }
 
-#endif
+void Widget::setVisible(bool visible)
+{
+
+}
+
+}

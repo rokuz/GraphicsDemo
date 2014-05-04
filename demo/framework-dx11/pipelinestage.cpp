@@ -25,6 +25,8 @@
 #include "application.h"
 #include "utils.h"
 #include <algorithm>
+#undef min
+#undef max
 
 namespace framework
 {

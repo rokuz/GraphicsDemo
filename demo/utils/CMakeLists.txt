@@ -7,6 +7,7 @@ set(SOURCE_LIB  logger.h
 				timer.cpp
 				profiler.h
 				profiler.cpp
+				inputkeys.h
 )
 source_group(utils FILES ${SOURCE_LIB})
 add_library(utils STATIC ${SOURCE_LIB})

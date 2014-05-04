@@ -22,7 +22,7 @@
  */
 
 #pragma once
-#pragma warning(disable:4005)
+#pragma warning(disable:4005 4996)
 #include <d3d11.h>
 
 namespace framework

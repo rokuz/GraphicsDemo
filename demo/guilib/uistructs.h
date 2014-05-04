@@ -21,32 +21,46 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
-#include <map>
-#include "vector.h"
-#include "quaternion.h"
+#ifndef __UI_STRUCTS_H__
+#define __UI_STRUCTS_H__
+
+#include <memory>
 #include "inputkeys.h"
 
-namespace utils
+namespace gui
 {
 
-class Utils
+#define DECLARE_PTR(t) typedef std::shared_ptr<t> t##Ptr_T; typedef std::weak_ptr<t> t##WeakPtr_T;
+
+struct Coords
 {
-public:
-	static void init();
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
-	static std::string getExtention(const std::string& fileName);
-	static std::string getPath(const std::string& fileName);
-	static float* convert(const vector4& v);
-	static float* convert(const vector3& v);
-	static float* convert(const quaternion& q);
-	static std::string fromUnicode(const std::wstring& str);
-	static std::wstring toUnicode(const std::string& str);
-	static vector3 random(float minValue = 0.0f, float maxValue = 1.0f);
-	static std::map<std::string, int> parseCommandLine(const std::string& commandLine);
+	float relativeX;
+	float relativeY;
+	float absoluteX;
+	float absoluteY;
+
+	Coords() : relativeX(0), relativeY(0), absoluteX(0), absoluteY(0){}
+	
+	Coords(float relX, float absX, float relY, float absY) : relativeX(relX), relativeY(relY), absoluteX(absX), absoluteY(absY){}
+	
+	static Coords Absolute(float x, float y) 
+	{
+		return Coords(0, x, 0, y);
+	}
+	
+	static Coords Relative(float x, float y)
+	{
+		return Coords(x, 0, y, 0);
+	}
+};
+
+enum Formatting
+{
+	LeftAligned = 0,
+	RightAligned,
+	TopAligned,
+	BottomAligned,
+	CenterAligned
 };
 
 }

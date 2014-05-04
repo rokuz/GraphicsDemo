@@ -22,6 +22,7 @@ public:
 	virtual void init()
 	{
 		m_info.title = "Test application (OpenGL 4.x)";
+		m_info.flags.fullscreen = 1;
 	}
 
 	virtual void startup(CEGUI::DefaultWindow* root)

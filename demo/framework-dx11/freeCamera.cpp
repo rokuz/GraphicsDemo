@@ -22,8 +22,8 @@
  */
 
 #include "freeCamera.h"
-#include "CEGUI/CEGUI.h"
 #include "logger.h"
+#include "inputkeys.h"
 
 namespace framework
 {
@@ -58,19 +58,19 @@ void FreeCamera::initWithPositionDirection(int width, int height, const vector3&
 
 void FreeCamera::onKeyButton(int key, int scancode, bool pressed)
 {
-	if (key == CEGUI::Key::Scan::W || key == CEGUI::Key::Scan::ArrowUp)
+	if (key == InputKeys::Scan::W || key == InputKeys::Scan::ArrowUp)
 	{
 		m_moveForward = pressed;
 	}
-	else if (key == CEGUI::Key::Scan::S || key == CEGUI::Key::Scan::ArrowDown)
+	else if (key == InputKeys::Scan::S || key == InputKeys::Scan::ArrowDown)
 	{
 		m_moveBackward = pressed;
 	}
-	else if (key == CEGUI::Key::Scan::A || key == CEGUI::Key::Scan::ArrowLeft)
+	else if (key == InputKeys::Scan::A || key == InputKeys::Scan::ArrowLeft)
 	{
 		m_moveLeft = pressed;
 	}
-	else if (key == CEGUI::Key::Scan::D || key == CEGUI::Key::Scan::ArrowRight)
+	else if (key == InputKeys::Scan::D || key == InputKeys::Scan::ArrowRight)
 	{
 		m_moveRight = pressed;
 	}
@@ -78,7 +78,7 @@ void FreeCamera::onKeyButton(int key, int scancode, bool pressed)
 	
 void FreeCamera::onMouseButton(double xpos, double ypos, int button, bool pressed)
 {
-	if (button == CEGUI::MouseButton::LeftButton)
+	if (button == InputKeys::MouseButton::LeftButton)
 	{
 		if (pressed)
 		{ 

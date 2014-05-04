@@ -21,33 +21,29 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
-#include <map>
-#include "vector.h"
-#include "quaternion.h"
-#include "inputkeys.h"
+#ifndef __LABEL_H__
+#define __LABEL_H__
 
-namespace utils
+#include "widget.h"
+#include <string>
+
+namespace gui
 {
 
-class Utils
+class Label : public Widget
 {
 public:
-	static void init();
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
-	static std::string getExtention(const std::string& fileName);
-	static std::string getPath(const std::string& fileName);
-	static float* convert(const vector4& v);
-	static float* convert(const vector3& v);
-	static float* convert(const quaternion& q);
-	static std::string fromUnicode(const std::wstring& str);
-	static std::wstring toUnicode(const std::string& str);
-	static vector3 random(float minValue = 0.0f, float maxValue = 1.0f);
-	static std::map<std::string, int> parseCommandLine(const std::string& commandLine);
+	Label();
+	~Label(){}
+
+	void setText(const std::wstring& text);
+	void setHorzFormatting(Formatting formatting);
+	void setVertFormatting(Formatting formatting);
+
+private:
 };
+
+DECLARE_PTR(Label);
 
 }
 

@@ -79,7 +79,7 @@ public:
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 	}
 
-	virtual void startup(CEGUI::DefaultWindow* root)
+	virtual void startup(gui::WidgetPtr_T root)
 	{
 		// camera
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
@@ -287,18 +287,13 @@ public:
 		m_lightsBuffer->applyChanges();
 	}
 
-	void initOverlays(CEGUI::DefaultWindow* root)
+	void initOverlays(gui::WidgetPtr_T root)
 	{
-		CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
-		m_overlay = (CEGUI::Window*)winMgr.createWindow(getGuiFullName("/Label").c_str());
-		root->addChild(m_overlay);
-
-		m_overlay->setPosition(CEGUI::UVector2(CEGUI::UDim(1.0f, -300.0f), CEGUI::UDim(1.0f, -150.0f)));
-		m_overlay->setSize(CEGUI::USize(cegui_absdim(300.0f), cegui_absdim(150.0f)));
-		m_overlay->setProperty("HorzFormatting", "RightAligned");
-		m_overlay->setProperty("VertFormatting", "BottomAligned");
-		m_overlay->setText("Fragments buffer usage = 0%\nLost fragments = 0");
-		m_overlay->setVisible(m_renderDebug);
+		m_debugLabel = gui::UIManager::instance().createLabel(gui::Coords(1.0f, -300.0f, 1.0f, -150.0f),
+															  gui::Coords::Absolute(300.0f, 150.0f),
+															  gui::RightAligned, gui::BottomAligned,
+															  L"Fragments buffer usage = 0 % \nLost fragments = 0");
+		root->addChild(m_debugLabel);
 	}
 
 	virtual void render(double elapsedTime)
@@ -405,9 +400,9 @@ public:
 			usage = 100.0;
 			lostFragments = bufferUsage - m_fragmentsBufferSize;
 		}
-		static char buf[100];
-		sprintf(buf, "Fragments buffer usage = %d%%\nLost fragments = %d", (int)usage, lostFragments);
-		m_overlay->setText(buf);
+		static wchar_t buf[100];
+		swprintf(buf, L"Fragments buffer usage = %d%%\nLost fragments = %d", (int)usage, lostFragments);
+		m_debugLabel->setText(buf);
 
 		//m_opaqueEntity.geometry->renderBoundingBox(m_mvp);
 		//matrix44 vp = m_camera.getView() * m_camera.getProjection();
@@ -417,15 +412,15 @@ public:
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)
 	{
-		if (key == CEGUI::Key::Space && pressed)
+		if (key == InputKeys::Space && pressed)
 		{
 			m_pause = !m_pause;
 			return;
 		}
-		if (key == CEGUI::Key::F1 && pressed)
+		if (key == InputKeys::F1 && pressed)
 		{
 			m_renderDebug = !m_renderDebug;
-			m_overlay->setVisible(m_renderDebug);
+			m_debugLabel->setVisible(m_renderDebug);
 			return;
 		}
 		m_camera.onKeyButton(key, scancode, pressed);
@@ -521,7 +516,7 @@ private:
 	bool m_renderDebug;
 	unsigned int m_fragmentsBufferSize;
 
-	CEGUI::Window* m_overlay;
+	gui::LabelPtr_T m_debugLabel;
 };
 
 DECLARE_MAIN(OITApp);

@@ -21,33 +21,58 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
+#ifndef __UI_MANAGER_H__
+#define __UI_MANAGER_H__
+
 #include <string>
 #include <map>
-#include "vector.h"
-#include "quaternion.h"
-#include "inputkeys.h"
+#include <memory>
 
-namespace utils
+#include "uistructs.h"
+#include "overlay.h"
+#include "label.h"
+
+namespace gui
 {
 
-class Utils
+class UIManager
 {
+	UIManager();
+	~UIManager(){}
+
 public:
-	static void init();
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
-	static std::string getExtention(const std::string& fileName);
-	static std::string getPath(const std::string& fileName);
-	static float* convert(const vector4& v);
-	static float* convert(const vector3& v);
-	static float* convert(const quaternion& q);
-	static std::string fromUnicode(const std::wstring& str);
-	static std::wstring toUnicode(const std::string& str);
-	static vector3 random(float minValue = 0.0f, float maxValue = 1.0f);
-	static std::map<std::string, int> parseCommandLine(const std::string& commandLine);
+	static UIManager& instance()
+	{
+		static UIManager inst;
+		return inst;
+	}
+
+	void init(size_t width, size_t height);
+	void cleanup();
+
+	WidgetPtr_T root() const;
+
+	void setScreenSize(size_t width, size_t height);
+
+	void injectFrameTime(double elapsed);
+	void injectKeyDown(InputKeys::Scan scan);
+	void injectKeyUp(InputKeys::Scan scan);
+	void injectChar(int character);
+	void injectMouseButtonDown(InputKeys::MouseButton button);
+	void injectMouseButtonUp(InputKeys::MouseButton button);
+	void injectMousePosition(float x, float y);
+	void injectMouseWheelChange(float delta);
+
+	LabelPtr_T createLabel(const Coords& position, const Coords& size, 
+						   Formatting hformatting = LeftAligned, 
+						   Formatting vformatting = CenterAligned,
+						   const std::wstring& text = L"");
+
+	OverlayPtr_T createOverlay(const Coords& position, const Coords& size);
+
+private:
 };
+
 
 }
 

@@ -25,19 +25,18 @@
 
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN 1
-#include <windows.h>
 #include "structs.h"
 #include <string>
 #include <list>
-
-#include "CEGUI/CEGUI.h"
+#include <algorithm>
 
 #include "matrix.h"
 #include "logger.h"
 #include "utils.h"
 #include "timer.h"
 #include "profiler.h"
+
+#include "uimanager.h"
 
 #include "window.h"
 #include "outputd3d11.h"
@@ -59,6 +58,9 @@
 #include "unorderedaccessiblebatch.h"
 #include "sampler.h"
 
+#undef min
+#undef max
+
 namespace framework
 {
 
@@ -73,7 +75,7 @@ public:
 	virtual ~Application(){}
 
 	virtual void init(const std::map<std::string, int>& params){}
-	virtual void startup(CEGUI::DefaultWindow* root){}
+	virtual void startup(gui::WidgetPtr_T root){}
 	virtual void render(double elapsedTime){}
 	virtual void shutdown(){}
 	virtual void onResize(int width, int height){}
@@ -116,8 +118,6 @@ protected:
 
 	void exit();
 
-	static std::string getGuiFullName(const std::string& name);
-
 	void setLegend(const std::string& legend);
 
 	void renderGui(double elapsedTime);
@@ -137,10 +137,9 @@ private:
 	bool m_isRunning;
 	double m_lastTime;
 	double m_fpsStorage;
-	CEGUI::Renderer* m_guiRenderer;
-	CEGUI::DefaultWindow* m_rootWindow;
-	CEGUI::Window* m_fpsLabel;
-	CEGUI::Window* m_legendLabel;
+	gui::WidgetPtr_T m_rootWindow;
+	gui::LabelPtr_T m_fpsLabel;
+	gui::LabelPtr_T m_legendLabel;
 	double m_timeSinceLastFpsUpdate;
 	double m_averageFps;
 	size_t m_framesCounter;
@@ -177,7 +176,6 @@ private:
 
 	void initGui();
 	void destroyGui();
-	void initialiseResources();
 	void initInput();
 	void initAxes();
 

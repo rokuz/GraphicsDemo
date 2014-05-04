@@ -35,7 +35,7 @@ public:
 		m_info.flags.fullscreen = 0;
 	}
 
-	virtual void startup(CEGUI::DefaultWindow* root)
+	virtual void startup(gui::WidgetPtr_T root)
 	{
 		m_rotation = 0.0f;
 		m_pause = false;
@@ -152,7 +152,7 @@ public:
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)
 	{
-		if (key == CEGUI::Key::Space && pressed)
+		if (key == InputKeys::Space && pressed)
 		{
 			m_pause = !m_pause;
 			return;

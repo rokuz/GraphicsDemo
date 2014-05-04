@@ -36,7 +36,7 @@ endif()
 if( GRAPHICS_API STREQUAL GRAPHICS_API_DX11 )
 set(FRAMEWORK_DIR "../../framework-dx11")
 endif()
-include_directories(../../mathlib ../../geomlib ../../utils ${FRAMEWORK_DIR})
+include_directories(../../mathlib ../../geomlib ../../utils ../../guilib ${FRAMEWORK_DIR})
 
 #link projects
 target_link_libraries(${demo_name} framework)

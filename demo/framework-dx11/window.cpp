@@ -22,7 +22,7 @@
  */
 
 #include "window.h"
-#include <CEGUI/InputEvent.h>
+#include "inputkeys.h"
 
 namespace framework
 {
@@ -162,7 +162,7 @@ LRESULT Window::handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (m_mouseHandler != 0)
 			{
 				auto pos = getCursorPosition();
-				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::LeftButton, false);
+				m_mouseHandler(pos.first, pos.second, 0, InputKeys::MouseButton::LeftButton, false);
 			}
 		}
 		break;
@@ -172,7 +172,7 @@ LRESULT Window::handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (m_mouseHandler != 0)
 			{
 				auto pos = getCursorPosition();
-				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::LeftButton, true);
+				m_mouseHandler(pos.first, pos.second, 0, InputKeys::MouseButton::LeftButton, true);
 			}
 		}
 		break;
@@ -182,7 +182,7 @@ LRESULT Window::handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (m_mouseHandler != 0)
 			{
 				auto pos = getCursorPosition();
-				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::MiddleButton, false);
+				m_mouseHandler(pos.first, pos.second, 0, InputKeys::MouseButton::MiddleButton, false);
 			}
 		}
 		break;
@@ -192,7 +192,7 @@ LRESULT Window::handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (m_mouseHandler != 0)
 			{
 				auto pos = getCursorPosition();
-				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::MiddleButton, true);
+				m_mouseHandler(pos.first, pos.second, 0, InputKeys::MouseButton::MiddleButton, true);
 			}
 		}
 		break;
@@ -202,7 +202,7 @@ LRESULT Window::handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (m_mouseHandler != 0)
 			{
 				auto pos = getCursorPosition();
-				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::RightButton, false);
+				m_mouseHandler(pos.first, pos.second, 0, InputKeys::MouseButton::RightButton, false);
 			}
 		}
 		break;
@@ -212,7 +212,7 @@ LRESULT Window::handleEvent(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (m_mouseHandler != 0)
 			{
 				auto pos = getCursorPosition();
-				m_mouseHandler(pos.first, pos.second, 0, CEGUI::MouseButton::RightButton, true);
+				m_mouseHandler(pos.first, pos.second, 0, InputKeys::MouseButton::RightButton, true);
 			}
 		}
 		break;
@@ -329,21 +329,21 @@ int Window::translateKey(WPARAM wParam, LPARAM lParam)
 	{
 		switch (MapVirtualKey(HIWORD(lParam) & 0xFF, 1))
 		{
-		case VK_INSERT:   return (int)CEGUI::Key::Scan::Numpad0;
-		case VK_END:      return (int)CEGUI::Key::Scan::Numpad1;
-		case VK_DOWN:     return (int)CEGUI::Key::Scan::Numpad2;
-		case VK_NEXT:     return (int)CEGUI::Key::Scan::Numpad3;
-		case VK_LEFT:     return (int)CEGUI::Key::Scan::Numpad4;
-		case VK_CLEAR:    return (int)CEGUI::Key::Scan::Numpad5;
-		case VK_RIGHT:    return (int)CEGUI::Key::Scan::Numpad6;
-		case VK_HOME:     return (int)CEGUI::Key::Scan::Numpad7;
-		case VK_UP:       return (int)CEGUI::Key::Scan::Numpad8;
-		case VK_PRIOR:    return (int)CEGUI::Key::Scan::Numpad9;
-		case VK_DIVIDE:   return (int)CEGUI::Key::Scan::Divide;
-		case VK_MULTIPLY: return (int)CEGUI::Key::Scan::Multiply;
-		case VK_SUBTRACT: return (int)CEGUI::Key::Scan::Subtract;
-		case VK_ADD:      return (int)CEGUI::Key::Scan::Add;
-		case VK_DELETE:   return (int)CEGUI::Key::Scan::Decimal;
+		case VK_INSERT:   return (int)InputKeys::Scan::Numpad0;
+		case VK_END:      return (int)InputKeys::Scan::Numpad1;
+		case VK_DOWN:     return (int)InputKeys::Scan::Numpad2;
+		case VK_NEXT:     return (int)InputKeys::Scan::Numpad3;
+		case VK_LEFT:     return (int)InputKeys::Scan::Numpad4;
+		case VK_CLEAR:    return (int)InputKeys::Scan::Numpad5;
+		case VK_RIGHT:    return (int)InputKeys::Scan::Numpad6;
+		case VK_HOME:     return (int)InputKeys::Scan::Numpad7;
+		case VK_UP:       return (int)InputKeys::Scan::Numpad8;
+		case VK_PRIOR:    return (int)InputKeys::Scan::Numpad9;
+		case VK_DIVIDE:   return (int)InputKeys::Scan::Divide;
+		case VK_MULTIPLY: return (int)InputKeys::Scan::Multiply;
+		case VK_SUBTRACT: return (int)InputKeys::Scan::Subtract;
+		case VK_ADD:      return (int)InputKeys::Scan::Add;
+		case VK_DELETE:   return (int)InputKeys::Scan::Decimal;
 		default:          break;
 		}
 	}
@@ -359,9 +359,9 @@ int Window::translateKey(WPARAM wParam, LPARAM lParam)
 		// right)
 		const DWORD scancode = MapVirtualKey(VK_RSHIFT, 0);
 		if ((DWORD)((lParam & 0x01ff0000) >> 16) == scancode)
-			return (int)CEGUI::Key::Scan::RightShift;
+			return (int)InputKeys::Scan::RightShift;
 
-		return (int)CEGUI::Key::Scan::LeftShift;
+		return (int)InputKeys::Scan::LeftShift;
 	}
 
 	// The CTRL keys require special handling
@@ -372,7 +372,7 @@ int Window::translateKey(WPARAM wParam, LPARAM lParam)
 
 		// Is this an extended key (i.e. right key)?
 		if (lParam & 0x01000000)
-			return (int)CEGUI::Key::Scan::RightControl;
+			return (int)InputKeys::Scan::RightControl;
 
 		// Here is a trick: "Alt Gr" sends LCTRL, then RALT. We only
 		// want the RALT message, so we try to see if the next message
@@ -392,12 +392,12 @@ int Window::translateKey(WPARAM wParam, LPARAM lParam)
 				{
 					// Next message is a RALT down message, which
 					// means that this is not a proper LCTRL message
-					return (int)CEGUI::Key::Scan::Unknown;
+					return (int)InputKeys::Scan::Unknown;
 				}
 			}
 		}
 
-		return (int)CEGUI::Key::Scan::LeftControl;
+		return (int)InputKeys::Scan::LeftControl;
 	}
 
 	// The ALT keys require special handling
@@ -405,9 +405,9 @@ int Window::translateKey(WPARAM wParam, LPARAM lParam)
 	{
 		// Is this an extended key (i.e. right key)?
 		if (lParam & 0x01000000)
-			return (int)CEGUI::Key::Scan::RightAlt;
+			return (int)InputKeys::Scan::RightAlt;
 
-		return (int)CEGUI::Key::Scan::LeftAlt;
+		return (int)InputKeys::Scan::LeftAlt;
 	}
 
 	// The ENTER keys require special handling
@@ -415,131 +415,131 @@ int Window::translateKey(WPARAM wParam, LPARAM lParam)
 	{
 		// Is this an extended key (i.e. right key)?
 		if (lParam & 0x01000000)
-			return (int)CEGUI::Key::Scan::NumpadEnter;
+			return (int)InputKeys::Scan::NumpadEnter;
 
-		return (int)CEGUI::Key::Scan::Return;
+		return (int)InputKeys::Scan::Return;
 	}
 
 	// Funcion keys (non-printable keys)
-	case VK_ESCAPE:        return (int)CEGUI::Key::Scan::Escape;
-	case VK_TAB:           return (int)CEGUI::Key::Scan::Tab;
-	case VK_BACK:          return (int)CEGUI::Key::Scan::Backspace;
-	case VK_HOME:          return (int)CEGUI::Key::Scan::Home;
-	case VK_END:           return (int)CEGUI::Key::Scan::End;
-	case VK_PRIOR:         return (int)CEGUI::Key::Scan::PageUp;
-	case VK_NEXT:          return (int)CEGUI::Key::Scan::PageDown;
-	case VK_INSERT:        return (int)CEGUI::Key::Scan::Insert;
-	case VK_DELETE:        return (int)CEGUI::Key::Scan::Delete;
-	case VK_LEFT:          return (int)CEGUI::Key::Scan::ArrowLeft;
-	case VK_UP:            return (int)CEGUI::Key::Scan::ArrowUp;
-	case VK_RIGHT:         return (int)CEGUI::Key::Scan::ArrowRight;
-	case VK_DOWN:          return (int)CEGUI::Key::Scan::ArrowDown;
-	case VK_F1:            return (int)CEGUI::Key::Scan::F1;
-	case VK_F2:            return (int)CEGUI::Key::Scan::F2;
-	case VK_F3:            return (int)CEGUI::Key::Scan::F3;
-	case VK_F4:            return (int)CEGUI::Key::Scan::F4;
-	case VK_F5:            return (int)CEGUI::Key::Scan::F5;
-	case VK_F6:            return (int)CEGUI::Key::Scan::F6;
-	case VK_F7:            return (int)CEGUI::Key::Scan::F7;
-	case VK_F8:            return (int)CEGUI::Key::Scan::F8;
-	case VK_F9:            return (int)CEGUI::Key::Scan::F9;
-	case VK_F10:           return (int)CEGUI::Key::Scan::F10;
-	case VK_F11:           return (int)CEGUI::Key::Scan::F11;
-	case VK_F12:           return (int)CEGUI::Key::Scan::F12;
-	case VK_F13:           return (int)CEGUI::Key::Scan::F13;
-	case VK_F14:           return (int)CEGUI::Key::Scan::F14;
-	case VK_F15:           return (int)CEGUI::Key::Scan::F15;
-	case VK_F16:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_F17:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_F18:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_F19:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_F20:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_F21:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_F22:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_F23:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_F24:           return (int)CEGUI::Key::Scan::Unknown;
-	case VK_NUMLOCK:       return (int)CEGUI::Key::Scan::NumLock;
-	case VK_CAPITAL:       return (int)CEGUI::Key::Scan::Capital;
-	case VK_SNAPSHOT:      return (int)CEGUI::Key::Scan::Unknown;
-	case VK_SCROLL:        return (int)CEGUI::Key::Scan::ScrollLock;
-	case VK_PAUSE:         return (int)CEGUI::Key::Scan::Pause;
-	case VK_LWIN:          return (int)CEGUI::Key::Scan::LeftWindows;
-	case VK_RWIN:          return (int)CEGUI::Key::Scan::RightWindows;
-	case VK_APPS:          return (int)CEGUI::Key::Scan::AppMenu;
+	case VK_ESCAPE:        return (int)InputKeys::Scan::Escape;
+	case VK_TAB:           return (int)InputKeys::Scan::Tab;
+	case VK_BACK:          return (int)InputKeys::Scan::Backspace;
+	case VK_HOME:          return (int)InputKeys::Scan::Home;
+	case VK_END:           return (int)InputKeys::Scan::End;
+	case VK_PRIOR:         return (int)InputKeys::Scan::PageUp;
+	case VK_NEXT:          return (int)InputKeys::Scan::PageDown;
+	case VK_INSERT:        return (int)InputKeys::Scan::Insert;
+	case VK_DELETE:        return (int)InputKeys::Scan::Delete;
+	case VK_LEFT:          return (int)InputKeys::Scan::ArrowLeft;
+	case VK_UP:            return (int)InputKeys::Scan::ArrowUp;
+	case VK_RIGHT:         return (int)InputKeys::Scan::ArrowRight;
+	case VK_DOWN:          return (int)InputKeys::Scan::ArrowDown;
+	case VK_F1:            return (int)InputKeys::Scan::F1;
+	case VK_F2:            return (int)InputKeys::Scan::F2;
+	case VK_F3:            return (int)InputKeys::Scan::F3;
+	case VK_F4:            return (int)InputKeys::Scan::F4;
+	case VK_F5:            return (int)InputKeys::Scan::F5;
+	case VK_F6:            return (int)InputKeys::Scan::F6;
+	case VK_F7:            return (int)InputKeys::Scan::F7;
+	case VK_F8:            return (int)InputKeys::Scan::F8;
+	case VK_F9:            return (int)InputKeys::Scan::F9;
+	case VK_F10:           return (int)InputKeys::Scan::F10;
+	case VK_F11:           return (int)InputKeys::Scan::F11;
+	case VK_F12:           return (int)InputKeys::Scan::F12;
+	case VK_F13:           return (int)InputKeys::Scan::F13;
+	case VK_F14:           return (int)InputKeys::Scan::F14;
+	case VK_F15:           return (int)InputKeys::Scan::F15;
+	case VK_F16:           return (int)InputKeys::Scan::Unknown;
+	case VK_F17:           return (int)InputKeys::Scan::Unknown;
+	case VK_F18:           return (int)InputKeys::Scan::Unknown;
+	case VK_F19:           return (int)InputKeys::Scan::Unknown;
+	case VK_F20:           return (int)InputKeys::Scan::Unknown;
+	case VK_F21:           return (int)InputKeys::Scan::Unknown;
+	case VK_F22:           return (int)InputKeys::Scan::Unknown;
+	case VK_F23:           return (int)InputKeys::Scan::Unknown;
+	case VK_F24:           return (int)InputKeys::Scan::Unknown;
+	case VK_NUMLOCK:       return (int)InputKeys::Scan::NumLock;
+	case VK_CAPITAL:       return (int)InputKeys::Scan::Capital;
+	case VK_SNAPSHOT:      return (int)InputKeys::Scan::Unknown;
+	case VK_SCROLL:        return (int)InputKeys::Scan::ScrollLock;
+	case VK_PAUSE:         return (int)InputKeys::Scan::Pause;
+	case VK_LWIN:          return (int)InputKeys::Scan::LeftWindows;
+	case VK_RWIN:          return (int)InputKeys::Scan::RightWindows;
+	case VK_APPS:          return (int)InputKeys::Scan::AppMenu;
 
 	// Numeric keypad
-	case VK_NUMPAD0:       return (int)CEGUI::Key::Scan::Numpad0;
-	case VK_NUMPAD1:       return (int)CEGUI::Key::Scan::Numpad1;
-	case VK_NUMPAD2:       return (int)CEGUI::Key::Scan::Numpad2;
-	case VK_NUMPAD3:       return (int)CEGUI::Key::Scan::Numpad3;
-	case VK_NUMPAD4:       return (int)CEGUI::Key::Scan::Numpad4;
-	case VK_NUMPAD5:       return (int)CEGUI::Key::Scan::Numpad5;
-	case VK_NUMPAD6:       return (int)CEGUI::Key::Scan::Numpad6;
-	case VK_NUMPAD7:       return (int)CEGUI::Key::Scan::Numpad7;
-	case VK_NUMPAD8:       return (int)CEGUI::Key::Scan::Numpad8;
-	case VK_NUMPAD9:       return (int)CEGUI::Key::Scan::Numpad9;
-	case VK_DIVIDE:        return (int)CEGUI::Key::Scan::Divide;
-	case VK_MULTIPLY:      return (int)CEGUI::Key::Scan::Multiply;
-	case VK_SUBTRACT:      return (int)CEGUI::Key::Scan::Subtract;
-	case VK_ADD:           return (int)CEGUI::Key::Scan::Add;
-	case VK_DECIMAL:       return (int)CEGUI::Key::Scan::Decimal;
+	case VK_NUMPAD0:       return (int)InputKeys::Scan::Numpad0;
+	case VK_NUMPAD1:       return (int)InputKeys::Scan::Numpad1;
+	case VK_NUMPAD2:       return (int)InputKeys::Scan::Numpad2;
+	case VK_NUMPAD3:       return (int)InputKeys::Scan::Numpad3;
+	case VK_NUMPAD4:       return (int)InputKeys::Scan::Numpad4;
+	case VK_NUMPAD5:       return (int)InputKeys::Scan::Numpad5;
+	case VK_NUMPAD6:       return (int)InputKeys::Scan::Numpad6;
+	case VK_NUMPAD7:       return (int)InputKeys::Scan::Numpad7;
+	case VK_NUMPAD8:       return (int)InputKeys::Scan::Numpad8;
+	case VK_NUMPAD9:       return (int)InputKeys::Scan::Numpad9;
+	case VK_DIVIDE:        return (int)InputKeys::Scan::Divide;
+	case VK_MULTIPLY:      return (int)InputKeys::Scan::Multiply;
+	case VK_SUBTRACT:      return (int)InputKeys::Scan::Subtract;
+	case VK_ADD:           return (int)InputKeys::Scan::Add;
+	case VK_DECIMAL:       return (int)InputKeys::Scan::Decimal;
 
 	// Printable keys are mapped according to US layout
-	case VK_SPACE:         return (int)CEGUI::Key::Scan::Space;
-	case 0x30:             return (int)CEGUI::Key::Scan::Zero;
-	case 0x31:             return (int)CEGUI::Key::Scan::One;
-	case 0x32:             return (int)CEGUI::Key::Scan::Two;
-	case 0x33:             return (int)CEGUI::Key::Scan::Three;
-	case 0x34:             return (int)CEGUI::Key::Scan::Four;
-	case 0x35:             return (int)CEGUI::Key::Scan::Five;
-	case 0x36:             return (int)CEGUI::Key::Scan::Six;
-	case 0x37:             return (int)CEGUI::Key::Scan::Seven;
-	case 0x38:             return (int)CEGUI::Key::Scan::Eight;
-	case 0x39:             return (int)CEGUI::Key::Scan::Nine;
-	case 0x41:             return (int)CEGUI::Key::Scan::A;
-	case 0x42:             return (int)CEGUI::Key::Scan::B;
-	case 0x43:             return (int)CEGUI::Key::Scan::C;
-	case 0x44:             return (int)CEGUI::Key::Scan::D;
-	case 0x45:             return (int)CEGUI::Key::Scan::E;
-	case 0x46:             return (int)CEGUI::Key::Scan::F;
-	case 0x47:             return (int)CEGUI::Key::Scan::G;
-	case 0x48:             return (int)CEGUI::Key::Scan::H;
-	case 0x49:             return (int)CEGUI::Key::Scan::I;
-	case 0x4A:             return (int)CEGUI::Key::Scan::J;
-	case 0x4B:             return (int)CEGUI::Key::Scan::K;
-	case 0x4C:             return (int)CEGUI::Key::Scan::L;
-	case 0x4D:             return (int)CEGUI::Key::Scan::M;
-	case 0x4E:             return (int)CEGUI::Key::Scan::N;
-	case 0x4F:             return (int)CEGUI::Key::Scan::O;
-	case 0x50:             return (int)CEGUI::Key::Scan::P;
-	case 0x51:             return (int)CEGUI::Key::Scan::Q;
-	case 0x52:             return (int)CEGUI::Key::Scan::R;
-	case 0x53:             return (int)CEGUI::Key::Scan::S;
-	case 0x54:             return (int)CEGUI::Key::Scan::T;
-	case 0x55:             return (int)CEGUI::Key::Scan::U;
-	case 0x56:             return (int)CEGUI::Key::Scan::V;
-	case 0x57:             return (int)CEGUI::Key::Scan::W;
-	case 0x58:             return (int)CEGUI::Key::Scan::X;
-	case 0x59:             return (int)CEGUI::Key::Scan::Y;
-	case 0x5A:             return (int)CEGUI::Key::Scan::Z;
-	case 0xBD:             return (int)CEGUI::Key::Scan::Minus;
-	case 0xBB:             return (int)CEGUI::Key::Scan::Equals;
-	case 0xDB:             return (int)CEGUI::Key::Scan::LeftBracket;
-	case 0xDD:             return (int)CEGUI::Key::Scan::RightBracket;
-	case 0xDC:             return (int)CEGUI::Key::Scan::Backslash;
-	case 0xBA:             return (int)CEGUI::Key::Scan::Semicolon;
-	case 0xDE:             return (int)CEGUI::Key::Scan::Apostrophe;
-	case 0xC0:             return (int)CEGUI::Key::Scan::Grave;
-	case 0xBC:             return (int)CEGUI::Key::Scan::Comma;
-	case 0xBE:             return (int)CEGUI::Key::Scan::Period;
-	case 0xBF:             return (int)CEGUI::Key::Scan::Slash;
-	case 0xDF:             return (int)CEGUI::Key::Scan::Unknown;
-	case 0xE2:             return (int)CEGUI::Key::Scan::Unknown;
+	case VK_SPACE:         return (int)InputKeys::Scan::Space;
+	case 0x30:             return (int)InputKeys::Scan::Zero;
+	case 0x31:             return (int)InputKeys::Scan::One;
+	case 0x32:             return (int)InputKeys::Scan::Two;
+	case 0x33:             return (int)InputKeys::Scan::Three;
+	case 0x34:             return (int)InputKeys::Scan::Four;
+	case 0x35:             return (int)InputKeys::Scan::Five;
+	case 0x36:             return (int)InputKeys::Scan::Six;
+	case 0x37:             return (int)InputKeys::Scan::Seven;
+	case 0x38:             return (int)InputKeys::Scan::Eight;
+	case 0x39:             return (int)InputKeys::Scan::Nine;
+	case 0x41:             return (int)InputKeys::Scan::A;
+	case 0x42:             return (int)InputKeys::Scan::B;
+	case 0x43:             return (int)InputKeys::Scan::C;
+	case 0x44:             return (int)InputKeys::Scan::D;
+	case 0x45:             return (int)InputKeys::Scan::E;
+	case 0x46:             return (int)InputKeys::Scan::F;
+	case 0x47:             return (int)InputKeys::Scan::G;
+	case 0x48:             return (int)InputKeys::Scan::H;
+	case 0x49:             return (int)InputKeys::Scan::I;
+	case 0x4A:             return (int)InputKeys::Scan::J;
+	case 0x4B:             return (int)InputKeys::Scan::K;
+	case 0x4C:             return (int)InputKeys::Scan::L;
+	case 0x4D:             return (int)InputKeys::Scan::M;
+	case 0x4E:             return (int)InputKeys::Scan::N;
+	case 0x4F:             return (int)InputKeys::Scan::O;
+	case 0x50:             return (int)InputKeys::Scan::P;
+	case 0x51:             return (int)InputKeys::Scan::Q;
+	case 0x52:             return (int)InputKeys::Scan::R;
+	case 0x53:             return (int)InputKeys::Scan::S;
+	case 0x54:             return (int)InputKeys::Scan::T;
+	case 0x55:             return (int)InputKeys::Scan::U;
+	case 0x56:             return (int)InputKeys::Scan::V;
+	case 0x57:             return (int)InputKeys::Scan::W;
+	case 0x58:             return (int)InputKeys::Scan::X;
+	case 0x59:             return (int)InputKeys::Scan::Y;
+	case 0x5A:             return (int)InputKeys::Scan::Z;
+	case 0xBD:             return (int)InputKeys::Scan::Minus;
+	case 0xBB:             return (int)InputKeys::Scan::Equals;
+	case 0xDB:             return (int)InputKeys::Scan::LeftBracket;
+	case 0xDD:             return (int)InputKeys::Scan::RightBracket;
+	case 0xDC:             return (int)InputKeys::Scan::Backslash;
+	case 0xBA:             return (int)InputKeys::Scan::Semicolon;
+	case 0xDE:             return (int)InputKeys::Scan::Apostrophe;
+	case 0xC0:             return (int)InputKeys::Scan::Grave;
+	case 0xBC:             return (int)InputKeys::Scan::Comma;
+	case 0xBE:             return (int)InputKeys::Scan::Period;
+	case 0xBF:             return (int)InputKeys::Scan::Slash;
+	case 0xDF:             return (int)InputKeys::Scan::Unknown;
+	case 0xE2:             return (int)InputKeys::Scan::Unknown;
 	default:               break;
 	}
 
 	// No matching translation was found
-	return (int)CEGUI::Key::Scan::Unknown;
+	return (int)InputKeys::Scan::Unknown;
 }
 
 }

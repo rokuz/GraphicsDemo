@@ -23,12 +23,14 @@
 
 #include "application.h"
 #include <algorithm>
-#include "CEGUI/RendererModules/Direct3D11/Renderer.h"
 
 namespace framework
 {
 
-static const std::string GUI_SKIN = "TaharezLook";
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "dxguid.lib")
 
 Application::AppInfo::AppInfo() : 
 	title("Demo"), 
@@ -53,10 +55,6 @@ Application* Application::m_self = 0;
 Application::Application() : 
 	m_isRunning(false), 
 	m_lastTime(0), 
-	m_guiRenderer(0), 
-	m_rootWindow(0), 
-	m_fpsLabel(0), 
-	m_legendLabel(0),
 	m_fpsStorage(0), 
 	m_timeSinceLastFpsUpdate(0),
 	m_averageFps(0), 
@@ -205,10 +203,7 @@ void Application::exit()
 
 void Application::resize()
 {
-	if (m_guiRenderer != 0)
-	{
-		m_guiRenderer->setDisplaySize(CEGUI::Sizef((float)m_info.windowWidth, (float)m_info.windowHeight));
-	}
+	gui::UIManager::instance().setScreenSize((size_t)m_info.windowWidth, (size_t)m_info.windowHeight);
 
 	if (m_defaultRasterizer.get() != 0)
 	{
@@ -462,8 +457,8 @@ void Application::measureFps(double delta)
 		m_averageFps = m_fpsStorage / (m_framesCounter > 0 ? (double)m_framesCounter : 1.0);
 		if (m_fpsLabel != 0)
 		{
-			static char buf[100];
-			sprintf(buf, "%.2f fps", (float)m_averageFps);
+			static wchar_t buf[100];
+			swprintf(buf, L"%.2f fps", (float)m_averageFps);
 			m_fpsLabel->setText(buf);
 		}
 
@@ -483,22 +478,14 @@ void Application::useDefaultRenderTarget()
 	m_pipeline.setRenderTarget(m_defaultRenderTarget);
 }
 
-std::string Application::getGuiFullName(const std::string& name)
-{
-	return GUI_SKIN + name;
-}
-
 void Application::renderGui(double elapsedTime)
 {
-	TRACE_FUNCTION
-	useDefaultRenderTarget();
+	//TRACE_FUNCTION
+	//useDefaultRenderTarget();
 
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	gui_system.injectTimePulse((float)elapsedTime);
-	m_guiRenderer->beginRendering();
-	gui_system.getDefaultGUIContext().draw();
-	m_guiRenderer->endRendering();
-	CEGUI::WindowManager::getSingleton().cleanDeadPool();
+	//TODO
+
+	gui::UIManager::instance().injectFrameTime(elapsedTime);
 }
 
 void Application::renderAxes(const matrix44& viewProjection)
@@ -537,43 +524,26 @@ void Application::destroyAllDestroyable()
 
 void Application::initGui()
 {
-	m_guiRenderer = &CEGUI::Direct3D11Renderer::create(m_device.device, m_device.context);
-	CEGUI::System::create(*m_guiRenderer);
-	initialiseResources();
+	gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight);
+	m_rootWindow = gui::UIManager::instance().root();
 
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	CEGUI::GUIContext* guiContext = &gui_system.getDefaultGUIContext();
-	CEGUI::SchemeManager::getSingleton().createFromFile(getGuiFullName(".scheme").c_str());
-	guiContext->getMouseCursor().setDefaultImage(getGuiFullName("/MouseArrow").c_str());
-	guiContext->getMouseCursor().hide();
-
-	CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
-	m_rootWindow = (CEGUI::DefaultWindow*)winMgr.createWindow("DefaultWindow", "Root");
-	CEGUI::Font& defaultFont = CEGUI::FontManager::getSingleton().createFromFile("DejaVuSans-12.font");
-	guiContext->setDefaultFont(&defaultFont);
-	guiContext->setRootWindow(m_rootWindow);
-
-	m_fpsLabel = (CEGUI::Window*)winMgr.createWindow(getGuiFullName("/Label").c_str());
+	// create a label to show fps statistics
+	m_fpsLabel = gui::UIManager::instance().createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
+														gui::Coords::Absolute(150.0f, 25.0f),
+														gui::RightAligned, gui::TopAligned, L"0 fps");
 	m_rootWindow->addChild(m_fpsLabel);
-	m_fpsLabel->setPosition(CEGUI::UVector2(CEGUI::UDim(1.0f, -150.0f), cegui_reldim(0.0)));
-	m_fpsLabel->setSize(CEGUI::USize(cegui_absdim(150.0f), cegui_absdim(25.0f)));
-	m_fpsLabel->setProperty("HorzFormatting", "RightAligned");
-	m_fpsLabel->setText("0 fps");
 
-	m_legendLabel = (CEGUI::Window*)winMgr.createWindow(getGuiFullName("/Label").c_str());
+	// create a label to show the legend
+	m_legendLabel = gui::UIManager::instance().createLabel(gui::Coords::Coords(0.0f, 0.0f, 0.0f, 0.0f),
+														   gui::Coords::Absolute(500.0f, 500.0f),
+														   gui::LeftAligned, gui::TopAligned,
+														   utils::Utils::toUnicode(m_legend));
 	m_rootWindow->addChild(m_legendLabel);
-	m_legendLabel->setPosition(CEGUI::UVector2(CEGUI::UDim(0.0f, 0.0f), CEGUI::UDim(0.0f, 0.0f)));
-	m_legendLabel->setSize(CEGUI::USize(cegui_absdim(500.0f), cegui_absdim(500.0f)));
-	m_legendLabel->setProperty("HorzFormatting", "LeftAligned");
-	m_legendLabel->setProperty("VertFormatting", "TopAligned");
-	m_legendLabel->setVisible(!m_legend.empty());
-	m_legendLabel->setText(m_legend.c_str());
 }
 
 void Application::destroyGui()
 {
-	CEGUI::System::destroy();
-	CEGUI::Direct3D11Renderer::destroy(static_cast<CEGUI::Direct3D11Renderer&>(*m_guiRenderer));
+	gui::UIManager::instance().cleanup();
 }
 
 void Application::setLegend(const std::string& legend)
@@ -582,7 +552,7 @@ void Application::setLegend(const std::string& legend)
 	if (m_legendLabel != 0)
 	{
 		m_legendLabel->setVisible(!m_legend.empty());
-		m_legendLabel->setText(m_legend.c_str());
+		m_legendLabel->setText(utils::Utils::toUnicode(m_legend.c_str()));
 	}
 }
 
@@ -599,67 +569,50 @@ void Application::initInput()
 {
 	m_window.setKeyboardHandler([this](int key, int scancode, bool pressed)
 	{
-		CEGUI::Key::Scan ceguiKey = (CEGUI::Key::Scan)(key);
-		if (CEGUI::System::getSingletonPtr())
+		InputKeys::Scan iKey = (InputKeys::Scan)(key);
+		if (pressed)
 		{
-			CEGUI::System& gui_system(CEGUI::System::getSingleton());
-			if (pressed)
-			{
-				gui_system.getDefaultGUIContext().injectKeyDown(ceguiKey);
-			}
-			else
-			{
-				gui_system.getDefaultGUIContext().injectKeyUp(ceguiKey);
-			}
+			gui::UIManager::instance().injectKeyDown(iKey);
+		}
+		else
+		{
+			gui::UIManager::instance().injectKeyUp(iKey);
 		}
 
 		// hint to exit on ESC
-		if (ceguiKey == CEGUI::Key::Escape) m_isRunning = false;
+		if (iKey == InputKeys::Escape) m_isRunning = false;
 
 		onKeyButton(key, scancode, pressed);
 	});
 
 	m_window.setCharHandler([this](int codepoint)
 	{
-		if (CEGUI::System::getSingletonPtr())
-		{
-			CEGUI::System& gui_system(CEGUI::System::getSingleton());
-			gui_system.getDefaultGUIContext().injectChar((CEGUI::String::value_type)codepoint);
-		}
+		gui::UIManager::instance().injectChar(codepoint);
 	});
 
 	m_window.setMouseHandler([this](double xpos, double ypos, double zdelta, int button, bool pressed)
 	{
-		if (CEGUI::System::getSingletonPtr())
+		if (button >= 0)
 		{
-			CEGUI::System& gui_system(CEGUI::System::getSingleton());
-			if (button >= 0)
+			if (pressed)
 			{
-				if (pressed)
-				{
-					gui_system.getDefaultGUIContext().injectMouseButtonDown((CEGUI::MouseButton)button);
-				}
-				else
-				{
-					gui_system.getDefaultGUIContext().injectMouseButtonUp((CEGUI::MouseButton)button);
-				}
+				gui::UIManager::instance().injectMouseButtonDown((InputKeys::MouseButton)button);
 			}
 			else
 			{
-				gui_system.getDefaultGUIContext().injectMousePosition((float)xpos, (float)ypos);
-				if (fabs(zdelta) > 1e-4)
-				{
-					gui_system.getDefaultGUIContext().injectMouseWheelChange((float)zdelta);
-				}
+				gui::UIManager::instance().injectMouseButtonUp((InputKeys::MouseButton)button);
 			}
-		}
 
-		if (button >= 0)
-		{
 			onMouseButton(xpos, ypos, button, pressed);
 		}
 		else
 		{
+			gui::UIManager::instance().injectMousePosition((float)xpos, (float)ypos);
+			if (fabs(zdelta) > 1e-4)
+			{
+				gui::UIManager::instance().injectMouseWheelChange((float)zdelta);
+			}
+
 			onMouseMove(xpos, ypos);
 		}
 	});
@@ -681,34 +634,6 @@ void Application::initAxes()
 
 	m_axisZ.reset(new Line3D());
 	m_axisZ->initWithArray(points_z);
-}
-
-void Application::initialiseResources()
-{
-	CEGUI::DefaultResourceProvider* rp = static_cast<CEGUI::DefaultResourceProvider*>(CEGUI::System::getSingleton().getResourceProvider());
-
-	rp->setResourceGroupDirectory("schemes", "data/gui/schemes");
-	rp->setResourceGroupDirectory("imagesets", "data/gui/imagesets");
-	rp->setResourceGroupDirectory("fonts", "data/gui/fonts");
-	rp->setResourceGroupDirectory("layouts", "data/gui/layouts");
-	rp->setResourceGroupDirectory("looknfeels", "data/gui/looknfeel");
-	rp->setResourceGroupDirectory("lua_scripts", "data/gui/lua_scripts");
-	rp->setResourceGroupDirectory("schemas", "data/gui/xml_schemas");   
-	rp->setResourceGroupDirectory("animations", "data/gui/animations");
-
-	CEGUI::ImageManager::setImagesetDefaultResourceGroup("imagesets");
-	CEGUI::Font::setDefaultResourceGroup("fonts");
-	CEGUI::Scheme::setDefaultResourceGroup("schemes");
-	CEGUI::WidgetLookManager::setDefaultResourceGroup("looknfeels");
-	CEGUI::WindowManager::setDefaultResourceGroup("layouts");
-	CEGUI::ScriptModule::setDefaultResourceGroup("lua_scripts");
-	CEGUI::AnimationManager::setDefaultResourceGroup("animations");
-
-	CEGUI::XMLParser* parser = CEGUI::System::getSingleton().getXMLParser();
-	if (parser->isPropertyPresent("SchemaDefaultResourceGroup"))
-	{
-		parser->setProperty("SchemaDefaultResourceGroup", "schemas");
-	}
 }
 
 }

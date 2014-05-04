@@ -107,7 +107,7 @@ public:
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 	}
 
-	virtual void startup(CEGUI::DefaultWindow* root)
+	virtual void startup(gui::WidgetPtr_T root)
 	{
 		// camera
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
@@ -303,18 +303,14 @@ public:
 		m_lightsBuffer->applyChanges();
 	}
 
-	void initOverlays(CEGUI::DefaultWindow* root)
+	void initOverlays(gui::WidgetPtr_T root)
 	{
-		CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
-		m_overlay = (CEGUI::Window*)winMgr.createWindow(getGuiFullName("/Label").c_str());
-		root->addChild(m_overlay);
+		m_debugLabel = gui::UIManager::instance().createLabel(gui::Coords(1.0f, -300.0f, 1.0f, -150.0f),
+															  gui::Coords::Absolute(300.0f, 150.0f),
+															  gui::RightAligned, gui::BottomAligned);
+		root->addChild(m_debugLabel);
 
-		m_overlay->setPosition(CEGUI::UVector2(CEGUI::UDim(1.0f, -300.0f), CEGUI::UDim(1.0f, -150.0f)));
-		m_overlay->setSize(CEGUI::USize(cegui_absdim(300.0f), cegui_absdim(150.0f)));
-		m_overlay->setProperty("HorzFormatting", "RightAligned");
-		m_overlay->setProperty("VertFormatting", "BottomAligned");
-		m_overlay->setText("");
-		m_overlay->setVisible(m_renderDebug);
+		m_debugLabel->setVisible(m_renderDebug);
 	}
 
 	virtual void render(double elapsedTime)
@@ -425,9 +421,9 @@ public:
 	{
 		if (!m_renderDebug) return;
 
-		static char buf[100];
-		sprintf(buf, "MSAA = %dx\nVisible lights = %d\nVisible objects = %d", m_info.samples, m_lightsCount, m_visibleObjects);
-		m_overlay->setText(buf);
+		static wchar_t buf[100];
+		swprintf(buf, L"MSAA = %dx\nVisible lights = %d\nVisible objects = %d", m_info.samples, m_lightsCount, m_visibleObjects);
+		m_debugLabel->setText(buf);
 
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
 		renderAxes(vp);
@@ -436,15 +432,15 @@ public:
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)
 	{
-		if (key == CEGUI::Key::Space && pressed)
+		if (key == InputKeys::Space && pressed)
 		{
 			m_pause = !m_pause;
 			return;
 		}
-		if (key == CEGUI::Key::F1 && pressed)
+		if (key == InputKeys::F1 && pressed)
 		{
 			m_renderDebug = !m_renderDebug;
-			m_overlay->setVisible(m_renderDebug);
+			m_debugLabel->setVisible(m_renderDebug);
 			return;
 		}
 		m_camera.onKeyButton(key, scancode, pressed);
@@ -558,7 +554,7 @@ private:
 	int m_additionalLights;
 	int m_visibleObjects;
 
-	CEGUI::Window* m_overlay;
+	gui::LabelPtr_T m_debugLabel;
 };
 
 DECLARE_MAIN(DeferredShadingApp);

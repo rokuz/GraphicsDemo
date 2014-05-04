@@ -21,34 +21,83 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
-#include <string>
-#include <map>
-#include "vector.h"
-#include "quaternion.h"
-#include "inputkeys.h"
+#include "uimanager.h"
 
-namespace utils
+namespace gui
 {
 
-class Utils
+UIManager::UIManager()
 {
-public:
-	static void init();
-	static bool exists(const std::string& fileName);
-	static bool readFileToString(const std::string& fileName, std::string& out);
-	static std::string getExtention(const std::string& fileName);
-	static std::string getPath(const std::string& fileName);
-	static float* convert(const vector4& v);
-	static float* convert(const vector3& v);
-	static float* convert(const quaternion& q);
-	static std::string fromUnicode(const std::wstring& str);
-	static std::wstring toUnicode(const std::string& str);
-	static vector3 random(float minValue = 0.0f, float maxValue = 1.0f);
-	static std::map<std::string, int> parseCommandLine(const std::string& commandLine);
-};
+}
+
+void UIManager::init(size_t width, size_t height)
+{
 
 }
 
-#endif
+void UIManager::cleanup()
+{
+
+}
+
+WidgetPtr_T UIManager::root() const
+{
+	return WidgetPtr_T(new Widget());
+}
+
+void UIManager::setScreenSize(size_t width, size_t height)
+{
+
+}
+
+void UIManager::injectFrameTime(double elapsed)
+{
+
+}
+
+void UIManager::injectKeyDown(InputKeys::Scan scan)
+{
+
+}
+
+void UIManager::injectKeyUp(InputKeys::Scan scan)
+{
+
+}
+
+void UIManager::injectChar(int character)
+{
+
+}
+
+void UIManager::injectMouseButtonDown(InputKeys::MouseButton button)
+{
+
+}
+
+void UIManager::injectMouseButtonUp(InputKeys::MouseButton button)
+{
+
+}
+
+void UIManager::injectMousePosition(float x, float y)
+{
+
+}
+
+void UIManager::injectMouseWheelChange(float delta)
+{
+
+}
+
+LabelPtr_T UIManager::createLabel(const Coords& position, const Coords& size, Formatting hformatting, Formatting vformatting, const std::wstring& text)
+{
+	return LabelPtr_T(new Label());
+}
+
+OverlayPtr_T UIManager::createOverlay(const Coords& position, const Coords& size)
+{
+	return OverlayPtr_T(new Overlay());
+}
+
+}
