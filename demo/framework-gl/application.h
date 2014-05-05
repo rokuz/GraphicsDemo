@@ -26,30 +26,22 @@
 #ifndef __APPLICATION_H__
 #define __APPLICATION_H__
 
-#ifdef WIN32
-    #pragma once
+#pragma warning(disable:4996)
 
-    #define WIN32_LEAN_AND_MEAN 1
-    #include <Windows.h>
-    #pragma comment (lib, "OpenGL32.lib")
-#endif
-
-#include "GL/gl3w.h"
-
-#define GLFW_NO_GLU 1
-#define GLFW_INCLUDE_NONE 1
-#include "GLFW/glfw3.h"
+#include "openglcontext.h"
 
 #include <string>
 #include <list>
-#include "CEGUI/CEGUI.h"
-#include "CEGUI/RendererModules/OpenGL/GL3Renderer.h"
+#include <map>
+#include <algorithm>
 
 #include "logger.h"
 #include "utils.h"
 #include "timer.h"
 #include "profiler.h"
 #include "matrix.h"
+
+#include "uimanager.h"
 
 #include "destroyable.h"
 #include "geometry3D.h"
@@ -60,6 +52,9 @@
 #include "freeCamera.h"
 #include "lightManager.h"
 #include "uniformBuffer.h"
+
+#undef min
+#undef max
 
 namespace framework
 {
@@ -72,18 +67,17 @@ public:
 	Application();
 	virtual ~Application(){}
 
-	virtual void init(){}
-	virtual void startup(CEGUI::DefaultWindow* root){}
+	virtual void init(const std::map<std::string, int>& params){}
+	virtual void startup(gui::WidgetPtr_T root){}
 	virtual void render(double elapsedTime){}
 	virtual void shutdown(){}
 	virtual void onResize(int width, int height){}
-	virtual void onKeyButton(int key, int scancode, int action, int mods){}
-	virtual void onMouseButton(double xpos, double ypos, int button, int action, int mods){}
+	virtual void onKeyButton(int key, int scancode, bool pressed){}
+	virtual void onMouseButton(double xpos, double ypos, int button, bool pressed){}
 	virtual void onMouseMove(double xpos, double ypos){}
 
-	static Application* Instance();
-
-	int run(Application* self);
+	static Application* instance();
+	int run(Application* self, const std::string& commandLine);
 
 protected:
 	struct AppInfo
@@ -91,20 +85,18 @@ protected:
         std::string title;
         int windowWidth;
         int windowHeight;
-        int majorVersion;
-        int minorVersion;
         int samples;
         union
         {
             struct
             {
-                unsigned int    fullscreen  : 1;
-                unsigned int    vsync       : 1;
-                unsigned int    cursor      : 1;
-                unsigned int    stereo      : 1;
-                unsigned int    debug       : 1;
+                unsigned int fullscreen  : 1;
+                unsigned int vsync       : 1;
+                unsigned int cursor      : 1;
+                unsigned int debug       : 1;
+				unsigned int useStencil  : 1;
             };
-            unsigned int        all;
+            unsigned int	 all;
         } flags;
 		
 		AppInfo();
@@ -113,19 +105,21 @@ protected:
 	AppInfo m_info;
 	LightManager m_lightManager;
 
-	static std::string getGuiFullName(const std::string& name);
+	void exit();
+	void resize();
+
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
 
 private:
 	static Application* m_self;
-	GLFWwindow* m_window;
+	OpenGLContext m_context;
+	utils::Timer m_timer;
 	bool m_isRunning;
 	double m_lastTime;
 	double m_fpsStorage;
-	CEGUI::Renderer* m_guiRenderer;
-	CEGUI::DefaultWindow* m_rootWindow;
-	CEGUI::Window* m_fpsLabel;
+	gui::WidgetPtr_T m_rootWindow;
+	gui::LabelPtr_T m_fpsLabel;
 	double m_timeSinceLastFpsUpdate;
 	double m_averageFps;
 	size_t m_framesCounter;
@@ -137,27 +131,16 @@ private:
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	void destroyAllDestroyable();
 
-	bool checkOpenGLVersion();
-	bool checkDeviceCapabilities(std::vector<int>& multisamplingLevels);
-
 	void initGui();
 	void destroyGui();
-	void initialiseResources();
 
 	void initAxes();
+	void initInput();
 
+	void mainLoop();
 	void measureFps(double delta);
 
-	static void errorCallback(int error, const char* description);
 	static void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, GLvoid* userParam);
-	static void _setWindowSize(GLFWwindow* window, int width, int height);
-	static void _onKey(GLFWwindow* window, int key, int scancode, int action, int mods);
-	static void _onChar(GLFWwindow* window, unsigned int codepoint);
-	static void _onMouse(GLFWwindow* window, int button, int action, int mods);
-	static void _onCursor(GLFWwindow* window, double xpos, double ypos);
-	static void _onScroll(GLFWwindow* window, double xoffset, double yoffset);
-	static CEGUI::Key::Scan glfwToCeguiKey(int glfwKey);
-	static CEGUI::MouseButton glfwToCeguiMouseButton(int glfwButton);
 };
 
 }
@@ -172,7 +155,7 @@ int CALLBACK WinMain(HINSTANCE hInstance,           \
 	utils::Logger::start(utils::Logger::IDE_OUTPUT |\
 						 utils::Logger::FILE);		\
     A *app = new A();                               \
-    int result = app->run(app);                     \
+    int result = app->run(app, lpCmdLine);          \
     delete app;                                     \
 	utils::Logger::finish();					    \
     return result;                                  \

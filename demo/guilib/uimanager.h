@@ -29,6 +29,7 @@
 #include <memory>
 
 #include "uistructs.h"
+#include "fontmanager.h"
 #include "overlay.h"
 #include "label.h"
 
@@ -47,7 +48,7 @@ public:
 		return inst;
 	}
 
-	void init(size_t width, size_t height);
+	bool init(size_t width, size_t height);
 	void cleanup();
 
 	WidgetPtr_T root() const;
@@ -71,6 +72,7 @@ public:
 	OverlayPtr_T createOverlay(const Coords& position, const Coords& size);
 
 private:
+	FontManagerPtr_T m_fontManager;
 };
 
 

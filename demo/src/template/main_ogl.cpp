@@ -25,7 +25,7 @@ public:
 		m_info.flags.fullscreen = 1;
 	}
 
-	virtual void startup(CEGUI::DefaultWindow* root)
+	virtual void startup(gui::WidgetPtr_T root)
 	{
 		m_rotation = 0.0f;
 
@@ -133,14 +133,14 @@ public:
 		m_lightManager.renderDebugVisualization(vp);
 	}
 
-	virtual void onKeyButton(int key, int scancode, int action, int mods)
+	virtual void onKeyButton(int key, int scancode, bool pressed)
 	{
-		m_camera.onKeyButton(key, scancode, action, mods);
+		m_camera.onKeyButton(key, scancode, pressed);
 	}
 	
-	virtual void onMouseButton(double xpos, double ypos, int button, int action, int mods)
+	virtual void onMouseButton(double xpos, double ypos, int button, bool pressed)
 	{
-		m_camera.onMouseButton(xpos, ypos, button, action, mods);
+		m_camera.onMouseButton(xpos, ypos, button, pressed);
 	}
 	
 	virtual void onMouseMove(double xpos, double ypos)

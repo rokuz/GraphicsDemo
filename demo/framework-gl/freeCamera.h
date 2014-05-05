@@ -40,8 +40,8 @@ public:
 
 	void initWithPositionDirection(int width, int height, const vector3& from, const vector3& to);
 	
-	void onKeyButton(int key, int scancode, int action, int mods);
-	void onMouseButton(double xpos, double ypos, int button, int action, int mods);
+	void onKeyButton(int key, int scancode, bool pressed);
+	void onMouseButton(double xpos, double ypos, int button, bool pressed);
 	void onMouseMove(double xpos, double ypos);
 
 	void update(double elapsedTime);

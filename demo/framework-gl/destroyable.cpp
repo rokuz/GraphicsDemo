@@ -31,7 +31,7 @@ void Destroyable::initDestroyable()
 {
 	if (isSmartPointer())
 	{
-		Application::Instance()->registerDestroyable(shared_from_this());
+		Application::instance()->registerDestroyable(shared_from_this());
 	}
 }
 
