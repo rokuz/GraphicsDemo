@@ -112,13 +112,12 @@ int Application::run(Application* self, const std::string& commandLine)
 	}
 
 	// init other subsystems
-	if (!StandardGpuPrograms::init())
+	if (!StandardGpuPrograms::init() || !initGui())
 	{
 		destroyDevice();
 		destroyAllDestroyable();
 		return EXIT_FAILURE;
 	}
-	initGui();
 	initAxes();
 	m_lightManager.init();
 
@@ -524,9 +523,13 @@ void Application::destroyAllDestroyable()
 	m_destroyableList.clear();
 }
 
-void Application::initGui()
+bool Application::initGui()
 {
-	gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight);
+	if (!gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight))
+	{
+		return false;
+	}
+	
 	m_rootWindow = gui::UIManager::instance().root();
 
 	// create a label to show fps statistics
@@ -541,6 +544,8 @@ void Application::initGui()
 														   gui::LeftAligned, gui::TopAligned,
 														   utils::Utils::toUnicode(m_legend));
 	m_rootWindow->addChild(m_legendLabel);
+
+	return true;
 }
 
 void Application::destroyGui()

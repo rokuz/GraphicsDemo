@@ -30,14 +30,20 @@ UIManager::UIManager()
 {
 }
 
-void UIManager::init(size_t width, size_t height)
+bool UIManager::init(size_t width, size_t height)
 {
+	m_fontManager.reset(new FontManager());
+	if (!m_fontManager->init()) return false;
 
+	return true;
 }
 
 void UIManager::cleanup()
 {
-
+	if (m_fontManager) 
+	{
+		m_fontManager->destroy();
+	}
 }
 
 WidgetPtr_T UIManager::root() const

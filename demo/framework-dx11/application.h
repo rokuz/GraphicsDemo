@@ -174,7 +174,7 @@ private:
 	void present();
 	void destroyDevice();
 
-	void initGui();
+	bool initGui();
 	void destroyGui();
 	void initInput();
 	void initAxes();
