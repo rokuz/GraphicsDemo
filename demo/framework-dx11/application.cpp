@@ -81,15 +81,17 @@ int Application::run(Application* self, const std::string& commandLine)
 		return EXIT_FAILURE;
 	}
 
-	if (!utils::Utils::exists("data/gui"))
+	if (!utils::Utils::exists("data"))
 	{
-		utils::Logger::toLog("Error: could not find gui directory. Probably working directory has not been set correctly (especially if you are running from IDE).\n");
+		utils::Logger::toLog("Error: could not find data directory. Probably working directory has not been set correctly (especially if you are running from IDE).\n");
 		return EXIT_FAILURE;
 	}
 
+	// initialize app
+	m_isRunning = true;
 	auto params = utils::Utils::parseCommandLine(commandLine);
 	init(params);
-	m_isRunning = true;
+	if (!m_isRunning) { return EXIT_SUCCESS; }
 
 	// create a window
 	if (!m_window.init(m_info.windowWidth, m_info.windowHeight, m_info.title))

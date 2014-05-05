@@ -41,18 +41,6 @@ include_directories(../../mathlib ../../geomlib ../../utils ../../guilib ${FRAME
 #link projects
 target_link_libraries(${demo_name} framework)
 
-# set copying CEGUI binaries
-foreach(item IN LISTS CEGUI_COPIABLE_BINARIES_DEBUG)
-add_custom_command(TARGET ${demo_name}
-		PRE_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy "${CEGUI_COPIABLE_BINARIES_DIR_DEBUG}/${item}" "${CMAKE_CURRENT_BINARY_DIR}/Debug/${item}")
-endforeach()
-foreach(item IN LISTS CEGUI_COPIABLE_BINARIES_RELEASE)
-add_custom_command(TARGET ${demo_name}
-		PRE_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy "${CEGUI_COPIABLE_BINARIES_DIR_RELEASE}/${item}" "${CMAKE_CURRENT_BINARY_DIR}/Release/${item}")
-endforeach()
-
 # set copying FBX SDK binaries
 IF (USE_FBX)
 foreach(item IN LISTS FBXSDK_COPIABLE_BINARIES_DEBUG)

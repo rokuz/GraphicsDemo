@@ -22,8 +22,8 @@
  */
 
 #include "freeCamera.h"
-#include "GLFW/glfw3.h"
 #include "logger.h"
+#include "inputkeys.h"
 
 namespace framework
 {
@@ -56,45 +56,41 @@ void FreeCamera::initWithPositionDirection(int width, int height, const vector3&
 	m_angles.y = n_rad2deg(angles.x);
 }
 
-void FreeCamera::onKeyButton(int key, int scancode, int action, int mods)
+void FreeCamera::onKeyButton(int key, int scancode, bool pressed)
 {
-	if (key == GLFW_KEY_W || key == GLFW_KEY_UP)
+	if (key == InputKeys::Scan::W || key == InputKeys::Scan::ArrowUp)
 	{
-		if (action == GLFW_PRESS) m_moveForward = true;
-		else if (action == GLFW_RELEASE) m_moveForward = false;
+		m_moveForward = pressed;
 	}
-	else if (key == GLFW_KEY_S || key == GLFW_KEY_DOWN)
+	else if (key == InputKeys::Scan::S || key == InputKeys::Scan::ArrowDown)
 	{
-		if (action == GLFW_PRESS) m_moveBackward = true;
-		else if (action == GLFW_RELEASE) m_moveBackward = false;
+		m_moveBackward = pressed;
 	}
-	else if (key == GLFW_KEY_A || key == GLFW_KEY_LEFT)
+	else if (key == InputKeys::Scan::A || key == InputKeys::Scan::ArrowLeft)
 	{
-		if (action == GLFW_PRESS) m_moveLeft = true;
-		else if (action == GLFW_RELEASE) m_moveLeft = false;
+		m_moveLeft = pressed;
 	}
-	else if (key == GLFW_KEY_D || key == GLFW_KEY_RIGHT)
+	else if (key == InputKeys::Scan::D || key == InputKeys::Scan::ArrowRight)
 	{
-		if (action == GLFW_PRESS) m_moveRight = true;
-		else if (action == GLFW_RELEASE) m_moveRight = false;
+		m_moveRight = pressed;
 	}
 }
 	
-void FreeCamera::onMouseButton(double xpos, double ypos, int button, int action, int mods)
+void FreeCamera::onMouseButton(double xpos, double ypos, int button, bool pressed)
 {
-	if (button == GLFW_MOUSE_BUTTON_LEFT)
+	if (button == InputKeys::MouseButton::LeftButton)
 	{
-		if (action == GLFW_PRESS) 
+		if (pressed)
 		{ 
 			m_rotationMode = true;
 			m_lastMousePosition.x = (float)xpos;
 			m_lastMousePosition.y = (float)ypos;
 			m_currentMousePosition = m_lastMousePosition;
 		}
-		else if (action == GLFW_RELEASE) m_rotationMode = false;
+		else m_rotationMode = false;
 	}
 }
-	
+
 void FreeCamera::onMouseMove(double xpos, double ypos)
 {
 	if (m_rotationMode)

@@ -27,40 +27,17 @@
 namespace framework
 {
 
-static const std::string GUI_SKIN = "TaharezLook";
-
-int IsExtensionSupported(const char* extname)
-{
-    GLint numExtensions;
-    GLint i;
-
-    glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
-
-    for (i = 0; i < numExtensions; i++)
-    {
-        const GLubyte * e = glGetStringi(GL_EXTENSIONS, i);
-        if (!strcmp((const char*)e, extname))
-        {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
 Application::AppInfo::AppInfo() : 
 	title("Demo"), 
 	windowWidth(1024), 
 	windowHeight(768), 
-	majorVersion(4), 
-	minorVersion(3), 
 	samples(0)
 {
 	flags.all = 0;
 	flags.fullscreen = 0;
 	flags.vsync = 0;
 	flags.cursor = 1;
-	flags.stereo = 0;
+	flags.useStencil = 0;
 	#ifdef _DEBUG
 	flags.debug = 1;
 	#else
@@ -71,12 +48,8 @@ Application::AppInfo::AppInfo() :
 Application* Application::m_self = 0;
 
 Application::Application() : 
-	m_window(0), 
 	m_isRunning(false), 
 	m_lastTime(0), 
-	m_guiRenderer(0), 
-	m_rootWindow(0), 
-	m_fpsLabel(0), 
 	m_fpsStorage(0), 
 	m_timeSinceLastFpsUpdate(0),
 	m_averageFps(0), 
@@ -87,96 +60,42 @@ Application::Application() :
 {
 }
 
-Application* Application::Instance()
+Application* Application::instance()
 {
 	return m_self;
 }
 
-int Application::run(Application* self)
+int Application::run(Application* self, const std::string& commandLine)
 {
 	m_self = self;
-
-	if (!utils::Utils::exists("data/gui"))
+	if (!m_timer.init())
 	{
-		utils::Logger::toLog("Error: could not find gui directory. Probably working directory has not been set correctly (especially if you are running from IDE).\n");
+		utils::Logger::toLog("Error: could not initialize a timer.\n");
 		return EXIT_FAILURE;
 	}
 
-	init();
+	if (!utils::Utils::exists("data"))
+	{
+		utils::Logger::toLog("Error: could not find data directory. Probably working directory has not been set correctly (especially if you are running from IDE).\n");
+		return EXIT_FAILURE;
+	}
+
+	// initialize app
 	m_isRunning = true;
-
-	glfwSetErrorCallback(&Application::errorCallback);
-
-	if (!glfwInit())
+	auto params = utils::Utils::parseCommandLine(commandLine);
+	init(params);
+	if (!m_isRunning) { return EXIT_SUCCESS; }
+	
+	// create context
+	if (!m_context.init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight, m_info.title, 
+						m_info.flags.fullscreen != 0, m_info.samples, 
+						m_info.flags.vsync != 0, m_info.flags.useStencil != 0))
 	{
-		utils::Logger::toLog("Error: glfwInit failed");
+		utils::Logger::toLog("Error: could not initialize OpenGL context");
 		return EXIT_FAILURE;
 	}
 
-	glfwWindowHint(GLFW_VISIBLE, GL_TRUE);
-	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-
-	glfwWindowHint(GLFW_RED_BITS, 8);
-	glfwWindowHint(GLFW_GREEN_BITS, 8);
-	glfwWindowHint(GLFW_BLUE_BITS, 8);
-	glfwWindowHint(GLFW_ALPHA_BITS, 0);
-	glfwWindowHint(GLFW_DEPTH_BITS, 32);
-	glfwWindowHint(GLFW_STENCIL_BITS, 0);
-
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, m_info.majorVersion);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, m_info.minorVersion);
-	#ifdef _DEBUG
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-	#endif
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_SAMPLES, m_info.samples);
-    glfwWindowHint(GLFW_STEREO, m_info.flags.stereo ? GL_TRUE : GL_FALSE);
-
-	// create window
-	m_window = glfwCreateWindow(m_info.windowWidth, m_info.windowHeight, 
-								m_info.title.c_str(), 
-								m_info.flags.fullscreen ? glfwGetPrimaryMonitor() : NULL, 
-								NULL);
-	if (!m_window)
-    {
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
-
-	glfwSetWindowSizeCallback(m_window, &Application::_setWindowSize);
-    glfwSetKeyCallback(m_window, &Application::_onKey);
-	glfwSetCharCallback(m_window, &Application::_onChar);
-    glfwSetMouseButtonCallback(m_window, &Application::_onMouse);
-    glfwSetCursorPosCallback(m_window, &Application::_onCursor);
-    glfwSetScrollCallback(m_window, &Application::_onScroll);
-	glfwSetInputMode(m_window, GLFW_CURSOR, m_info.flags.cursor ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_HIDDEN);
-
-	// center position
-	GLFWmonitor* primary = glfwGetPrimaryMonitor();
-	const GLFWvidmode* mode = glfwGetVideoMode(primary);
-	int posx = (mode->width - m_info.windowWidth) >> 1;
-	int posy = (mode->height - m_info.windowHeight) >> 1;
-	glfwSetWindowPos(m_window, posx, posy);
-
-	// set vsync
-	glfwMakeContextCurrent(m_window);
-	glfwSwapInterval((int)m_info.flags.vsync);
-
-	// init GL3w
-	gl3wInit();
-
-	std::vector<int> multisamplingLevels;
-	if (!checkOpenGLVersion() || !checkDeviceCapabilities(multisamplingLevels))
-	{
-		glfwDestroyWindow(m_window);
-		glfwTerminate();
-		return EXIT_FAILURE;
-	}
-
-	#ifdef _DEBUG
 	utils::Logger::toLogWithFormat("Video adapter: %s - %s, OpenGL: %s\n", (const char*)glGetString(GL_VENDOR), (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VERSION));
-	#endif
 
     if (m_info.flags.debug)
     {
@@ -185,27 +104,46 @@ int Application::run(Application* self)
             glDebugMessageCallback(debugCallback, this);
             glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         }
-        else if (IsExtensionSupported("GL_ARB_debug_output"))
+        else if (m_context.isExtensionSupported("GL_ARB_debug_output"))
         {
             glDebugMessageCallbackARB(debugCallback, this);
             glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
         }
     }
 
+	initInput();
 	initGui();
-
 	if (!StandardGpuPrograms::init())
 	{
-		glfwDestroyWindow(m_window);
-		glfwTerminate();
+		m_context.destroy();
 		return EXIT_FAILURE;
 	}
 	initAxes();
 	startup(m_rootWindow);
 
-	do
-    {
-		glfwMakeContextCurrent(m_window);
+	mainLoop();
+
+	shutdown();
+	destroyAllDestroyable();
+	destroyGui();
+	m_context.destroy();
+
+	return EXIT_SUCCESS;
+}
+
+void Application::mainLoop()
+{
+	while (m_isRunning)
+	{
+		// process events from the window
+		m_context.getWindow().pollEvents();
+
+		// need to close?
+		if (m_context.getWindow().shouldClose())
+		{
+			m_isRunning = false;
+		}
+
 		Texture::beginFrame();
 		if (fabs(m_lastTime) < 1e-7)
 		{
@@ -213,13 +151,13 @@ int Application::run(Application* self)
 			Texture::endFrame();
 			renderGui(0);
 
-			m_lastTime = glfwGetTime();
+			m_lastTime = m_timer.getTime();
 		}
 		else
 		{
-			double curTime = glfwGetTime();
+			double curTime = m_timer.getTime();
 			double delta = curTime - m_lastTime;
-				
+
 			// fps counter
 			measureFps(delta);
 
@@ -231,25 +169,8 @@ int Application::run(Application* self)
 			m_lastTime = curTime;
 		}
 
-        glfwSwapBuffers(m_window);
-
-		glfwPollEvents();
-			
-		if (glfwWindowShouldClose(m_window))
-		{
-            m_isRunning = GL_FALSE;
-		}
-		m_isRunning &= (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_RELEASE);
-    } 
-	while(m_isRunning);
-
-	shutdown();
-	destroyAllDestroyable();
-	destroyGui();
-
-	glfwDestroyWindow(m_window);
-	glfwTerminate();
-	return EXIT_SUCCESS;
+		m_context.present();
+	}
 }
 
 void Application::measureFps(double delta)
@@ -260,8 +181,8 @@ void Application::measureFps(double delta)
 		m_averageFps = m_fpsStorage / (m_framesCounter > 0 ? (double)m_framesCounter : 1.0);
 		if (m_fpsLabel != 0)
 		{
-			static char buf[100];
-			sprintf(buf, "%.2f fps", (float)m_averageFps);
+			static wchar_t buf[100];
+			swprintf(buf, L"%.2f fps", (float)m_averageFps);
 			m_fpsLabel->setText(buf);
 		}
 
@@ -276,29 +197,22 @@ void Application::measureFps(double delta)
 	}
 }
 
-std::string Application::getGuiFullName(const std::string& name)
+void Application::exit()
 {
-	return GUI_SKIN + name;
+	m_isRunning = false;
+}
+
+void Application::resize()
+{
+	gui::UIManager::instance().setScreenSize((size_t)m_info.windowWidth, (size_t)m_info.windowHeight);
+	onResize(m_info.windowWidth, m_info.windowHeight);
 }
 
 void Application::renderGui(double elapsedTime)
 {
-	GLboolean scissorTestEnable = glIsEnabled(GL_SCISSOR_TEST);
-	GLboolean depthTestEnable = glIsEnabled(GL_DEPTH_TEST);
-	GLboolean blendingEnable = glIsEnabled(GL_BLEND);
-	GLboolean cullfaceEnable = glIsEnabled(GL_CULL_FACE);
+	//TODO
 
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	gui_system.injectTimePulse((float)elapsedTime);
-	m_guiRenderer->beginRendering();
-	gui_system.getDefaultGUIContext().draw();
-	m_guiRenderer->endRendering();
-	CEGUI::WindowManager::getSingleton().cleanDeadPool();
-
-	if (scissorTestEnable) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
-	if (depthTestEnable) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-	if (blendingEnable) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-	if (cullfaceEnable) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+	gui::UIManager::instance().injectFrameTime(elapsedTime);
 }
 
 void Application::renderAxes(const matrix44& viewProjection)
@@ -335,81 +249,74 @@ void Application::destroyAllDestroyable()
 	m_destroyableList.clear();
 }
 
-bool Application::checkOpenGLVersion()
-{
-	int majorVersion = 0;
-	int minorVersion = 0;
-	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
-	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
-	if (majorVersion == 0 && minorVersion == 0)
-	{
-		utils::Logger::toLog("Error: Probably OpenGL 3+ is not supported in your hardware/drivers.\n");
-		return false;
-	}
-	if (majorVersion < m_info.majorVersion || minorVersion < m_info.minorVersion)
-	{
-		utils::Logger::toLogWithFormat("Error: Your hardware supports OpenGL %d.%d. You are trying to use OpenGL %d.%d.\n", majorVersion, minorVersion, m_info.majorVersion, m_info.minorVersion);
-		return false;
-	}
-	return true;
-}
-
-bool Application::checkDeviceCapabilities(std::vector<int>& multisamplingLevels)
-{
-	GLint samplesCount = 0;
-	glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA8, GL_NUM_SAMPLE_COUNTS, 1, &samplesCount);
-	GLint* samples = new GLint[samplesCount];
-	glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA8, GL_SAMPLES, samplesCount, samples);
-	multisamplingLevels.reserve(samplesCount);
-	for (int i = 0; i < samplesCount; i++) 
-	{
-		if (samples[i] > 0) multisamplingLevels.push_back(samples[i]);
-	}
-	multisamplingLevels.push_back(0);
-	delete [] samples;
-	std::sort(multisamplingLevels.begin(), multisamplingLevels.end());
-
-	if (std::find(multisamplingLevels.begin(), multisamplingLevels.end(), m_info.samples) == multisamplingLevels.end())
-	{
-		utils::Logger::toLogWithFormat("Error: Multisampling level (%d) is unsupported.\n", m_info.samples);
-		return false;
-	}
-
-	return true;
-}
-
 void Application::initGui()
 {
-	m_guiRenderer = &CEGUI::OpenGL3Renderer::create();
-	static_cast<CEGUI::OpenGL3Renderer*>(m_guiRenderer)->enableExtraStateSettings(true);
-	CEGUI::System::create(*m_guiRenderer);
-	initialiseResources();
+	gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight);
+	m_rootWindow = gui::UIManager::instance().root();
 
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	CEGUI::GUIContext* guiContext = &gui_system.getDefaultGUIContext();
-	CEGUI::SchemeManager::getSingleton().createFromFile(getGuiFullName(".scheme").c_str());
-	guiContext->getMouseCursor().setDefaultImage(getGuiFullName("/MouseArrow").c_str());
-	guiContext->getMouseCursor().hide();
-
-	CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
-	m_rootWindow = (CEGUI::DefaultWindow*)winMgr.createWindow("DefaultWindow", "Root");
-	CEGUI::Font& defaultFont = CEGUI::FontManager::getSingleton().createFromFile("DejaVuSans-12.font");
-	guiContext->setDefaultFont(&defaultFont);
-	guiContext->setRootWindow(m_rootWindow);
-
-	m_fpsLabel = (CEGUI::Window*)winMgr.createWindow(getGuiFullName("/Label").c_str());
+	// create a label to show fps statistics
+	m_fpsLabel = gui::UIManager::instance().createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
+														gui::Coords::Absolute(150.0f, 25.0f),
+														gui::RightAligned, gui::TopAligned, L"0 fps");
 	m_rootWindow->addChild(m_fpsLabel);
-
-	m_fpsLabel->setPosition(CEGUI::UVector2(CEGUI::UDim(1.0f, -150.0f), cegui_reldim(0.0)));
-	m_fpsLabel->setSize(CEGUI::USize(cegui_absdim(150.0f), cegui_absdim(25.0f)));
-	m_fpsLabel->setProperty("HorzFormatting", "RightAligned");
-	m_fpsLabel->setText("0 fps");
 }
 
 void Application::destroyGui()
 {
-	CEGUI::System::destroy();
-	CEGUI::OpenGL3Renderer::destroy(static_cast<CEGUI::OpenGL3Renderer&>(*m_guiRenderer));
+	gui::UIManager::instance().cleanup();
+}
+
+void Application::initInput()
+{
+	m_context.getWindow().setKeyboardHandler([this](int key, int scancode, bool pressed)
+	{
+		InputKeys::Scan iKey = (InputKeys::Scan)(key);
+		if (pressed)
+		{
+			gui::UIManager::instance().injectKeyDown(iKey);
+		}
+		else
+		{
+			gui::UIManager::instance().injectKeyUp(iKey);
+		}
+
+		// hint to exit on ESC
+		if (iKey == InputKeys::Escape) m_isRunning = false;
+
+		onKeyButton(key, scancode, pressed);
+	});
+
+	m_context.getWindow().setCharHandler([this](int codepoint)
+	{
+		gui::UIManager::instance().injectChar(codepoint);
+	});
+
+	m_context.getWindow().setMouseHandler([this](double xpos, double ypos, double zdelta, int button, bool pressed)
+	{
+		if (button >= 0)
+		{
+			if (pressed)
+			{
+				gui::UIManager::instance().injectMouseButtonDown((InputKeys::MouseButton)button);
+			}
+			else
+			{
+				gui::UIManager::instance().injectMouseButtonUp((InputKeys::MouseButton)button);
+			}
+
+			onMouseButton(xpos, ypos, button, pressed);
+		}
+		else
+		{
+			gui::UIManager::instance().injectMousePosition((float)xpos, (float)ypos);
+			if (fabs(zdelta) > 1e-4)
+			{
+				gui::UIManager::instance().injectMouseWheelChange((float)zdelta);
+			}
+
+			onMouseMove(xpos, ypos);
+		}
+	});
 }
 
 void Application::initAxes()
@@ -430,169 +337,10 @@ void Application::initAxes()
 	m_axisZ->initWithArray(points_z);
 }
 
-void Application::errorCallback(int error, const char* description)
-{
-	utils::Logger::toLogWithFormat("Error: %s\n", description);
-}
-
-void APIENTRY Application::debugCallback(GLenum source,
-                                    GLenum type,
-                                    GLuint id,
-                                    GLenum severity,
-                                    GLsizei length,
-                                    const GLchar* message,
-                                    GLvoid* userParam)
+void APIENTRY Application::debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
+										 GLsizei length, const GLchar* message, GLvoid* userParam)
 {
 	utils::Logger::toLogWithFormat("Debug: %s\n", message);
-}
-
-void Application::_setWindowSize(GLFWwindow* window, int width, int height)
-{
-	glfwMakeContextCurrent(window);
-	m_self->m_guiRenderer->setDisplaySize(CEGUI::Sizef((float)width, (float)height));
-	m_self->m_info.windowWidth = width;
-	m_self->m_info.windowHeight = height;
-
-	m_self->onResize(width, height);
-}
-
-void Application::_onKey(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	CEGUI::Key::Scan ceguiKey = glfwToCeguiKey(key);
-
-	if(action == GLFW_PRESS)
-	{
-		gui_system.getDefaultGUIContext().injectKeyDown(ceguiKey);
-	}
-	else if (action == GLFW_RELEASE)
-	{
-		gui_system.getDefaultGUIContext().injectKeyUp(ceguiKey);
-	}
-
-	m_self->onKeyButton(key, scancode, action, mods);
-}
-
-void Application::_onChar(GLFWwindow* window, unsigned int codepoint)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	gui_system.getDefaultGUIContext().injectChar(codepoint);
-}
-
-void Application::_onMouse(GLFWwindow* window, int button, int action, int mods)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	CEGUI::MouseButton ceguiMouseButton = glfwToCeguiMouseButton(button);
-
-	if(action == GLFW_PRESS)
-	{
-		gui_system.getDefaultGUIContext().injectMouseButtonDown(ceguiMouseButton);
-	}
-	else if (action == GLFW_RELEASE)
-	{
-		gui_system.getDefaultGUIContext().injectMouseButtonUp(ceguiMouseButton);
-	}
-
-	double xpos = 0, ypos = 0;
-	glfwGetCursorPos(window, &xpos, &ypos);
-	m_self->onMouseButton(xpos, ypos, button, action, mods);
-}
-
-void Application::_onCursor(GLFWwindow* window, double xpos, double ypos)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	gui_system.getDefaultGUIContext().injectMousePosition((float)xpos, (float)ypos);
-
-	m_self->onMouseMove(xpos, ypos);
-}
-
-void Application::_onScroll(GLFWwindow* window, double xoffset, double yoffset)
-{
-	CEGUI::System& gui_system(CEGUI::System::getSingleton());
-	gui_system.getDefaultGUIContext().injectMouseWheelChange((float)yoffset);
-}
-
-void Application::initialiseResources()
-{
-	CEGUI::DefaultResourceProvider* rp = static_cast<CEGUI::DefaultResourceProvider*>(CEGUI::System::getSingleton().getResourceProvider());
-
-	rp->setResourceGroupDirectory("schemes", "data/gui/schemes");
-	rp->setResourceGroupDirectory("imagesets", "data/gui/imagesets");
-	rp->setResourceGroupDirectory("fonts", "data/gui/fonts");
-	rp->setResourceGroupDirectory("layouts", "data/gui/layouts");
-	rp->setResourceGroupDirectory("looknfeels", "data/gui/looknfeel");
-	rp->setResourceGroupDirectory("lua_scripts", "data/gui/lua_scripts");
-	rp->setResourceGroupDirectory("schemas", "data/gui/xml_schemas");   
-	rp->setResourceGroupDirectory("animations", "data/gui/animations");
-
-	CEGUI::ImageManager::setImagesetDefaultResourceGroup("imagesets");
-	CEGUI::Font::setDefaultResourceGroup("fonts");
-	CEGUI::Scheme::setDefaultResourceGroup("schemes");
-	CEGUI::WidgetLookManager::setDefaultResourceGroup("looknfeels");
-	CEGUI::WindowManager::setDefaultResourceGroup("layouts");
-	CEGUI::ScriptModule::setDefaultResourceGroup("lua_scripts");
-	CEGUI::AnimationManager::setDefaultResourceGroup("animations");
-
-	CEGUI::XMLParser* parser = CEGUI::System::getSingleton().getXMLParser();
-	if (parser->isPropertyPresent("SchemaDefaultResourceGroup"))
-	{
-		parser->setProperty("SchemaDefaultResourceGroup", "schemas");
-	}
-}
-
-CEGUI::Key::Scan Application::glfwToCeguiKey(int glfwKey)
-{
-	switch(glfwKey)
-	{
-		case GLFW_KEY_ESCAPE : return CEGUI::Key::Escape;
-		case GLFW_KEY_F1 : return CEGUI::Key::F1;
-		case GLFW_KEY_F2 : return CEGUI::Key::F2;
-		case GLFW_KEY_F3 : return CEGUI::Key::F3;
-		case GLFW_KEY_F4 : return CEGUI::Key::F4;
-		case GLFW_KEY_F5 : return CEGUI::Key::F5;
-		case GLFW_KEY_F6 : return CEGUI::Key::F6;
-		case GLFW_KEY_F7 : return CEGUI::Key::F7;
-		case GLFW_KEY_F8 : return CEGUI::Key::F8;
-		case GLFW_KEY_F9 : return CEGUI::Key::F9;
-		case GLFW_KEY_F10 : return CEGUI::Key::F10;
-		case GLFW_KEY_F11 : return CEGUI::Key::F11;
-		case GLFW_KEY_F12 : return CEGUI::Key::F12;
-		case GLFW_KEY_F13 : return CEGUI::Key::F13;
-		case GLFW_KEY_F14 : return CEGUI::Key::F14;
-		case GLFW_KEY_F15 : return CEGUI::Key::F15;
-		case GLFW_KEY_UP : return CEGUI::Key::ArrowUp;
-		case GLFW_KEY_DOWN : return CEGUI::Key::ArrowDown;
-		case GLFW_KEY_LEFT : return CEGUI::Key::ArrowLeft;
-		case GLFW_KEY_RIGHT : return CEGUI::Key::ArrowRight;
-		case GLFW_KEY_LEFT_SHIFT : return CEGUI::Key::LeftShift;
-		case GLFW_KEY_RIGHT_SHIFT : return CEGUI::Key::RightShift;
-		case GLFW_KEY_LEFT_CONTROL : return CEGUI::Key::LeftControl;
-		case GLFW_KEY_RIGHT_CONTROL : return CEGUI::Key::RightControl;
-		case GLFW_KEY_LEFT_ALT : return CEGUI::Key::LeftAlt;
-		case GLFW_KEY_RIGHT_ALT : return CEGUI::Key::RightAlt;
-		case GLFW_KEY_TAB : return CEGUI::Key::Tab;
-		case GLFW_KEY_ENTER : return CEGUI::Key::Return;
-		case GLFW_KEY_BACKSPACE : return CEGUI::Key::Backspace;
-		case GLFW_KEY_INSERT : return CEGUI::Key::Insert;
-		case GLFW_KEY_DELETE : return CEGUI::Key::Delete;
-		case GLFW_KEY_PAGE_UP : return CEGUI::Key::PageUp;
-		case GLFW_KEY_PAGE_DOWN : return CEGUI::Key::PageDown;
-		case GLFW_KEY_HOME : return CEGUI::Key::Home;
-		case GLFW_KEY_END : return CEGUI::Key::End;
-		case GLFW_KEY_KP_ENTER : return CEGUI::Key::NumpadEnter;
-		default : return CEGUI::Key::Unknown;
-	}
-}
-
-CEGUI::MouseButton Application::glfwToCeguiMouseButton(int glfwButton)
-{
-	switch(glfwButton)
-	{
-		case GLFW_MOUSE_BUTTON_LEFT     : return CEGUI::LeftButton;
-		case GLFW_MOUSE_BUTTON_RIGHT    : return CEGUI::RightButton;
-		case GLFW_MOUSE_BUTTON_MIDDLE   : return CEGUI::MiddleButton;
-		default                         : return CEGUI::NoButton;
-	}
 }
 
 }
