@@ -19,10 +19,10 @@ public:
 	TestApp(){}
 	virtual ~TestApp(){}
 
-	virtual void init()
+	virtual void init(const std::map<std::string, int>& params)
 	{
 		m_info.title = "Test application (OpenGL 4.x)";
-		m_info.flags.fullscreen = 1;
+		m_info.flags.fullscreen = 0;
 	}
 
 	virtual void startup(gui::WidgetPtr_T root)

@@ -25,12 +25,15 @@
 #define __FONT_MANAGER_H__
 
 #include <memory>
+#include <functional>
 #include "uistructs.h"
 
 namespace gui
 {
 
 class FreeTypeWrapper;
+
+typedef std::function<void(std::shared_ptr<unsigned char[]>, size_t, size_t)> FontRendererFunc_T;
 
 class FontManager
 {

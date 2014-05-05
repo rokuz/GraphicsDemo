@@ -56,7 +56,7 @@ public:
 		FT_Done_FreeType(m_library);
 	}
 
-	bool loadFont(const std::string& name, size_t height)
+	bool loadFont(const std::string& name, size_t height, size_t bufferWidth, size_t bufferHeight)
 	{
 		FT_Face face;
 		if (FT_New_Face(m_library, name.c_str(), 0, &face))
@@ -82,7 +82,12 @@ public:
 				return false;
 			}
 
-			//slot->metrics
+			int w = (int)slot->metrics.width >> 6;
+			int h = (int)slot->metrics.height >> 6;
+			int ax = (int)slot->advance.x >> 6;
+			int bx = (int)slot->metrics.horiBearingX >> 6;
+			int by = (int)slot->metrics.horiBearingY >> 6;
+
 			//slot->bitmap
 			//pen_x += slot->advance.x >> 6;
 			//pen_y += slot->advance.y >> 6; /* not useful for now */
@@ -105,6 +110,8 @@ bool FontManager::init()
 		m_freetype.reset(); 
 		return false; 
 	}
+
+	m_freetype->loadFont("data/gui/DejaVuSans.ttf", 16, 2048, 2048);
 
 	return true;
 }
