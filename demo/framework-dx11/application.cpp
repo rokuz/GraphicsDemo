@@ -362,8 +362,8 @@ bool Application::initSwapChain(Device& device)
 	state.BufferDesc.Width = m_info.windowWidth;
 	state.BufferDesc.Height = m_info.windowHeight;
 	state.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	state.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-	state.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+	state.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+	state.BufferDesc.Scaling = DXGI_MODE_SCALING_STRETCHED;
 	if ((bool)m_info.flags.vsync)
 	{
 		state.BufferDesc.RefreshRate.Numerator = 60;
@@ -387,7 +387,7 @@ bool Application::initSwapChain(Device& device)
 	}
 
 	state.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	state.BufferCount = 1;
+	state.BufferCount = 2;
 	state.OutputWindow = m_window.getHandle();
 	state.Windowed = TRUE;
 	state.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
