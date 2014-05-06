@@ -23,8 +23,10 @@
 
 #include "fontmanager.h"
 #include "logger.h"
+#include "uimanager.h"
 
 #include <map>
+#include <sstream>
 
 #include <ft2build.h>
 #include <freetype/freetype.h>
@@ -72,6 +74,13 @@ public:
 
 	bool loadFont(Font& font, const std::string& name, size_t height)
 	{
+		// create font resource
+		if (!UIManager::instance().factory())
+		{
+			utils::Logger::toLog("Error: could not find an instance of UIResourcesFactory.\n");
+			return false;
+		}
+
 		FT_Face face;
 		if (FT_New_Face(m_library, name.c_str(), 0, &face))
 		{
@@ -81,9 +90,15 @@ public:
 
 		FT_Set_Char_Size(face, height << 6, height << 6, DPI, DPI);
 
+		// build name
+		std::stringstream str;
+		str << face->family_name << " " << height;
+		font.m_name = str.str();
+
+		// init maximum buffer
 		const int MAX_BUFFER_SIZE = 2048;
 		std::unique_ptr<unsigned char[]> fontBuffer(new unsigned char[MAX_BUFFER_SIZE * MAX_BUFFER_SIZE]);
-		memset(fontBuffer.get(), 0, MAX_BUFFER_SIZE * MAX_BUFFER_SIZE * sizeof(unsigned char));
+		memset(fontBuffer.get(), 0, MAX_BUFFER_SIZE * MAX_BUFFER_SIZE);
 
 		int offsetX = 0;
 		int offsetY = 0;
@@ -96,6 +111,7 @@ public:
 		unsigned int charToGlyphIndex = 0;
 		for (short index = 0; index < 128; index++)
 		{
+			// create association between characters and glyphs
 			FT_UInt glyphIndex = FT_Get_Char_Index(face, index);
 			if (glyphs.find(glyphIndex) == glyphs.end()) 
 			{
@@ -107,18 +123,23 @@ public:
 				continue;
 			}
 			
+			// load a glyph
 			if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT))
 			{
+				utils::Logger::toLogWithFormat("Error: could not create a font '%s'. A glyph loading failed.\n", font.getName().c_str());
 				FT_Done_Face(face);
 				return false;
 			}
 
+			// render a glyph
 			if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
 			{
+				utils::Logger::toLogWithFormat("Error: could not create a font '%s'. A glyph rendering failed.\n", font.getName().c_str());
 				FT_Done_Face(face);
 				return false;
 			}
 
+			// read glyph's parameters
 			int w = (int)slot->metrics.width >> 6;
 			int h = (int)slot->metrics.height >> 6;
 			int ax = (int)slot->advance.x >> 6;
@@ -133,13 +154,14 @@ public:
 			}
 			if (offsetY + h >= MAX_BUFFER_SIZE)
 			{
-				// buffer overflow
+				utils::Logger::toLogWithFormat("Error: could not create a font '%s'. Maximum buffer size was exceeded.\n", font.getName().c_str());
 				FT_Done_Face(face);
 				return false;
 			}
 
 			if (h > maxHeight) maxHeight = h;
 
+			// copy a glyph to buffer
 			for (int j = 0; j < h; j++) 
 			{
 				for (int i = 0; i < w; i++)
@@ -155,10 +177,29 @@ public:
 			charToGlyphIndex++;
 		}
 
+		FT_Done_Face(face);
+
+		// determine actual buffer size
 		size_t textureWidth = findNearestPower2(maxWidth);
 		size_t textureHeight = findNearestPower2(maxHeight);
 
-		FT_Done_Face(face);
+		std::vector<unsigned char> outputBuffer;
+		outputBuffer.resize(textureWidth * textureHeight);
+		memset(outputBuffer.data(), 0, textureWidth * textureHeight);
+		for (size_t j = 0; j < textureHeight; j++)
+		{
+			memcpy((void*)(outputBuffer.data() + j * textureWidth), fontBuffer.get() + j * MAX_BUFFER_SIZE, textureWidth);
+		}
+		fontBuffer.reset();
+
+		// create a resource
+		font.m_resource = UIManager::instance().factory()->createFontResource();
+		if (font.m_resource.expired() ||
+			!font.m_resource.lock()->createResource(font, outputBuffer, textureWidth, textureHeight))
+		{
+			utils::Logger::toLogWithFormat("Error: could not create a resource for the font '%s'.\n", font.getName().c_str());
+			return false;
+		}
 
 		return true;
 	}
@@ -176,15 +217,21 @@ bool FontManager::init()
 		return false; 
 	}
 
-	Font font;
-	m_freetype->loadFont(font, "data/gui/DejaVuSans.ttf", 16);
-
 	return true;
 }
 
 void FontManager::destroy()
 {
 	if (m_freetype) { m_freetype->destroy(); }
+}
+
+Font FontManager::createFont(const std::string& fontPath, size_t height)
+{
+	Font font;
+	if (!m_freetype->loadFont(font, fontPath, height)) 
+		return std::move(Font());
+
+	return std::move(font);
 }
 
 }

@@ -21,60 +21,26 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __FONT_MANAGER_H__
-#define __FONT_MANAGER_H__
+#include "guirenderer.h"
 
-#include <memory>
-#include <functional>
-#include <vector>
-#include "uistructs.h"
-
-namespace gui
+namespace framework
 {
 
-class FreeTypeWrapper;
-class IFontResource;
-
-class Font
+bool FontResourceD3D11::createResource(const gui::Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height)
 {
-	friend class FreeTypeWrapper;
-public:
-	Font(){}
-	~Font(){}
-	bool isVailid() const;
-
-	const std::string& getName() const { return m_name; }
-
-private:
-	std::string m_name;
-	std::vector<unsigned int> m_charToGlyph;
-	std::weak_ptr<IFontResource> m_resource;
-};
-
-class IFontResource
-{
-public:
-	virtual ~IFontResource(){}
-
-	virtual bool createResource(const Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height) = 0;
-};
-
-class FontManager
-{
-public:
-	FontManager(){}
-	~FontManager(){}
-
-	bool init();
-	void destroy();
-	Font createFont(const std::string& fontPath, size_t height);
-
-public:
-	std::shared_ptr<FreeTypeWrapper> m_freetype;
-};
-
-DECLARE_PTR(FontManager);
-
+	return true;
 }
 
-#endif
+std::weak_ptr<gui::IFontResource> UIResourcesFactoryD3D11::createFontResource()
+{
+	std::shared_ptr<FontResourceD3D11> font(new FontResourceD3D11());
+	m_fonts.push_back(font);
+	return font;
+}
+
+void UIResourcesFactoryD3D11::cleanup()
+{
+	m_fonts.clear();
+}
+
+}

@@ -23,6 +23,7 @@
 
 #include "application.h"
 #include <algorithm>
+#include "guirenderer.h"
 
 namespace framework
 {
@@ -610,7 +611,8 @@ void Application::destroyAllDestroyable()
 
 bool Application::initGui()
 {
-	if (!gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight))
+	std::shared_ptr<UIResourcesFactoryD3D11> factory(new UIResourcesFactoryD3D11());
+	if (!gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight, factory))
 	{
 		return false;
 	}

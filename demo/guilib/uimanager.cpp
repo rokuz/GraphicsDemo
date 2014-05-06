@@ -30,10 +30,16 @@ UIManager::UIManager()
 {
 }
 
-bool UIManager::init(size_t width, size_t height)
+bool UIManager::init(size_t width, size_t height, UIResourcesFactoryPtr_T factory)
 {
+	m_factory = factory;
+
+	// font manager
 	m_fontManager.reset(new FontManager());
 	if (!m_fontManager->init()) return false;
+
+	// TEMP
+	Font f = m_fontManager->createFont("data/gui/DejaVuSans.ttf", 16);
 
 	return true;
 }
@@ -43,6 +49,11 @@ void UIManager::cleanup()
 	if (m_fontManager) 
 	{
 		m_fontManager->destroy();
+	}
+
+	if (m_factory)
+	{
+		m_factory->cleanup();
 	}
 }
 

@@ -36,6 +36,19 @@
 namespace gui
 {
 
+// factory to create user interface resources
+class UIResourcesFactory
+{
+public:
+	UIResourcesFactory(){}
+	virtual ~UIResourcesFactory() {}
+
+	virtual void cleanup() = 0;
+	virtual std::weak_ptr<IFontResource> createFontResource() = 0;
+};
+DECLARE_PTR(UIResourcesFactory);
+
+// user interface manager
 class UIManager
 {
 	UIManager();
@@ -48,10 +61,11 @@ public:
 		return inst;
 	}
 
-	bool init(size_t width, size_t height);
+	bool init(size_t width, size_t height, UIResourcesFactoryPtr_T factory);
 	void cleanup();
 
 	WidgetPtr_T root() const;
+	UIResourcesFactoryPtr_T factory() const { return m_factory; }
 
 	void setScreenSize(size_t width, size_t height);
 
@@ -73,6 +87,7 @@ public:
 
 private:
 	FontManagerPtr_T m_fontManager;
+	UIResourcesFactoryPtr_T m_factory;
 };
 
 

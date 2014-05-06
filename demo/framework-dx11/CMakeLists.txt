@@ -8,6 +8,8 @@ set(SOURCE_CORE application.h
 				outputd3d11.cpp
 				destroyable.h
 				destroyable.cpp
+				guirenderer.h
+				guirenderer.cpp
 )
 set(SOURCE_PIP  pipelinestage.h
 				pipelinestage.cpp
