@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <functional>
+#include <vector>
 #include "uistructs.h"
 
 namespace gui
@@ -35,6 +36,17 @@ class FreeTypeWrapper;
 
 typedef std::function<void(std::shared_ptr<unsigned char[]>, size_t, size_t)> FontRendererFunc_T;
 
+class Font
+{
+	friend class FreeTypeWrapper;
+public:
+	Font(){}
+	~Font(){}
+
+private:
+	std::vector<unsigned int> m_charToGlyph;
+};
+
 class FontManager
 {
 public:
@@ -43,9 +55,11 @@ public:
 
 	bool init();
 	void destroy();
+	void setFontRenderer(FontRendererFunc_T func) { m_renderer = func; }
 
 public:
 	std::shared_ptr<FreeTypeWrapper> m_freetype;
+	FontRendererFunc_T m_renderer;
 };
 
 DECLARE_PTR(FontManager);

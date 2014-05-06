@@ -24,6 +24,8 @@
 #include "fontmanager.h"
 #include "logger.h"
 
+#include <map>
+
 #include <ft2build.h>
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
@@ -34,6 +36,18 @@ namespace gui
 {
 
 const int DPI = 96;
+
+namespace 
+{
+
+int findNearestPower2(int v)
+{
+	int i = 2;
+	while (i < v) i <<= 1;
+	return i;
+}
+
+}
 
 class FreeTypeWrapper
 {
@@ -56,7 +70,7 @@ public:
 		FT_Done_FreeType(m_library);
 	}
 
-	bool loadFont(const std::string& name, size_t height, size_t bufferWidth, size_t bufferHeight)
+	bool loadFont(Font& font, const std::string& name, size_t height)
 	{
 		FT_Face face;
 		if (FT_New_Face(m_library, name.c_str(), 0, &face))
@@ -67,10 +81,33 @@ public:
 
 		FT_Set_Char_Size(face, height << 6, height << 6, DPI, DPI);
 
+		const int MAX_BUFFER_SIZE = 2048;
+		std::unique_ptr<unsigned char[]> fontBuffer(new unsigned char[MAX_BUFFER_SIZE * MAX_BUFFER_SIZE]);
+		memset(fontBuffer.get(), 0, MAX_BUFFER_SIZE * MAX_BUFFER_SIZE * sizeof(unsigned char));
+
+		int offsetX = 0;
+		int offsetY = 0;
+		int maxHeight = 0;
+		int maxWidth = 0;
 		FT_GlyphSlot slot = face->glyph;
-		for (FT_Long index = 0; index < face->num_glyphs; index++)
+		
+		font.m_charToGlyph.resize(128);
+		std::map<unsigned int, unsigned int> glyphs;
+		unsigned int charToGlyphIndex = 0;
+		for (short index = 0; index < 128; index++)
 		{
-			if (FT_Load_Glyph(face, index, FT_LOAD_DEFAULT))
+			FT_UInt glyphIndex = FT_Get_Char_Index(face, index);
+			if (glyphs.find(glyphIndex) == glyphs.end()) 
+			{
+				glyphs[glyphIndex] = charToGlyphIndex;
+			}
+			else 
+			{
+				font.m_charToGlyph[index] = glyphs[glyphIndex];
+				continue;
+			}
+			
+			if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT))
 			{
 				FT_Done_Face(face);
 				return false;
@@ -88,10 +125,38 @@ public:
 			int bx = (int)slot->metrics.horiBearingX >> 6;
 			int by = (int)slot->metrics.horiBearingY >> 6;
 
-			//slot->bitmap
-			//pen_x += slot->advance.x >> 6;
-			//pen_y += slot->advance.y >> 6; /* not useful for now */
+			if (offsetX + w >= MAX_BUFFER_SIZE)
+			{
+				offsetX = 0;
+				offsetY += maxHeight;
+				maxHeight = h;
+			}
+			if (offsetY + h >= MAX_BUFFER_SIZE)
+			{
+				// buffer overflow
+				FT_Done_Face(face);
+				return false;
+			}
+
+			if (h > maxHeight) maxHeight = h;
+
+			for (int j = 0; j < h; j++) 
+			{
+				for (int i = 0; i < w; i++)
+				{
+					fontBuffer[(i + offsetX) + slot->bitmap.width * (j + offsetY)] = slot->bitmap.buffer[i + slot->bitmap.width * j];
+				}
+			}
+
+			offsetX += w;
+			if (offsetX > maxWidth + 1) maxWidth = offsetX - 1;
+
+			font.m_charToGlyph[index] = charToGlyphIndex;
+			charToGlyphIndex++;
 		}
+
+		size_t textureWidth = findNearestPower2(maxWidth);
+		size_t textureHeight = findNearestPower2(maxHeight);
 
 		FT_Done_Face(face);
 
@@ -111,7 +176,8 @@ bool FontManager::init()
 		return false; 
 	}
 
-	m_freetype->loadFont("data/gui/DejaVuSans.ttf", 16, 2048, 2048);
+	Font font;
+	m_freetype->loadFont(font, "data/gui/DejaVuSans.ttf", 16);
 
 	return true;
 }
