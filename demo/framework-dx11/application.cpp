@@ -32,6 +32,9 @@ namespace framework
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxguid.lib")
 
+const DXGI_FORMAT DISPLAY_FORMAT = DXGI_FORMAT_R8G8B8A8_UNORM;
+const UINT BACK_BUFFERS_COUNT = 2;
+
 Application::AppInfo::AppInfo() : 
 	title("Demo"), 
 	windowWidth(1024), 
@@ -41,7 +44,6 @@ Application::AppInfo::AppInfo() :
 {
 	flags.all = 0;
 	flags.fullscreen = 0;
-	flags.vsync = 0;
 	flags.cursor = 1;
 	#ifdef _DEBUG
 	flags.debug = 1;
@@ -123,12 +125,6 @@ int Application::run(Application* self, const std::string& commandLine)
 
 	// user-defined initialization
 	startup(m_rootWindow);
-
-	// set fullscreen
-	if (m_info.flags.fullscreen)
-	{
-		m_device.swapChain->SetFullscreenState(TRUE, NULL);
-	}
 
 	mainLoop();
 
@@ -228,6 +224,7 @@ bool Application::initDevice()
 		return false;
 	}
 	m_factory = factory;
+	hr = m_factory->MakeWindowAssociation(m_window.getHandle(), DXGI_MWA_NO_ALT_ENTER);
 
 	// adapter
 	IDXGIAdapter* adapter = 0;
@@ -251,6 +248,12 @@ bool Application::initDevice()
 	if (!isFeatureLevelSupported(m_info.featureLevel))
 	{
 		utils::Logger::toLog("Error: chosen feature level is unsupported.\n");
+		return false;
+	}
+
+	// get display modes
+	if (!findDisplayMode())
+	{
 		return false;
 	}
 
@@ -285,7 +288,7 @@ bool Application::initDevice()
 	if (m_info.samples != 0)
 	{
 		m_multisamplingQuality = 0;
-		hr = m_device.device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, m_info.samples, &m_multisamplingQuality);
+		hr = m_device.device->CheckMultisampleQualityLevels(DISPLAY_FORMAT, m_info.samples, &m_multisamplingQuality);
 		if (hr != S_OK || m_multisamplingQuality == 0)
 		{
 			utils::Logger::toLogWithFormat("Error: %dx-multisampling is not supported.\n", m_info.samples);
@@ -299,6 +302,9 @@ bool Application::initDevice()
 	{
 		return false;
 	}
+
+	// disable alt+enter
+	m_factory->MakeWindowAssociation(m_window.getHandle(), DXGI_MWA_NO_ALT_ENTER);
 
 	// init default rasterizer
 	m_defaultRasterizer.reset(new framework::RasterizerStage());
@@ -354,27 +360,65 @@ bool Application::initDevice()
 	return true;
 }
 
+bool Application::findDisplayMode()
+{
+	HRESULT hr = S_OK;
+
+	IDXGIOutput* output = NULL; 
+	hr = m_adapter->EnumOutputs(0, &output);
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not enumarate outputs.\n");
+		return false;
+	}
+	UINT numModes = 0;
+	DXGI_FORMAT format = DISPLAY_FORMAT;
+	hr = output->GetDisplayModeList(format, 0, &numModes, NULL);
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not get display modes number.\n");
+		return false;
+	}
+	std::vector<DXGI_MODE_DESC> displayModes;
+	displayModes.resize(numModes);
+	hr = output->GetDisplayModeList(format, 0, &numModes, displayModes.data());
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not get display modes number.\n");
+		return false;
+	}
+	output->Release();
+	
+	auto it = std::find_if(displayModes.begin(), displayModes.end(), [&](const DXGI_MODE_DESC& desc)
+	{
+		return desc.Width == (UINT)m_info.windowWidth && desc.Height == (UINT)m_info.windowHeight;
+	});
+	if (it == displayModes.end())
+	{
+		utils::Logger::toLog("Error: could not find appropriate display mode.\n");
+		return false;
+	}
+	m_displayDesc = *it;
+	m_displayDesc.Format = DXGI_FORMAT_UNKNOWN;
+	m_displayDesc.RefreshRate.Numerator = 0;
+	m_displayDesc.RefreshRate.Denominator = 0;
+
+	return true;
+}
+
 bool Application::initSwapChain(Device& device)
 {
 	HRESULT hr = S_OK;
 
 	// parameters
 	DXGI_SWAP_CHAIN_DESC state;
-	state.BufferDesc.Width = m_info.windowWidth;
-	state.BufferDesc.Height = m_info.windowHeight;
-	state.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	state.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-	state.BufferDesc.Scaling = DXGI_MODE_SCALING_STRETCHED;
-	if ((bool)m_info.flags.vsync)
-	{
-		state.BufferDesc.RefreshRate.Numerator = 60;
-		state.BufferDesc.RefreshRate.Denominator = 1;
-	}
-	else
-	{
-		state.BufferDesc.RefreshRate.Numerator = 0;
-		state.BufferDesc.RefreshRate.Denominator = 1;
-	}
+	state.BufferDesc.Width = m_displayDesc.Width;
+	state.BufferDesc.Height = m_displayDesc.Height;
+	state.BufferDesc.Format = DISPLAY_FORMAT;
+	state.BufferDesc.ScanlineOrdering = m_displayDesc.ScanlineOrdering;
+	state.BufferDesc.Scaling = m_displayDesc.Scaling;
+	state.BufferDesc.RefreshRate.Numerator = m_displayDesc.RefreshRate.Numerator;
+	state.BufferDesc.RefreshRate.Denominator = m_displayDesc.RefreshRate.Denominator;
 
 	if (m_info.samples > 0)
 	{
@@ -388,7 +432,7 @@ bool Application::initSwapChain(Device& device)
 	}
 
 	state.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	state.BufferCount = 2;
+	state.BufferCount = BACK_BUFFERS_COUNT;
 	state.OutputWindow = m_window.getHandle();
 	state.Windowed = TRUE;
 	state.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
@@ -400,6 +444,31 @@ bool Application::initSwapChain(Device& device)
 	{
 		utils::Logger::toLog("Error: could not create a swap chain.\n");
 		return false;
+	}
+
+	// set fullscreen
+	if (m_info.flags.fullscreen)
+	{
+		hr = m_device.swapChain->ResizeTarget(&m_displayDesc);
+		if (hr != S_OK)
+		{
+			utils::Logger::toLog("Error: failed ResizeTarget in swap chain.\n");
+			return false;
+		}
+		
+		hr = m_device.swapChain->SetFullscreenState(TRUE, NULL);
+		if (hr != S_OK)
+		{
+			utils::Logger::toLog("Error: failed SetFullscreenState in swap chain.\n");
+			return false;
+		}
+
+		hr = m_device.swapChain->ResizeBuffers(BACK_BUFFERS_COUNT, m_displayDesc.Width, m_displayDesc.Height, m_displayDesc.Format, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+		if (hr != S_OK)
+		{
+			utils::Logger::toLog("Error: failed ResizeBuffers in swap chain.\n");
+			return false;
+		}
 	}
 
 	// default render target from swap chain
@@ -446,7 +515,12 @@ void Application::present()
 
 	if (m_device.swapChain != 0)
 	{
-		m_device.swapChain->Present(0, 0);
+		HRESULT hr = m_device.swapChain->Present(0, 0);
+		if (hr != S_OK && hr != DXGI_STATUS_OCCLUDED)
+		{
+			utils::Logger::toLog("Error: application was stopped bacause of Present failure.\n");
+			m_isRunning = false;
+		}
 	}
 }
 

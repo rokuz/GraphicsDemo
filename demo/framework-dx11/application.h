@@ -102,12 +102,11 @@ protected:
         {
             struct
             {
-                unsigned int    fullscreen  : 1;
-                unsigned int    vsync       : 1;
-                unsigned int    cursor      : 1;
-                unsigned int    debug       : 1;
+                unsigned int fullscreen  : 1;
+                unsigned int cursor      : 1;
+                unsigned int debug       : 1;
             };
-            unsigned int        all;
+            unsigned int all;
         } flags;
 		
 		AppInfo();
@@ -152,6 +151,7 @@ private:
 	Device m_device;
 	D3D_DRIVER_TYPE m_driverType;
 	unsigned int m_multisamplingQuality;
+	DXGI_MODE_DESC m_displayDesc;
 
 	std::list<std::weak_ptr<Destroyable> > m_destroyableList;
 	std::shared_ptr<Line3D> m_axisX;
@@ -170,6 +170,7 @@ private:
 
 	bool initDevice();
 	bool isFeatureLevelSupported(D3D_FEATURE_LEVEL level);
+	bool findDisplayMode();
 	bool initSwapChain(Device& device);
 	void present();
 	void destroyDevice();
