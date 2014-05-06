@@ -156,7 +156,7 @@ void Application::mainLoop()
 		}
 
 		// pre-render
-		m_pipeline.beginFrame(m_defaultRenderTarget);
+		m_pipeline.beginFrame(defaultRenderTarget());
 		m_defaultRasterizer->apply();
 		m_defaultDepthStencil->apply();
 		m_defaultBlending->apply();
@@ -186,9 +186,9 @@ void Application::mainLoop()
 		}
 
 		// post-render
-		present();
 		m_usingGpuProgram.reset();
 		m_pipeline.endFrame();
+		present();
 	} 
 	while (m_isRunning);
 }
@@ -419,23 +419,13 @@ bool Application::initSwapChain(Device& device)
 	state.BufferDesc.Scaling = m_displayDesc.Scaling;
 	state.BufferDesc.RefreshRate.Numerator = m_displayDesc.RefreshRate.Numerator;
 	state.BufferDesc.RefreshRate.Denominator = m_displayDesc.RefreshRate.Denominator;
-
-	if (m_info.samples > 0)
-	{
-		state.SampleDesc.Count = m_info.samples;
-		state.SampleDesc.Quality = m_multisamplingQuality;
-	}
-	else
-	{
-		state.SampleDesc.Count = 1;
-		state.SampleDesc.Quality = 0;
-	}
-
+	state.SampleDesc.Count = 1;
+	state.SampleDesc.Quality = 0;
 	state.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	state.BufferCount = BACK_BUFFERS_COUNT;
 	state.OutputWindow = m_window.getHandle();
 	state.Windowed = TRUE;
-	state.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+	state.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 	state.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	// initialization
@@ -473,10 +463,25 @@ bool Application::initSwapChain(Device& device)
 
 	// default render target from swap chain
 	m_defaultRenderTarget.reset(new framework::RenderTarget());
-	m_defaultRenderTarget->initWithSwapChain(device);
+	m_defaultRenderTarget->initWithSwapChain(device, m_info.samples == 0);
 	if (!m_defaultRenderTarget->isValid())
 	{
 		return false;
+	}
+
+	// multisampling render target
+	if (m_info.samples > 0)
+	{
+		auto desc = RenderTarget::getDefaultDesc(m_displayDesc.Width, m_displayDesc.Height, DISPLAY_FORMAT);
+		desc.SampleDesc.Count = m_info.samples;
+		desc.SampleDesc.Quality = m_multisamplingQuality;
+
+		m_multisamplingRenderTarget.reset(new framework::RenderTarget());
+		m_multisamplingRenderTarget->initWithDescription(desc, true);
+		if (!m_multisamplingRenderTarget->isValid())
+		{
+			return false;
+		}
 	}
 
 	return true;
@@ -513,8 +518,14 @@ void Application::present()
 {
 	TRACE_FUNCTION
 
-	if (m_device.swapChain != 0)
+	if (m_device.context != 0 && m_device.swapChain != 0)
 	{
+		// resolve subresource in case of multisampling
+		if (m_info.samples > 0)
+		{
+			m_device.context->ResolveSubresource(m_defaultRenderTarget->getTexture(0), 0, m_multisamplingRenderTarget->getTexture(0), 0, DISPLAY_FORMAT);
+		}
+
 		HRESULT hr = m_device.swapChain->Present(0, 0);
 		if (hr != S_OK && hr != DXGI_STATUS_OCCLUDED)
 		{
@@ -550,7 +561,7 @@ void Application::measureFps(double delta)
 
 void Application::useDefaultRenderTarget()
 {
-	m_pipeline.setRenderTarget(m_defaultRenderTarget);
+	m_pipeline.setRenderTarget(defaultRenderTarget());
 }
 
 void Application::renderGui(double elapsedTime)
@@ -715,6 +726,14 @@ void Application::initAxes()
 
 	m_axisZ.reset(new Line3D());
 	m_axisZ->initWithArray(points_z);
+}
+
+const std::shared_ptr<RenderTarget>& Application::defaultRenderTarget() const
+{
+	if (m_multisamplingRenderTarget.get() != 0) 
+		return m_multisamplingRenderTarget;
+
+	return m_defaultRenderTarget;
 }
 
 }

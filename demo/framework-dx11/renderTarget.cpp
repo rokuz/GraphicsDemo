@@ -76,12 +76,12 @@ RenderTarget::~RenderTarget()
 	destroy();
 }
 
-void RenderTarget::initWithSwapChain(const Device& device)
+void RenderTarget::initWithSwapChain(const Device& device, bool withDepth)
 {
 	destroy();
 
 	// always use depth in this case
-	m_useDepth = true;
+	m_useDepth = withDepth;
 	m_isSwapChain = true;
 
 	// get buffer from swap chain
@@ -100,7 +100,10 @@ void RenderTarget::initWithSwapChain(const Device& device)
 	if (!createView(0)) return;
 
 	// depth buffer
-	if (!createDepth(0)) return;
+	if (m_useDepth)
+	{
+		if (!createDepth(0)) return;
+	}
 
 	if (isValid()) initDestroyable();
 }
@@ -250,6 +253,11 @@ const ResourceView& RenderTarget::getDepthView() const
 const D3D11_TEXTURE2D_DESC& RenderTarget::getDesc(int index) const
 {
 	return m_colorBufferDesc[index];
+}
+
+ID3D11Texture2D* RenderTarget::getTexture( int index ) const
+{
+	return m_colorBuffer[index];
 }
 
 void RenderTarget::destroy()

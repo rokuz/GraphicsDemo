@@ -123,7 +123,7 @@ protected:
 	void renderAxes(const matrix44& viewProjection);
 
 	void useDefaultRenderTarget();
-	const std::shared_ptr<RenderTarget>& defaultRenderTarget() const { return m_defaultRenderTarget; }
+	const std::shared_ptr<RenderTarget>& defaultRenderTarget() const;
 	const std::shared_ptr<RasterizerStage>& defaultRasterizer() const { return m_defaultRasterizer; }
 	void resize();
 	const std::shared_ptr<Sampler>& anisotropicSampler() const { return m_anisotropicSampler; }
@@ -162,6 +162,7 @@ private:
 	std::shared_ptr<DepthStencilStage> m_defaultDepthStencil;
 	std::shared_ptr<BlendStage> m_defaultBlending;
 	std::shared_ptr<RenderTarget> m_defaultRenderTarget;
+	std::shared_ptr<RenderTarget> m_multisamplingRenderTarget;
 	std::shared_ptr<Sampler> m_anisotropicSampler;
 	std::shared_ptr<Sampler> m_linearSampler;
 

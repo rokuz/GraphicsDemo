@@ -41,7 +41,7 @@ public:
 	static D3D11_TEXTURE2D_DESC getDefaultDesc(int width, int height, DXGI_FORMAT format);
 	static D3D11_TEXTURE2D_DESC getDefaultDepthDesc(int width, int height);
 
-	void initWithSwapChain(const Device& device);
+	void initWithSwapChain(const Device& device, bool withDepth);
 	void initWithDescription(const D3D11_TEXTURE2D_DESC& desc, bool withDepth);
 	void initWithDescriptions(const std::vector<D3D11_TEXTURE2D_DESC>& descs, bool withDepth);
 	
@@ -53,6 +53,7 @@ public:
 	const ResourceView& getDepthView() const;
 
 	const D3D11_TEXTURE2D_DESC& getDesc(int index) const;
+	ID3D11Texture2D* getTexture(int index) const;
 
 private:
 	virtual void destroy();
