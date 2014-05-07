@@ -23,11 +23,21 @@
 
 #include "guirenderer.h"
 
+#include "application.h"
+
 namespace framework
 {
 
 bool FontResourceD3D11::createResource(const gui::Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height)
 {
+	m_texture.reset(new Texture());
+	if (!m_texture->initWithData(DXGI_FORMAT_R8_UNORM, buffer, width, height))
+	{
+		return false;
+	}
+
+	//Application::instance()->saveTextureToFile(m_texture, "font.dds");
+
 	return true;
 }
 

@@ -115,6 +115,57 @@ bool Texture::initWithDDS(const std::string& fileName)
 	return result;
 }
 
+bool Texture::initWithData( DXGI_FORMAT format, const std::vector<unsigned char>& buffer, size_t width, size_t height )
+{
+	const Device& device = Application::instance()->getDevice();
+	destroy();
+
+	m_type = Texture2D;
+
+	m_texture2DDesc.Width = width;
+	m_texture2DDesc.Height = height;
+	m_texture2DDesc.MipLevels = 1;
+	m_texture2DDesc.ArraySize = 1;
+	m_texture2DDesc.Format = format;
+	m_texture2DDesc.SampleDesc.Count = 1;
+	m_texture2DDesc.SampleDesc.Quality = 0;
+	m_texture2DDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	m_texture2DDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	m_texture2DDesc.CPUAccessFlags = 0;
+	m_texture2DDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA data;
+	data.pSysMem = buffer.data();
+	data.SysMemPitch = UtilitiesD3D11::sizeOfFormat(format) * width;
+	data.SysMemSlicePitch = 0;
+
+	HRESULT hr = device.device->CreateTexture2D(&m_texture2DDesc, &data, &m_texture2D);
+	if (hr != S_OK)
+	{
+		destroy();
+		utils::Logger::toLog("Error: could not initialize a texture with data.\n");
+		return false;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	memset(&desc, 0, sizeof(desc));
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	desc.Texture2DArray.MipLevels = 1;
+	desc.Texture2DArray.ArraySize = 1;
+	hr = device.device->CreateShaderResourceView(m_texture2D, &desc, &m_view);
+	if (hr != S_OK)
+	{
+		destroy();
+		utils::Logger::toLog("Error: could not create shader resource view for a texture.\n");
+		return false;
+	}
+
+	initDestroyable();
+
+	return true;
+}
+
 void Texture::destroy()
 {
 	if (m_view != 0)
@@ -143,6 +194,20 @@ void Texture::destroy()
 bool Texture::isValid() const
 {
 	return m_type != TextureUnknown && (m_texture1D != 0 || m_texture2D != 0 || m_texture3D != 0) && m_view != 0;
+}
+
+ID3D11Resource* Texture::getResource() const
+{
+	if (m_texture1D != 0)
+		return m_texture1D;
+
+	if (m_texture2D != 0)
+		return m_texture2D;
+
+	if (m_texture3D != 0)
+		return m_texture3D;
+
+	return 0;
 }
 
 }

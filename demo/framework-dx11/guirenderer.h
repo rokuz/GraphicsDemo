@@ -23,6 +23,7 @@
 
 #pragma once
 #include "uimanager.h"
+#include "texture.h"
 #include <list>
 
 namespace framework
@@ -34,6 +35,9 @@ public:
 	virtual ~FontResourceD3D11(){}
 
 	virtual bool createResource(const gui::Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height);
+
+private:
+	std::shared_ptr<Texture> m_texture;
 };
 
 class UIResourcesFactoryD3D11 : public gui::UIResourcesFactory

@@ -90,6 +90,8 @@ public:
 	std::weak_ptr<GpuProgram> getUsingGpuProgram() const { return m_usingGpuProgram; }
 	Pipeline& getPipeline() { return m_pipeline; }
 
+	void saveTextureToFile(std::shared_ptr<Texture> texture, const std::string& filename);
+
 protected:
 	struct AppInfo
     {

@@ -25,6 +25,8 @@
 #include <algorithm>
 #include "guirenderer.h"
 
+#include "dds/ScreenGrab.h"
+
 namespace framework
 {
 
@@ -736,6 +738,12 @@ const std::shared_ptr<RenderTarget>& Application::defaultRenderTarget() const
 		return m_multisamplingRenderTarget;
 
 	return m_defaultRenderTarget;
+}
+
+void Application::saveTextureToFile( std::shared_ptr<Texture> texture, const std::string& filename )
+{
+	if (m_device.context == 0 && texture && texture->getResource() != 0) return;
+	DirectX::SaveDDSTextureToFile(m_device.context, texture->getResource(), utils::Utils::toUnicode(filename).c_str());
 }
 
 }

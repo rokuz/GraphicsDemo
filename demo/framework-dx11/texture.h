@@ -60,9 +60,11 @@ public:
 	virtual ~Texture();
     
     bool initWithDDS(const std::string& fileName);
+	bool initWithData(DXGI_FORMAT format, const std::vector<unsigned char>& buffer, size_t width, size_t height);
 	bool isValid() const;
 
 	TextureType getType() const { return m_type; }
+	ID3D11Resource* getResource() const;
 	ID3D11Texture1D* getTexture1D() const { return m_texture1D; }
 	ID3D11Texture2D* getTexture2D() const { return m_texture2D; }
 	ID3D11Texture3D* getTexture3D() const { return m_texture3D; }
