@@ -38,6 +38,8 @@ namespace gui
 {
 
 const int DPI = 96;
+const int BASIC_CHARS_COUNT = 1280;
+const float LINE_DIST_COEF = 1.25f;
 
 namespace 
 {
@@ -106,10 +108,11 @@ public:
 		int maxWidth = 0;
 		FT_GlyphSlot slot = face->glyph;
 		
-		font.m_charToGlyph.resize(128);
+		font.m_charToGlyph.resize(BASIC_CHARS_COUNT);
+		font.m_charToGlyph.reserve(BASIC_CHARS_COUNT);
 		std::map<unsigned int, unsigned int> glyphs;
 		unsigned int charToGlyphIndex = 0;
-		for (short index = 0; index < 128; index++)
+		for (short index = 0; index < BASIC_CHARS_COUNT; index++)
 		{
 			// create association between characters and glyphs
 			FT_UInt glyphIndex = FT_Get_Char_Index(face, index);
@@ -145,6 +148,12 @@ public:
 			int ax = (int)slot->advance.x >> 6;
 			int bx = (int)slot->metrics.horiBearingX >> 6;
 			int by = (int)slot->metrics.horiBearingY >> 6;
+			if (w > 255 || h > 255 || ax > 255 || bx > 127 || by > 127 || bx < -128 || by < -128)
+			{
+				utils::Logger::toLogWithFormat("Error: could not create a font '%s'. Maximum glyph's metrics were exceeded.\n", font.getName().c_str());
+				FT_Done_Face(face);
+				return false;
+			}
 
 			if (offsetX + w >= MAX_BUFFER_SIZE)
 			{
@@ -166,22 +175,38 @@ public:
 			{
 				for (int i = 0; i < w; i++)
 				{
-					fontBuffer[(i + offsetX) + slot->bitmap.width * (j + offsetY)] = slot->bitmap.buffer[i + slot->bitmap.width * j];
+					fontBuffer[(i + offsetX) + MAX_BUFFER_SIZE * (j + offsetY)] = slot->bitmap.buffer[i + w * j];
 				}
 			}
 
-			offsetX += w;
-			if (offsetX > maxWidth + 1) maxWidth = offsetX - 1;
+			// save metrics
+			Font::Glyph fontGlyph;
+			fontGlyph.x = (unsigned short)offsetX;
+			fontGlyph.y = (unsigned short)offsetY;
+			fontGlyph.width = (unsigned char)w;
+			fontGlyph.height = (unsigned char)h;
+			fontGlyph.advance = (unsigned char)ax;
+			fontGlyph.bearingX = (char)bx;
+			fontGlyph.bearingY = (char)by;
+			font.m_glyphs.push_back(fontGlyph);
+
+			float fby = (float)abs(by);
+			if (fby > font.m_linesDistance) font.m_linesDistance = fby;
 
 			font.m_charToGlyph[index] = charToGlyphIndex;
 			charToGlyphIndex++;
+
+			offsetX += w;
+			if (offsetX > maxWidth + 1) maxWidth = offsetX - 1;
 		}
+
+		font.m_linesDistance *= LINE_DIST_COEF;
 
 		FT_Done_Face(face);
 
 		// determine actual buffer size
 		size_t textureWidth = findNearestPower2(maxWidth);
-		size_t textureHeight = findNearestPower2(maxHeight);
+		size_t textureHeight = findNearestPower2(offsetY + maxHeight);
 
 		std::vector<unsigned char> outputBuffer;
 		outputBuffer.resize(textureWidth * textureHeight);
@@ -208,6 +233,34 @@ private:
 	FT_Library m_library;
 };
 
+Font::Font() : m_id(-1), m_linesDistance(0)
+{
+}
+
+bool Font::isValid() const
+{
+	return m_id >= 0 && !m_resource.expired();
+}
+
+vector2 Font::computeStringSize(const std::wstring& str, size_t offset, size_t len)
+{
+	if (str.empty()) return vector2(0, 0);
+	if (len == 0) len = str.length();
+	if (offset >= len - 1) return vector2(0, 0);
+
+	vector2 size;
+	for (size_t i = 0; i < str.length(); i++)
+	{
+		wchar_t character = (str[i] < BASIC_CHARS_COUNT ? str[i] : L'?');
+		unsigned int glyph = m_charToGlyph[character];
+		const Glyph& glyphData = m_glyphs[glyph];
+		size.x += (float)glyphData.advance;
+		if (size.y < (float)glyphData.height) size.y = (float)glyphData.height;
+	}
+
+	return size;
+}
+
 bool FontManager::init()
 {
 	m_freetype.reset(new FreeTypeWrapper());
@@ -227,9 +280,13 @@ void FontManager::destroy()
 
 Font FontManager::createFont(const std::string& fontPath, size_t height)
 {
+	static int idGenerator = 0;
 	Font font;
 	if (!m_freetype->loadFont(font, fontPath, height)) 
 		return std::move(Font());
+
+	font.m_id = idGenerator;
+	idGenerator++;
 
 	return std::move(font);
 }

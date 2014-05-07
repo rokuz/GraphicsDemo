@@ -40,6 +40,7 @@ bool UIManager::init(size_t width, size_t height, UIResourcesFactoryPtr_T factor
 
 	// TEMP
 	Font f = m_fontManager->createFont("data/gui/DejaVuSans.ttf", 16);
+	vector2 sz = f.computeStringSize(L"Hello, world!");
 
 	return true;
 }

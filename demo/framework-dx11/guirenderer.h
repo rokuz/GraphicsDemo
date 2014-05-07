@@ -53,4 +53,14 @@ private:
 	std::list<std::shared_ptr<FontResourceD3D11> > m_fonts;
 };
 
+class GuiRenderer
+{
+public:
+	GuiRenderer(){}
+	~GuiRenderer(){}
+
+	void RenderText(const gui::Font& font, float x, float y, float w, float h, 
+					gui::Formatting horz, gui::Formatting vert, const std::wstring& text);
+};
+
 }

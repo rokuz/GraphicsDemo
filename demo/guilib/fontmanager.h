@@ -27,27 +27,48 @@
 #include <memory>
 #include <functional>
 #include <vector>
+#include <map>
 #include "uistructs.h"
+#include "vector.h"
 
 namespace gui
 {
 
+class FontManager;
 class FreeTypeWrapper;
 class IFontResource;
 
 class Font
 {
+	friend class FontManager;
 	friend class FreeTypeWrapper;
 public:
-	Font(){}
+	Font();
 	~Font(){}
-	bool isVailid() const;
 
+	bool isValid() const;
+	int getID() const { return m_id; }
 	const std::string& getName() const { return m_name; }
 
+	vector2 computeStringSize(const std::wstring& str, size_t offset = 0, size_t len = 0);
+
 private:
+	int m_id;
 	std::string m_name;
 	std::vector<unsigned int> m_charToGlyph;
+	struct Glyph
+	{
+		unsigned short x;
+		unsigned short y;
+		unsigned char width;
+		unsigned char height;
+		unsigned char advance;
+		char bearingX;
+		char bearingY;
+		Glyph() : x(0), y(0), width(0), height(0), advance(0), bearingX(0), bearingY(0) {}
+	};
+	float m_linesDistance;
+	std::vector<Glyph> m_glyphs;
 	std::weak_ptr<IFontResource> m_resource;
 };
 

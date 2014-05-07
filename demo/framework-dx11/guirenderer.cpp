@@ -53,4 +53,10 @@ void UIResourcesFactoryD3D11::cleanup()
 	m_fonts.clear();
 }
 
+void GuiRenderer::RenderText(const gui::Font& font, float x, float y, float w, float h,
+							 gui::Formatting horz, gui::Formatting vert, const std::wstring& text)
+{
+
+}
+
 }
