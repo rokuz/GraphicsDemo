@@ -24,6 +24,7 @@
 #include "freeCamera.h"
 #include "logger.h"
 #include "inputkeys.h"
+#include "profiler.h"
 
 namespace framework
 {
@@ -101,6 +102,28 @@ void FreeCamera::onMouseMove(double xpos, double ypos)
 
 void FreeCamera::update(double elapsedTime)
 {
+	if (m_rotationMode)
+	{
+		vector2 delta = m_currentMousePosition - m_lastMousePosition;
+		vector2 old_angles = m_angles;
+		m_angles.x -= (delta.x * 10.0f * (float)elapsedTime);
+		m_angles.y += (delta.y * 10.0f * (float)elapsedTime);
+		if (m_angles.y > 89.9f) m_angles.y = 89.9f;
+		if (m_angles.y < -89.9) m_angles.y = -89.9f;
+		//utils::Logger::toLogWithFormat("angles = (%.2f; %.2f)\n", m_angles.x, m_angles.y);
+
+		if (!old_angles.isequal(m_angles, 0.00001f))
+		{
+			quaternion q1;
+			q1.set_rotate_axis_angle(vector3(0, 1, 0), n_deg2rad(m_angles.x));
+			quaternion q2;
+			q2.set_rotate_axis_angle(vector3(1, 0, 0), n_deg2rad(m_angles.y));
+			m_orientation = q1 * q2;
+		}
+
+		m_lastMousePosition = m_currentMousePosition;
+	}
+
 	if (m_moveForward)
 	{
 		m_position += (m_orientation.z_direction() * m_speed * (float)elapsedTime);
@@ -119,28 +142,6 @@ void FreeCamera::update(double elapsedTime)
 	if (m_moveRight)
 	{
 		m_position -= (m_orientation.x_direction() * m_speed * (float)elapsedTime);
-	}
-
-	if (m_rotationMode)
-	{
-		vector2 delta = m_currentMousePosition - m_lastMousePosition;
-		vector2 old_angles = m_angles;
-		m_angles.x -= delta.x * 200.0f * (float)elapsedTime;
-		m_angles.y += delta.y * 200.0f * (float)elapsedTime;
-		if (m_angles.y > 89.9f) m_angles.y = 89.9f;
-		if (m_angles.y < -89.9) m_angles.y = -89.9f;
-		//utils::Logger::toLogWithFormat("angles = (%.2f; %.2f)\n", m_angles.x, m_angles.y);
-
-		if (!old_angles.isequal(m_angles, 0.001f))
-		{
-			quaternion q1;
-			q1.set_rotate_axis_angle(vector3(0, 1, 0), n_deg2rad(m_angles.x));
-			quaternion q2;
-			q2.set_rotate_axis_angle(vector3(1, 0, 0), n_deg2rad(m_angles.y));
-			m_orientation = q1 * q2;
-		}
-
-		m_lastMousePosition = m_currentMousePosition;
 	}
 }
 

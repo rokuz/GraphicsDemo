@@ -1,5 +1,5 @@
-#include <common.h>
-#include <pscommon.h>
+#include <common.h.hlsl>
+#include <pscommon.h.hlsl>
 
 struct ListNode
 {

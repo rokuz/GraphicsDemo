@@ -1,5 +1,5 @@
-#include <common.h>
-#include <dscommon.h>
+#include <common.h.hlsl>
+#include <dscommon.h.hlsl>
 
 Texture2D<float4> dataBlockMap1 : register(t1);
 Texture2D<uint3> dataBlockMap2 : register(t2);

@@ -23,8 +23,7 @@
 
 #include "application.h"
 #include <algorithm>
-#include "guirenderer.h"
-
+#include "uirendererd3d11.h"
 #include "dds/ScreenGrab.h"
 
 namespace framework
@@ -127,7 +126,7 @@ int Application::run(Application* self, const std::string& commandLine)
 	m_lightManager.init();
 
 	// user-defined initialization
-	startup(m_rootWindow);
+	startup(gui::UIManager::instance().root());
 
 	mainLoop();
 
@@ -147,51 +146,65 @@ void Application::mainLoop()
 
 	do
 	{
-		TRACE_BLOCK("_Frame");
+		//TRACE_BLOCK("_Frame");
 
-		// process events from the window
-		m_window.pollEvents();
-
-		// need to close?
-		if (m_window.shouldClose())
+		// events
 		{
-			m_isRunning = false;
+			//TRACE_BLOCK("_Events");
+
+			// process events from the window
+			m_window.pollEvents();
+
+			// need to close?
+			if (m_window.shouldClose())
+			{
+				m_isRunning = false;
+			}
 		}
 
 		// pre-render
-		m_pipeline.beginFrame(defaultRenderTarget());
-		m_defaultRasterizer->apply();
-		m_defaultDepthStencil->apply();
-		m_defaultBlending->apply();
+		{
+			//TRACE_BLOCK("_PreRender");
+			m_pipeline.beginFrame(defaultRenderTarget());
+			m_defaultRasterizer->apply();
+			m_defaultDepthStencil->apply();
+			m_defaultBlending->apply();
+		}
 
 		// render frame
-		if (fabs(m_lastTime) < 1e-7)
 		{
-			// the first frame
-			render(0);
-			renderGui(0);
+			//TRACE_BLOCK("_RenderRender");
+			if (fabs(m_lastTime) < 1e-7)
+			{
+				// the first frame
+				render(0);
+				renderGui(0);
 
-			m_lastTime = m_timer.getTime();
-		}
-		else
-		{
-			double curTime = m_timer.getTime();
-			double delta = curTime - m_lastTime;
+				m_lastTime = m_timer.getTime();
+			}
+			else
+			{
+				double curTime = m_timer.getTime();
+				double delta = curTime - m_lastTime;
 
-			// fps counter
-			measureFps(delta);
+				// fps counter
+				measureFps(delta);
 
-			// rendering
-			render(delta);
-			renderGui(delta);
+				// rendering
+				render(delta);
+				renderGui(delta);
 
-			m_lastTime = curTime;
+				m_lastTime = curTime;
+			}
 		}
 
 		// post-render
-		m_usingGpuProgram.reset();
-		m_pipeline.endFrame();
-		present();
+		{
+			//TRACE_BLOCK("_PostRender");
+			m_usingGpuProgram.reset();
+			m_pipeline.endFrame();
+			present();
+		}
 	} 
 	while (m_isRunning);
 }
@@ -569,12 +582,15 @@ void Application::useDefaultRenderTarget()
 
 void Application::renderGui(double elapsedTime)
 {
-	//TRACE_FUNCTION
-	//useDefaultRenderTarget();
-
-	//TODO
+	TRACE_FUNCTION
+	useDefaultRenderTarget();
 
 	gui::UIManager::instance().injectFrameTime(elapsedTime);
+
+	if (gui::UIManager::instance().renderer())
+	{
+		gui::UIManager::instance().renderer()->render();
+	}
 }
 
 void Application::renderAxes(const matrix44& viewProjection)
@@ -614,25 +630,25 @@ void Application::destroyAllDestroyable()
 bool Application::initGui()
 {
 	std::shared_ptr<UIResourcesFactoryD3D11> factory(new UIResourcesFactoryD3D11());
-	if (!gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight, factory))
+	std::shared_ptr<UIRendererD3D11> renderer(new UIRendererD3D11());
+	if (!gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight, factory, renderer))
 	{
 		return false;
 	}
 	
-	m_rootWindow = gui::UIManager::instance().root();
-
 	// create a label to show fps statistics
-	m_fpsLabel = gui::UIManager::instance().createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
-														gui::Coords::Absolute(150.0f, 25.0f),
-														gui::RightAligned, gui::TopAligned, L"0 fps");
-	m_rootWindow->addChild(m_fpsLabel);
+	m_fpsLabel = framework::UIFactory::createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
+												   gui::Coords::Absolute(150.0f, 25.0f),
+												   gui::RightAligned, gui::TopAligned, L"0 fps");
+	gui::UIManager::instance().root()->addChild(m_fpsLabel);
 
 	// create a label to show the legend
-	m_legendLabel = gui::UIManager::instance().createLabel(gui::Coords::Coords(0.0f, 0.0f, 0.0f, 0.0f),
-														   gui::Coords::Absolute(500.0f, 500.0f),
-														   gui::LeftAligned, gui::TopAligned,
-														   utils::Utils::toUnicode(m_legend));
-	m_rootWindow->addChild(m_legendLabel);
+	m_legendLabel = framework::UIFactory::createLabel(gui::Coords::Coords(0.0f, 0.0f, 0.0f, 0.0f),
+													  gui::Coords::Absolute(500.0f, 500.0f),
+													  gui::LeftAligned, gui::TopAligned,
+													  utils::Utils::toUnicode(m_legend));
+	m_legendLabel->setVisible(!m_legend.empty());
+	gui::UIManager::instance().root()->addChild(m_legendLabel);
 
 	return true;
 }

@@ -64,8 +64,9 @@ Profiler::~Profiler()
 	cleanup();
 }
 
-Profiler::ProfilerObj::ProfilerObj( const std::string& name ) :
-	isStarted(false)
+Profiler::ProfilerObj::ProfilerObj(const std::string& name, bool enableHistory) :
+	isStarted(false),
+	historical(enableHistory)
 {
 	if (Profiler::instance().isRun())
 	{
@@ -78,7 +79,7 @@ Profiler::ProfilerObj::~ProfilerObj()
 {
 	if (isStarted)
 	{
-		Profiler::instance().endTrace();
+		Profiler::instance().endTrace(historical);
 	}
 }
 
@@ -120,7 +121,7 @@ void Profiler::beginTrace( const std::string& name )
 	}
 }
 
-void Profiler::endTrace()
+void Profiler::endTrace(bool historical)
 {
 	if (!m_isRun) return;
 
@@ -133,6 +134,10 @@ void Profiler::endTrace()
 		Node* cur = it->second->current;
 		double instantTime = m_timer.getTime() - cur->startTime;
 		cur->statistics.callsCount++;
+		if (historical)
+		{
+			cur->statistics.history.push_back(instantTime);
+		}
 		if (cur->statistics.callsCount > 1)
 		{
 			cur->statistics.averageTime = (cur->statistics.averageTime + instantTime) / 2.0;
@@ -270,6 +275,14 @@ void Profiler::saveToFile()
 								 << ", min = " << stats.minTime * 1000.0 << "ms"
 								 << ", max = " << stats.maxTime * 1000.0 << "ms"
 								 << ", average = " << stats.averageTime * 1000.0 << "ms\n";
+					if (!stats.history.empty())
+					{
+						for (int d = 0; d < depth; d++) profilerFile << "  ";
+						profilerFile << "  history = { ";
+						for (auto it = stats.history.begin(); it != stats.history.end(); ++it)
+							profilerFile << (*it) * 1000.0 << " ";
+						profilerFile << "}\n";
+					}
 				});
 			}
 			profilerFile.close();

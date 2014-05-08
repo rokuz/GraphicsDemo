@@ -34,13 +34,24 @@ class Label : public Widget
 {
 public:
 	Label();
-	~Label(){}
+	virtual ~Label(){}
+	virtual WidgetType getType() const { return LabelType; }
 
 	void setText(const std::wstring& text);
 	void setHorzFormatting(Formatting formatting);
 	void setVertFormatting(Formatting formatting);
+	void setFont(int fontId);
+
+	const std::wstring& getText() const { return m_text; }
+	Formatting getHorzFormatting() const { return m_horzFormatting; }
+	Formatting getVertFormatting() const { return m_vertFormatting; }
+	int getFont() const { return m_fontId; }
 
 private:
+	std::wstring m_text;
+	Formatting m_horzFormatting;
+	Formatting m_vertFormatting;
+	int m_fontId;
 };
 
 DECLARE_PTR(Label);

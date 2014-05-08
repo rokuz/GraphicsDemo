@@ -55,14 +55,16 @@ const char* getModelByType(ShaderType shaderType)
 	return 0;
 }
 
-int getTypeByExt(const std::string& ext)
+int getTypeByExt(const std::list<std::string>& exts)
 {
-	if (ext == "vs" || ext == "vsh") return VERTEX_SHADER;
-	if (ext == "hs" || ext == "hsh") return HULL_SHADER;
-	if (ext == "ds" || ext == "dsh") return DOMAIN_SHADER;
-	if (ext == "gs" || ext == "gsh") return GEOMETRY_SHADER;
-	if (ext == "ps" || ext == "psh") return PIXEL_SHADER;
-	if (ext == "cs" || ext == "csh") return COMPUTE_SHADER;
+#define FIND_EXT(str) std::find(exts.cbegin(), exts.cend(), str) != exts.cend()
+	if (FIND_EXT("vsh") || FIND_EXT("vs")) return VERTEX_SHADER;
+	if (FIND_EXT("hsh") || FIND_EXT("hs")) return HULL_SHADER;
+	if (FIND_EXT("dsh") || FIND_EXT("ds")) return DOMAIN_SHADER;
+	if (FIND_EXT("gsh") || FIND_EXT("gs")) return GEOMETRY_SHADER;
+	if (FIND_EXT("psh") || FIND_EXT("ps")) return PIXEL_SHADER;
+	if (FIND_EXT("csh") || FIND_EXT("cs")) return COMPUTE_SHADER;
+#undef FIND_EXT
 	return -1;
 }
 
@@ -192,7 +194,7 @@ void GpuProgram::destroy()
 
 void GpuProgram::addShader(const std::string& fileName, const std::string& mainFunc)
 {
-	int shaderType = getTypeByExt(utils::Utils::getExtention(fileName));
+	int shaderType = getTypeByExt(utils::Utils::getExtentions(fileName));
 	if (shaderType < 0)
 	{
 		utils::Logger::toLogWithFormat("Error: could not add shader '%s'. The reason: shader type is undefined.\n", fileName.c_str());

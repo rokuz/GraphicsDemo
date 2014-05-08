@@ -26,23 +26,33 @@
 namespace gui
 {
 
-Label::Label()
+Label::Label() :
+	m_fontId(-1)
 {
 }
 
 void Label::setText(const std::wstring& text)
 {
-
+	m_text = text;
+	if (m_renderingCache) m_renderingCache->invalidate();
 }
 
 void Label::setHorzFormatting(Formatting formatting)
 {
-
+	m_horzFormatting = formatting;
+	if (m_renderingCache) m_renderingCache->invalidate();
 }
 
 void Label::setVertFormatting(Formatting formatting)
 {
+	m_vertFormatting = formatting;
+	if (m_renderingCache) m_renderingCache->invalidate();
+}
 
+void Label::setFont(int fontId)
+{
+	m_fontId = fontId;
+	if (m_renderingCache) m_renderingCache->invalidate();
 }
 
 }

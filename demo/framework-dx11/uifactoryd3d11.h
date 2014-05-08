@@ -29,12 +29,26 @@
 namespace framework
 {
 
+// widgets
+class UIFactory
+{
+public:	
+	static gui::LabelPtr_T createLabel(const gui::Coords& position, const gui::Coords& size,
+									   gui::Formatting hformatting = gui::LeftAligned,
+									   gui::Formatting vformatting = gui::CenterAligned,
+									   const std::wstring& text = L"");
+
+	static gui::OverlayPtr_T createOverlay(const gui::Coords& position, const gui::Coords& size);
+};
+
+// resources
 class FontResourceD3D11 : public gui::IFontResource
 {
 public:
 	virtual ~FontResourceD3D11(){}
-
 	virtual bool createResource(const gui::Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height);
+
+	std::shared_ptr<Texture> getTexture() const { return m_texture; }
 
 private:
 	std::shared_ptr<Texture> m_texture;
@@ -51,16 +65,6 @@ public:
 
 private:
 	std::list<std::shared_ptr<FontResourceD3D11> > m_fonts;
-};
-
-class GuiRenderer
-{
-public:
-	GuiRenderer(){}
-	~GuiRenderer(){}
-
-	void RenderText(const gui::Font& font, float x, float y, float w, float h, 
-					gui::Formatting horz, gui::Formatting vert, const std::wstring& text);
 };
 
 }

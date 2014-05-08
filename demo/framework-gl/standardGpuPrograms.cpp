@@ -36,13 +36,13 @@ bool StandardGpuPrograms::init()
 	std::string shadersPath = "data/shaders/gl/win32/standard/";
 
 	m_lineRenderer.reset(new GpuProgram());
-	result &= m_lineRenderer->initWithVFShaders(shadersPath + "line.vsh", shadersPath + "line.fsh");
+	result &= m_lineRenderer->initWithVFShaders(shadersPath + "line.vsh.glsl", shadersPath + "line.fsh.glsl");
 	if (!result) return false;
 	m_lineRenderer->bindUniform<StandardUniforms>(STD_UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
 	m_lineRenderer->bindUniform<StandardUniforms>(STD_UF::COLOR, "color");
 
 	m_arrowRenderer.reset(new GpuProgram());
-	result &= m_arrowRenderer->initWithVGFShaders(shadersPath + "arrow.vsh", shadersPath + "arrow.gsh", shadersPath + "arrow.fsh");
+	result &= m_arrowRenderer->initWithVGFShaders(shadersPath + "arrow.vsh.glsl", shadersPath + "arrow.gsh.glsl", shadersPath + "arrow.fsh.glsl");
 	if (!result) return false;
 	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::MODELVIEWPROJECTION_MATRIX, "viewProjectionMatrix");
 	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::POSITION, "position");

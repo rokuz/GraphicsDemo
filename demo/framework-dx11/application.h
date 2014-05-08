@@ -37,6 +37,7 @@
 #include "profiler.h"
 
 #include "uimanager.h"
+#include "uifactoryd3d11.h"
 
 #include "window.h"
 #include "outputd3d11.h"
@@ -138,7 +139,6 @@ private:
 	bool m_isRunning;
 	double m_lastTime;
 	double m_fpsStorage;
-	gui::WidgetPtr_T m_rootWindow;
 	gui::LabelPtr_T m_fpsLabel;
 	gui::LabelPtr_T m_legendLabel;
 	double m_timeSinceLastFpsUpdate;

@@ -25,6 +25,7 @@
 #define __UI_STRUCTS_H__
 
 #include <memory>
+#include "vector.h"
 #include "inputkeys.h"
 
 namespace gui
@@ -52,6 +53,11 @@ struct Coords
 	{
 		return Coords(x, 0, y, 0);
 	}
+
+	vector2 onScreen(const vector2& screenSize)
+	{
+		return vector2(relativeX * screenSize.x + absoluteX, relativeY * screenSize.y + absoluteY);
+	}
 };
 
 enum Formatting
@@ -61,6 +67,13 @@ enum Formatting
 	TopAligned,
 	BottomAligned,
 	CenterAligned
+};
+
+enum WidgetType
+{
+	UnspecifiedType = 0,
+	LabelType,
+	OverlayType
 };
 
 }

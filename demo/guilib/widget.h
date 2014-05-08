@@ -25,27 +25,64 @@
 #define __WIDGET_H__
 
 #include <memory>
+#include <list>
 #include "uistructs.h"
+#include "vector.h"
 
 namespace gui
 {
 
+class WidgetRenderingCache
+{
+public:
+	WidgetRenderingCache() : m_isValid(false){}
+	virtual ~WidgetRenderingCache(){}
+	
+	void invalidate() { m_isValid = false; }
+	bool isValid() const { return m_isValid; }
+	void setValid() { m_isValid = true; }
+
+protected:
+	bool m_isValid;
+};
+DECLARE_PTR(WidgetRenderingCache);
+
 class Widget;
 DECLARE_PTR(Widget);
 
-class Widget
+class Widget : public std::enable_shared_from_this<Widget>
 {
 public:
 	Widget();
 	virtual ~Widget(){}
 	
+	virtual WidgetType getType() const { return UnspecifiedType; }
+
 	void addChild(WidgetWeakPtr_T widget);
 	void removeChild(WidgetWeakPtr_T widget);
 
 	void setVisible(bool visible);
+	void setPosition(const Coords& pos);
+	void setSize(const Coords& size);
+	
+	const Coords& getPosition() const { return m_position; }
+	const Coords& getSize() const { return m_size; }
+	bool isVisible() const { return m_visible; }
+	const std::list<WidgetWeakPtr_T>& getChildren() const { return m_children; }
 
-private:
+	vector2 computeOnScreenPosition();
+	vector2 computeOnScreenSize();
 
+	void setRenderingCache(WidgetRenderingCachePtr_T cache);
+	WidgetRenderingCachePtr_T getRenderingCache() const { return m_renderingCache; }
+
+protected:
+	Coords m_position;
+	Coords m_size;
+	bool m_visible;
+	WidgetWeakPtr_T m_parent;
+	std::list<WidgetWeakPtr_T> m_children;
+	WidgetRenderingCachePtr_T m_renderingCache;
 };
 
 

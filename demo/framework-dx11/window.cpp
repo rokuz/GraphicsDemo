@@ -23,6 +23,7 @@
 
 #include "window.h"
 #include "inputkeys.h"
+#include "profiler.h"
 
 namespace framework
 {

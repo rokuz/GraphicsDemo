@@ -40,13 +40,24 @@ namespace gui
 class UIResourcesFactory
 {
 public:
-	UIResourcesFactory(){}
 	virtual ~UIResourcesFactory() {}
 
 	virtual void cleanup() = 0;
 	virtual std::weak_ptr<IFontResource> createFontResource() = 0;
 };
 DECLARE_PTR(UIResourcesFactory);
+
+// abstract renderer
+class UIRenderer
+{
+public:
+	virtual ~UIRenderer() {}
+
+	virtual bool init() = 0;
+	virtual void render() = 0;
+	virtual void cleanup() = 0;
+};
+DECLARE_PTR(UIRenderer);
 
 // user interface manager
 class UIManager
@@ -61,13 +72,17 @@ public:
 		return inst;
 	}
 
-	bool init(size_t width, size_t height, UIResourcesFactoryPtr_T factory);
+	bool init(size_t width, size_t height, UIResourcesFactoryPtr_T factory, UIRendererPtr_T renderer);
 	void cleanup();
 
 	WidgetPtr_T root() const;
 	UIResourcesFactoryPtr_T factory() const { return m_factory; }
+	UIRendererPtr_T renderer() const { return m_renderer; }
+	FontManagerPtr_T fontManager() const { return m_fontManager; }
+	const Font& defaultFont() const { return m_defaultFont; }
 
 	void setScreenSize(size_t width, size_t height);
+	const vector2& getScreenSize() const { return m_screenSize; }
 
 	void injectFrameTime(double elapsed);
 	void injectKeyDown(InputKeys::Scan scan);
@@ -78,16 +93,14 @@ public:
 	void injectMousePosition(float x, float y);
 	void injectMouseWheelChange(float delta);
 
-	LabelPtr_T createLabel(const Coords& position, const Coords& size, 
-						   Formatting hformatting = LeftAligned, 
-						   Formatting vformatting = CenterAligned,
-						   const std::wstring& text = L"");
-
-	OverlayPtr_T createOverlay(const Coords& position, const Coords& size);
-
 private:
-	FontManagerPtr_T m_fontManager;
 	UIResourcesFactoryPtr_T m_factory;
+	UIRendererPtr_T m_renderer;
+	FontManagerPtr_T m_fontManager;
+	WidgetPtr_T m_root;
+
+	vector2 m_screenSize;
+	Font m_defaultFont;
 };
 
 

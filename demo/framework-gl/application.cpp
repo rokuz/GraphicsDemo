@@ -94,6 +94,7 @@ int Application::run(Application* self, const std::string& commandLine)
 		utils::Logger::toLog("Error: could not initialize OpenGL context");
 		return EXIT_FAILURE;
 	}
+	m_context.getWindow().setCursorVisibility(m_info.flags.cursor != 0);
 
 	utils::Logger::toLogWithFormat("Video adapter: %s - %s, OpenGL: %s\n", (const char*)glGetString(GL_VENDOR), (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VERSION));
 
@@ -251,14 +252,14 @@ void Application::destroyAllDestroyable()
 
 void Application::initGui()
 {
-	gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight);
+	gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight, gui::UIResourcesFactoryPtr_T(), gui::UIRendererPtr_T());
 	m_rootWindow = gui::UIManager::instance().root();
 
 	// create a label to show fps statistics
-	m_fpsLabel = gui::UIManager::instance().createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
+	/*m_fpsLabel = gui::UIManager::instance().createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
 														gui::Coords::Absolute(150.0f, 25.0f),
 														gui::RightAligned, gui::TopAligned, L"0 fps");
-	m_rootWindow->addChild(m_fpsLabel);
+	m_rootWindow->addChild(m_fpsLabel);*/
 }
 
 void Application::destroyGui()

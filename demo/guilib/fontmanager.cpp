@@ -24,9 +24,11 @@
 #include "fontmanager.h"
 #include "logger.h"
 #include "uimanager.h"
+#include "utils.h"
 
 #include <map>
 #include <sstream>
+#include <algorithm>
 
 #include <ft2build.h>
 #include <freetype/freetype.h>
@@ -49,6 +51,16 @@ int findNearestPower2(int v)
 	int i = 2;
 	while (i < v) i <<= 1;
 	return i;
+}
+
+bool isOutside(const vector4& box, const vector2& rectPos, const vector2& rectSize)
+{
+	float xmin = rectPos.x;
+	float xmax = rectPos.x + rectSize.x;
+	if ((box.x < xmin && box.z < xmin) || (box.x > xmax && box.z > xmax)) return true;
+	float ymin = rectPos.y;
+	float ymax = rectPos.y + rectSize.y;
+	return (box.y < ymin && box.w < ymin) || (box.y > ymax && box.w > ymax);
 }
 
 }
@@ -242,23 +254,87 @@ bool Font::isValid() const
 	return m_id >= 0 && !m_resource.expired();
 }
 
-vector2 Font::computeStringSize(const std::wstring& str, size_t offset, size_t len)
+float Font::computeStringWidth(const std::wstring& str, size_t offset, size_t len) const
 {
-	if (str.empty()) return vector2(0, 0);
+	if (str.empty()) return 0;
 	if (len == 0) len = str.length();
-	if (offset >= len - 1) return vector2(0, 0);
+	if (offset >= offset + len - 1) return 0;
 
-	vector2 size;
-	for (size_t i = 0; i < str.length(); i++)
+	float w = 0;
+	for (size_t i = offset; i < offset + len; i++)
 	{
 		wchar_t character = (str[i] < BASIC_CHARS_COUNT ? str[i] : L'?');
 		unsigned int glyph = m_charToGlyph[character];
 		const Glyph& glyphData = m_glyphs[glyph];
-		size.x += (float)glyphData.advance;
-		if (size.y < (float)glyphData.height) size.y = (float)glyphData.height;
+		w += (float)glyphData.advance;
 	}
 
-	return size;
+	return w;
+}
+
+std::list<Font::Character> Font::computeCharacters(const std::wstring& str, const vector2& rectPos, const vector2& rectSize, gui::Formatting horz, gui::Formatting vert) const
+{
+	std::list<Character> result;
+	auto tokens = utils::Utils::tokenize<std::wstring>(str, '\n');
+	if (tokens.empty()) return result;
+
+	// calculate y-offset
+	float offsetY = rectPos.y;
+	if (vert == gui::BottomAligned)
+	{
+		offsetY = rectPos.y + rectSize.y - m_linesDistance * tokens.size();
+	}
+	else if (vert == gui::CenterAligned)
+	{
+		offsetY = rectPos.y + 0.5f * (rectSize.y - m_linesDistance * tokens.size());
+	}
+
+	// for each string of text
+	std::for_each(tokens.begin(), tokens.end(), [&](const std::pair<size_t, size_t>& pos)
+	{
+		// calculate x-offset
+		float offsetX = rectPos.x;
+		if (horz == gui::RightAligned)
+		{
+			float w = computeStringWidth(str, pos.first, pos.second - pos.first + 1);
+			offsetX = rectPos.x + rectSize.x - w;
+		}
+		else if (horz == gui::CenterAligned)
+		{
+			float w = computeStringWidth(str, pos.first, pos.second - pos.first + 1);
+			offsetX = rectPos.x + 0.5f * (rectSize.x - w);
+		}
+
+		for (size_t index = pos.first; index <= pos.second; index++)
+		{
+			wchar_t character = (str[index] < BASIC_CHARS_COUNT ? str[index] : L'?');
+			unsigned int glyph = m_charToGlyph[character];
+			const Glyph& glyphData = m_glyphs[glyph];
+
+			if (glyphData.width != 0 && glyphData.height != 0)
+			{
+				vector4 box;
+				box.x = offsetX + (float)glyphData.bearingX;
+				box.y = offsetY + m_linesDistance - (float)glyphData.bearingY;
+				box.z = box.x + (float)glyphData.width;
+				box.w = box.y + (float)glyphData.height;
+
+				if (!isOutside(box, rectPos, rectSize))
+				{
+					Character c;
+					c.box = box;
+					c.texturePos = vector2((float)glyphData.x, (float)glyphData.y);
+					result.push_back(std::move(c));
+				}
+			}
+
+			offsetX += (float)glyphData.advance;
+		}
+
+		offsetY += m_linesDistance;
+	});
+
+	return result;
 }
 
 bool FontManager::init()
@@ -269,6 +345,8 @@ bool FontManager::init()
 		m_freetype.reset(); 
 		return false; 
 	}
+
+	m_fonts.reserve(10);
 
 	return true;
 }
@@ -288,7 +366,17 @@ Font FontManager::createFont(const std::string& fontPath, size_t height)
 	font.m_id = idGenerator;
 	idGenerator++;
 
+	m_fonts.push_back(font);
+
 	return std::move(font);
 }
+
+const Font& FontManager::getFont(int id) const
+{
+	static Font dummy;
+	if (id >= (int)m_fonts.size() || id < 0) return dummy;
+	return m_fonts[id];
+}
+
 
 }

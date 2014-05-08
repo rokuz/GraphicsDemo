@@ -1,4 +1,4 @@
-#include <common.h>
+#include <common.h.hlsl>
 
 struct VS_OUTPUT_SKYBOX
 {

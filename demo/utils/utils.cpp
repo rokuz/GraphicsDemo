@@ -80,19 +80,39 @@ bool Utils::readFileToString( const std::string& fileName, std::string& out )
 
 std::string Utils::getExtention(const std::string& fileName)
 {
-	size_t p = fileName.find_last_of('.');
-	if (p == std::string::npos || (p + 1 >= fileName.size()))
-	{
-		return "";
-	}
-
-	std::string ext = fileName.substr(p + 1, fileName.size() - p - 1);
+	auto tokens = tokenize<std::string>(fileName, '.');
+	if (tokens.empty()) return "";
+	auto it = tokens.rbegin();
+	std::string ext = fileName.substr(it->first, it->second - it->first + 1);
 	std::locale loc;
 	for (std::string::size_type i = 0; i < ext.length(); ++i)
 	{
 		ext[i] = std::tolower(ext[i], loc);
 	}
+	
 	return std::move(ext);
+}
+
+std::list<std::string> Utils::getExtentions(const std::string& fileName)
+{
+	std::list<std::string> result;
+	auto tokens = tokenize<std::string>(fileName, '.');
+	if (tokens.empty()) return result;
+	
+	auto it = tokens.begin();
+	it++;
+	for (; it != tokens.end(); ++it)
+	{
+		std::string ext = fileName.substr(it->first, it->second - it->first + 1);
+		std::locale loc;
+		for (std::string::size_type i = 0; i < ext.length(); ++i)
+		{
+			ext[i] = std::tolower(ext[i], loc);
+		}
+		result.push_back(std::move(ext));
+	}
+
+	return std::move(result);
 }
 
 std::string Utils::getPath(const std::string& fileName)

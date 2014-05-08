@@ -1,5 +1,5 @@
-#include <common.h>
-#include <pscommon.h>
+#include <common.h.hlsl>
+#include <pscommon.h.hlsl>
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {

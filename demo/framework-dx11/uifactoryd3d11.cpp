@@ -21,12 +21,33 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "guirenderer.h"
-
+#include "uifactoryd3d11.h"
 #include "application.h"
+#include "uirendererd3d11.h"
 
 namespace framework
 {
+
+gui::LabelPtr_T UIFactory::createLabel(const gui::Coords& position, const gui::Coords& size, gui::Formatting hformatting, gui::Formatting vformatting, const std::wstring& text)
+{
+	gui::LabelPtr_T label(new gui::Label());
+	label->setPosition(position);
+	label->setSize(size);
+	label->setHorzFormatting(hformatting);
+	label->setVertFormatting(vformatting);
+	label->setText(text);
+	label->setRenderingCache(gui::WidgetRenderingCachePtr_T(new LabelRenderingCache()));
+	return label;
+}
+
+gui::OverlayPtr_T UIFactory::createOverlay(const gui::Coords& position, const gui::Coords& size)
+{
+	gui::OverlayPtr_T overlay(new gui::Overlay());
+	overlay->setPosition(position);
+	overlay->setSize(size);
+
+	return overlay;
+}
 
 bool FontResourceD3D11::createResource(const gui::Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height)
 {
@@ -51,12 +72,6 @@ std::weak_ptr<gui::IFontResource> UIResourcesFactoryD3D11::createFontResource()
 void UIResourcesFactoryD3D11::cleanup()
 {
 	m_fonts.clear();
-}
-
-void GuiRenderer::RenderText(const gui::Font& font, float x, float y, float w, float h,
-							 gui::Formatting horz, gui::Formatting vert, const std::wstring& text)
-{
-
 }
 
 }

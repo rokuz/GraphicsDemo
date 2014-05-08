@@ -46,6 +46,7 @@ public:
 		double minTime;
 		double maxTime;
 		int callsCount;
+		std::list<double> history;
 
 		Statistics() : averageTime(0.0), minTime(0.0), maxTime(0.0), callsCount(0) {}
 	};
@@ -79,7 +80,7 @@ protected:
 	Timer m_timer;
 
 	void beginTrace(const std::string& name);
-	void endTrace();
+	void endTrace(bool historical);
 	void deleteTree(Node* node);
 	void forEachNode(Node* node, ProcessNodeFunc processNode, int depth);
 	void cleanup();
@@ -91,8 +92,9 @@ public:
 	class ProfilerObj
 	{
 		bool isStarted;
+		bool historical;
 	public:
-		ProfilerObj(const std::string& name);
+		ProfilerObj(const std::string& name, bool enableHistory);
 		~ProfilerObj();
 	};
 
@@ -108,8 +110,10 @@ public:
 	void saveToFile();
 };
 
-#define TRACE_FUNCTION utils::Profiler::ProfilerObj __profiler_obj__(__FUNCTION__);
-#define TRACE_BLOCK(blockName) utils::Profiler::ProfilerObj __profiler_obj__(std::string(__FUNCTION__) + blockName);
+#define TRACE_FUNCTION utils::Profiler::ProfilerObj __profiler_obj__(__FUNCTION__, false);
+#define TRACE_BLOCK(blockName) utils::Profiler::ProfilerObj __profiler_obj__(std::string(__FUNCTION__) + blockName, false);
+#define TRACE_FUNCTION_HISTORICAL utils::Profiler::ProfilerObj __profiler_obj__(__FUNCTION__, true);
+#define TRACE_BLOCK_HISTORICAL(blockName) utils::Profiler::ProfilerObj __profiler_obj__(std::string(__FUNCTION__) + blockName, true);
 
 }
 

@@ -28,12 +28,14 @@
 #include <functional>
 #include <vector>
 #include <map>
+#include <list>
 #include "uistructs.h"
 #include "vector.h"
 
 namespace gui
 {
 
+class UIManager;
 class FontManager;
 class FreeTypeWrapper;
 class IFontResource;
@@ -50,7 +52,17 @@ public:
 	int getID() const { return m_id; }
 	const std::string& getName() const { return m_name; }
 
-	vector2 computeStringSize(const std::wstring& str, size_t offset = 0, size_t len = 0);
+	struct Character
+	{
+		vector4 box;
+		vector2 texturePos;
+	};
+
+	std::list<Character> computeCharacters(const std::wstring& str, 
+										   const vector2& rectPos, const vector2& rectSize, 
+										   gui::Formatting horz, gui::Formatting vert) const;
+
+	std::weak_ptr<IFontResource> getResource() const { return m_resource; }
 
 private:
 	int m_id;
@@ -70,6 +82,8 @@ private:
 	float m_linesDistance;
 	std::vector<Glyph> m_glyphs;
 	std::weak_ptr<IFontResource> m_resource;
+
+	float computeStringWidth(const std::wstring& str, size_t offset, size_t len) const;
 };
 
 class IFontResource
@@ -77,21 +91,26 @@ class IFontResource
 public:
 	virtual ~IFontResource(){}
 
-	virtual bool createResource(const Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height) = 0;
+	virtual bool createResource(const Font& font, 
+								const std::vector<unsigned char>& buffer, 
+								size_t width, size_t height) = 0;
 };
 
 class FontManager
 {
+	friend class UIManager;
 public:
 	FontManager(){}
 	~FontManager(){}
+	Font createFont(const std::string& fontPath, size_t height);
+	const Font& getFont(int id) const;
+
+private:
+	std::shared_ptr<FreeTypeWrapper> m_freetype;
+	std::vector<Font> m_fonts;
 
 	bool init();
 	void destroy();
-	Font createFont(const std::string& fontPath, size_t height);
-
-public:
-	std::shared_ptr<FreeTypeWrapper> m_freetype;
 };
 
 DECLARE_PTR(FontManager);

@@ -22,6 +22,8 @@
  */
 
 #include "uimanager.h"
+#include "utils.h"
+#include "logger.h"
 
 namespace gui
 {
@@ -30,17 +32,46 @@ UIManager::UIManager()
 {
 }
 
-bool UIManager::init(size_t width, size_t height, UIResourcesFactoryPtr_T factory)
+bool UIManager::init(size_t width, size_t height, UIResourcesFactoryPtr_T factory, UIRendererPtr_T renderer)
 {
+	if (!utils::Utils::exists("data/gui"))
+	{
+		utils::Logger::toLog("Error: could not find gui directory. Probably working directory has not been set correctly (especially if you are running from IDE).\n");
+		return false;
+	}
+
+	if (width == 0 || height == 0)
+	{
+		utils::Logger::toLog("Error: failed to initialize ui manager, width/height could not be 0.\n");
+		return false;
+	}
+
 	m_factory = factory;
+	m_renderer = renderer;
+	if (m_renderer && !m_renderer->init())
+	{
+		utils::Logger::toLog("Error: failed to initialize ui renderer.\n");
+		return false;
+	}
+	setScreenSize(width, height);
 
 	// font manager
 	m_fontManager.reset(new FontManager());
 	if (!m_fontManager->init()) return false;
 
-	// TEMP
-	Font f = m_fontManager->createFont("data/gui/DejaVuSans.ttf", 16);
-	vector2 sz = f.computeStringSize(L"Hello, world!");
+	// default font
+	m_defaultFont = m_fontManager->createFont("data/gui/DejaVuSans.ttf", 16);
+	if (!m_defaultFont.isValid())
+	{
+		utils::Logger::toLog("Error: failed to initialize ui manager, could not create default font.\n");
+		return false;
+	}
+
+	// root window
+	m_root.reset(new Widget());
+	m_root->setVisible(true);
+	m_root->setPosition(Coords::Relative(0, 0));
+	m_root->setSize(Coords::Relative(1, 1));
 
 	return true;
 }
@@ -50,22 +81,31 @@ void UIManager::cleanup()
 	if (m_fontManager) 
 	{
 		m_fontManager->destroy();
+		m_fontManager.reset();
 	}
 
 	if (m_factory)
 	{
 		m_factory->cleanup();
+		m_factory.reset();
+	}
+
+	if (m_renderer)
+	{
+		m_renderer->cleanup();
+		m_renderer.reset();
 	}
 }
 
 WidgetPtr_T UIManager::root() const
 {
-	return WidgetPtr_T(new Widget());
+	return m_root;
 }
 
 void UIManager::setScreenSize(size_t width, size_t height)
 {
-
+	m_screenSize.x = (float)width;
+	m_screenSize.y = (float)height;
 }
 
 void UIManager::injectFrameTime(double elapsed)
@@ -106,16 +146,6 @@ void UIManager::injectMousePosition(float x, float y)
 void UIManager::injectMouseWheelChange(float delta)
 {
 
-}
-
-LabelPtr_T UIManager::createLabel(const Coords& position, const Coords& size, Formatting hformatting, Formatting vformatting, const std::wstring& text)
-{
-	return LabelPtr_T(new Label());
-}
-
-OverlayPtr_T UIManager::createOverlay(const Coords& position, const Coords& size)
-{
-	return OverlayPtr_T(new Overlay());
 }
 
 }

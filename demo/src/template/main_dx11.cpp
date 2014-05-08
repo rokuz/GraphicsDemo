@@ -44,8 +44,8 @@ public:
 
 		// gpu program
 		m_program.reset(new framework::GpuProgram());
-		m_program->addShader("data/shaders/dx11/template/shader.vsh");
-		m_program->addShader("data/shaders/dx11/template/shader.psh");
+		m_program->addShader("data/shaders/dx11/template/shader.vsh.hlsl");
+		m_program->addShader("data/shaders/dx11/template/shader.psh.hlsl");
 		if (!m_program->init()) exit();
 		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
 		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");

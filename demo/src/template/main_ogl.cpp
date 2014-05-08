@@ -44,7 +44,7 @@ public:
 		m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx");
 
 		m_program.reset(new framework::GpuProgram());
-		m_program->initWithVFShaders("data/shaders/gl/win32/shader.vsh", "data/shaders/gl/win32/shader.fsh");
+		m_program->initWithVFShaders("data/shaders/gl/win32/template/shader.vsh.glsl", "data/shaders/gl/win32/template/shader.fsh.glsl");
 		m_program->bindUniform<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
 		m_program->bindUniform<TestAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
 		m_program->bindUniform<TestAppUniforms>(UF::DIFFUSE_MAP, "diffuseSampler");

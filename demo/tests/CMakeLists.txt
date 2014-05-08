@@ -1,5 +1,5 @@
 #sources
-set(SOURCE_TESTS mathlibtests.cpp)
+set(SOURCE_TESTS mathlibtests.cpp utilstests.cpp)
 source_group(tests FILES ${SOURCE_TESTS})
 add_executable(tests ${SOURCE_TESTS})
 
@@ -7,10 +7,10 @@ add_executable(tests ${SOURCE_TESTS})
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -DGTEST_HAS_TR1_TUPLE=0)
 
 #dependences
-set (LINKED_PROJECTS mathlib)
+set (LINKED_PROJECTS mathlib utils)
 
 #headers search
-include_directories(../mathlib)
+include_directories(../mathlib ../utils)
 
 #link gtest
 set(LIBRARY_NAME gtest)

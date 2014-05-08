@@ -132,8 +132,8 @@ public:
 
 		// gpu programs
 		m_gbufferRendering.reset(new framework::GpuProgram());
-		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.vsh");
-		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.psh");
+		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.vsh.hlsl");
+		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.psh.hlsl");
 		if (!m_gbufferRendering->init()) exit();
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
 		//m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
@@ -143,24 +143,24 @@ public:
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_skyboxRendering.reset(new framework::GpuProgram());
-		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/screenquad.vsh");
-		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.gsh");
-		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.psh");
+		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/screenquad.vsh.hlsl");
+		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.gsh.hlsl");
+		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.psh.hlsl");
 		if (!m_skyboxRendering->init(true)) exit();
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_deferredShading.reset(new framework::GpuProgram());
-		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.vsh");
-		m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.gsh");
+		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.vsh.hlsl");
+		m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.gsh.hlsl");
 		if (m_info.samples == 0)
 		{
-			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.psh");
+			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.psh.hlsl");
 		}
 		else
 		{
-			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading_msaa.psh");
+			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading_msaa.psh.hlsl");
 		}
 		if (!m_deferredShading->init(true)) exit();
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");
@@ -215,7 +215,7 @@ public:
 		// lights
 		initLights();
 
-		utils::Profiler::instance().run();
+		//utils::Profiler::instance().run();
 	}
 
 	virtual void shutdown()
@@ -223,8 +223,8 @@ public:
 		if (utils::Profiler::instance().isRun())
 		{
 			utils::Profiler::instance().stop();
-			utils::Profiler::instance().saveToFile();
 		}
+		utils::Profiler::instance().saveToFile();
 	}
 
 	Entity initEntity(const std::string& geometry, 
@@ -305,9 +305,9 @@ public:
 
 	void initOverlays(gui::WidgetPtr_T root)
 	{
-		m_debugLabel = gui::UIManager::instance().createLabel(gui::Coords(1.0f, -300.0f, 1.0f, -150.0f),
-															  gui::Coords::Absolute(300.0f, 150.0f),
-															  gui::RightAligned, gui::BottomAligned);
+		m_debugLabel = framework::UIFactory::createLabel(gui::Coords(1.0f, -300.0f, 1.0f, -150.0f),
+														 gui::Coords::Absolute(300.0f, 150.0f),
+														 gui::RightAligned, gui::BottomAligned);
 		root->addChild(m_debugLabel);
 
 		m_debugLabel->setVisible(m_renderDebug);
@@ -315,7 +315,7 @@ public:
 
 	virtual void render(double elapsedTime)
 	{
-		TRACE_FUNCTION
+		TRACE_FUNCTION_HISTORICAL
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
@@ -441,6 +441,14 @@ public:
 		{
 			m_renderDebug = !m_renderDebug;
 			m_debugLabel->setVisible(m_renderDebug);
+			return;
+		}
+		if (key == InputKeys::P && pressed)
+		{
+			if (!utils::Profiler::instance().isRun())
+				utils::Profiler::instance().run();
+			else
+				utils::Profiler::instance().stop();
 			return;
 		}
 		m_camera.onKeyButton(key, scancode, pressed);

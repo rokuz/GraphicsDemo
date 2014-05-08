@@ -105,8 +105,8 @@ public:
 
 		// gpu programs
 		m_opaqueRendering.reset(new framework::GpuProgram());
-		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.vsh");
-		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.psh");
+		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.vsh.hlsl");
+		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.psh.hlsl");
 		if (!m_opaqueRendering->init()) exit();
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
@@ -116,8 +116,8 @@ public:
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_fragmentsListCreation.reset(new framework::GpuProgram());
-		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/opaque.vsh");
-		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/fragmentslist.psh");
+		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/opaque.vsh.hlsl");
+		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/fragmentslist.psh.hlsl");
 		if (!m_fragmentsListCreation->init()) exit();
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
@@ -127,15 +127,15 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
-		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.vsh");
-		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.gsh");
-		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.psh");
+		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.vsh.hlsl");
+		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.gsh.hlsl");
+		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.psh.hlsl");
 		if (!m_transparentRendering->init(true)) exit();
 
 		m_skyboxRendering.reset(new framework::GpuProgram());
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/screenquad.vsh");
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.gsh");
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.psh");
+		m_skyboxRendering->addShader("data/shaders/dx11/oit/screenquad.vsh.hlsl");
+		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.gsh.hlsl");
+		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.psh.hlsl");
 		if (!m_skyboxRendering->init(true)) exit();
 		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
@@ -289,10 +289,10 @@ public:
 
 	void initOverlays(gui::WidgetPtr_T root)
 	{
-		m_debugLabel = gui::UIManager::instance().createLabel(gui::Coords(1.0f, -300.0f, 1.0f, -150.0f),
-															  gui::Coords::Absolute(300.0f, 150.0f),
-															  gui::RightAligned, gui::BottomAligned,
-															  L"Fragments buffer usage = 0 % \nLost fragments = 0");
+		m_debugLabel = framework::UIFactory::createLabel(gui::Coords(1.0f, -300.0f, 1.0f, -150.0f),
+														 gui::Coords::Absolute(300.0f, 150.0f),
+														 gui::RightAligned, gui::BottomAligned,
+														 L"Fragments buffer usage = 0 % \nLost fragments = 0");
 		root->addChild(m_debugLabel);
 	}
 

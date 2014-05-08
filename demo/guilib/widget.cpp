@@ -22,26 +22,98 @@
  */
 
 #include "widget.h"
+#include "uimanager.h"
+#include <algorithm>
 
 namespace gui
 {
 
-Widget::Widget()
+Widget::Widget() :
+	m_visible(true)
 {
 }
 
 void Widget::addChild(WidgetWeakPtr_T widget)
 {
+	if (widget.expired()) return;
+	WidgetPtr_T widgetPtr = widget.lock();
+
+	auto found = std::find_if(m_children.begin(), m_children.end(), [&](WidgetWeakPtr_T wPtr)
+	{
+		if (wPtr.expired()) return false;
+		return wPtr.lock() == widgetPtr;
+	});
+	if (found != m_children.end()) return;
+
+	widgetPtr->m_parent = shared_from_this();
+	m_children.push_back(widgetPtr);
+
+	if (m_renderingCache) m_renderingCache->invalidate();
 }
 
 void Widget::removeChild(WidgetWeakPtr_T widget)
 {
+	if (widget.expired()) return;
+	WidgetPtr_T widgetPtr = widget.lock();
 
+	auto found = std::find_if(m_children.begin(), m_children.end(), [&](WidgetWeakPtr_T wPtr)
+	{
+		if (wPtr.expired()) return false;
+		return wPtr.lock() == widgetPtr;
+	});
+	if (found == m_children.end()) return;
+
+	m_children.erase(found);
+	widgetPtr->m_parent.reset();
+
+	if (m_renderingCache) m_renderingCache->invalidate();
 }
 
 void Widget::setVisible(bool visible)
 {
+	m_visible = visible;
+	if (m_renderingCache) m_renderingCache->invalidate();
+}
 
+void Widget::setPosition(const Coords& pos)
+{
+	m_position = pos;
+	if (m_renderingCache) m_renderingCache->invalidate();
+}
+
+void Widget::setSize(const Coords& size)
+{
+	m_size = size;
+	if (m_renderingCache) m_renderingCache->invalidate();
+}
+
+vector2 Widget::computeOnScreenPosition()
+{
+	if (UIManager::instance().root().get() == this)
+	{
+		return m_position.onScreen(UIManager::instance().getScreenSize());
+	}
+	if (m_parent.expired()) return vector2();
+	vector2 parentSize = m_parent.lock()->computeOnScreenSize();
+
+	return m_position.onScreen(parentSize);
+}
+
+vector2 Widget::computeOnScreenSize()
+{
+	if (UIManager::instance().root().get() == this)
+	{
+		return m_size.onScreen(UIManager::instance().getScreenSize());
+	}
+	if (m_parent.expired()) return vector2();
+	vector2 parentSize = m_parent.lock()->computeOnScreenSize();
+
+	return m_size.onScreen(parentSize);
+}
+
+void Widget::setRenderingCache(WidgetRenderingCachePtr_T cache)
+{
+	m_renderingCache = cache;
 }
 
 }

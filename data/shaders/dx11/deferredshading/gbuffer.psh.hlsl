@@ -1,4 +1,4 @@
-#include <common.h>
+#include <common.h.hlsl>
 
 texture2D diffuseMap : register(t0);
 texture2D normalMap : register(t1);

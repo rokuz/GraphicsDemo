@@ -21,26 +21,38 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __OVERLAY_H__
-#define __OVERLAY_H__
+#pragma once
+#include "uimanager.h"
+#include <list>
 
-#include "widget.h"
-
-namespace gui
+namespace framework
 {
 
-class Overlay : public Widget
+// renderer
+class UIRendererD3D11 : public gui::UIRenderer
 {
 public:
-	Overlay();
-	~Overlay(){}
-	virtual WidgetType getType() const { return OverlayType; }
+	UIRendererD3D11(){}
+	~UIRendererD3D11(){}
+
+	virtual bool init();
+	virtual void render();
+	virtual void cleanup();
 
 private:
+	void renderWidget(gui::WidgetPtr_T widget);
+	void renderLabel(gui::LabelPtr_T label);
+
+	//std::shared_ptr<framework::GpuProgram> m_textRendering;
 };
 
-DECLARE_PTR(Overlay);
+// rendering cache
+class LabelRenderingCache : public gui::WidgetRenderingCache
+{
+public:
+	vector2 position;
+	vector2 size;
+	std::list<gui::Font::Character> characters;
+};
 
 }
-
-#endif

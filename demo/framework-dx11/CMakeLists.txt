@@ -8,8 +8,10 @@ set(SOURCE_CORE application.h
 				outputd3d11.cpp
 				destroyable.h
 				destroyable.cpp
-				guirenderer.h
-				guirenderer.cpp
+				uirendererd3d11.h
+				uirendererd3d11.cpp
+				uifactoryd3d11.h
+				uifactoryd3d11.cpp				
 )
 set(SOURCE_PIP  pipelinestage.h
 				pipelinestage.cpp
@@ -49,10 +51,21 @@ set(SOURCE_ENT  camera.h
 				lightManager.h
 				lightManager.cpp
 )
+set(SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/dx11/text.vsh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/dx11/text.gsh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/dx11/text.psh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/arrow.gsh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/arrow.psh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/arrow.vsh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/line.psh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/line.vsh.hlsl
+)
+source_group(shaders FILES ${SHADERS})
 source_group(core FILES ${SOURCE_CORE})
 source_group(pipeline FILES ${SOURCE_PIP})
 source_group(entities FILES ${SOURCE_ENT})
-add_library(framework STATIC ${SOURCE_CORE} ${SOURCE_PIP} ${SOURCE_ENT})
+source_group(shaders FILES ${SHADERS})
+add_library(framework STATIC ${SOURCE_CORE} ${SOURCE_PIP} ${SOURCE_ENT} ${SHADERS})
 
 #preprocessor
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)

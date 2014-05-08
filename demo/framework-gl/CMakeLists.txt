@@ -28,8 +28,15 @@ set(SOURCE_LIB  application.h
 				window.h
 				window.cpp
 )
+set(SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arrow.gsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arrow.fsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arrow.vsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/line.fsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/line.vsh.glsl
+)
+source_group(shaders FILES ${SHADERS})
 source_group(core FILES ${SOURCE_LIB})
-add_library(framework STATIC ${SOURCE_LIB})
+add_library(framework STATIC ${SOURCE_LIB} ${SHADERS})
 
 #preprocessor
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
