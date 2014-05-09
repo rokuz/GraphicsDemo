@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014 Roman Kuznetsov 
+ * Implementation is borrowed from GLFW
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,45 +22,51 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "label.h"
+#include "fpscounter.h"
 
-namespace gui
+namespace utils
 {
 
-Label::Label() :
-	m_fontId(-1),
-	m_color(1.0f, 1.0f, 1.0f, 1.0f)
+FpsCounter::FpsCounter() :
+	m_fpsTime(0),
+	m_fpsStorage(0),
+	m_timeSinceLastFpsUpdate(0),
+	m_averageFps(0),
+	m_framesCounter(0)
 {
+	m_timer.init();
 }
 
-void Label::setText(const std::wstring& text)
+void FpsCounter::beginFrame()
 {
-	m_text = text;
-	if (m_renderingCache) m_renderingCache->invalidate();
+	m_fpsTime = m_timer.getTime();
 }
 
-void Label::setHorzFormatting(Formatting formatting)
+bool FpsCounter::endFrame()
 {
-	m_horzFormatting = formatting;
-	if (m_renderingCache) m_renderingCache->invalidate();
+	double fpsDelta = m_timer.getTime() - m_fpsTime;
+	if (fpsDelta == 0) return false;
+
+	m_timeSinceLastFpsUpdate += fpsDelta;
+	m_framesCounter++;
+	m_fpsStorage += (1.0 / fpsDelta);
+
+	if (m_timeSinceLastFpsUpdate >= 1.0f)
+	{
+		m_averageFps = m_fpsStorage / (m_framesCounter > 0 ? (double)m_framesCounter : 1.0);
+		m_timeSinceLastFpsUpdate -= 1.0f;
+		m_framesCounter = 0;
+		m_fpsStorage = 0;
+
+		return true;
+	}
+
+	return false;
 }
 
-void Label::setVertFormatting(Formatting formatting)
+double FpsCounter::getFps() const
 {
-	m_vertFormatting = formatting;
-	if (m_renderingCache) m_renderingCache->invalidate();
-}
-
-void Label::setFont(int fontId)
-{
-	m_fontId = fontId;
-	if (m_renderingCache) m_renderingCache->invalidate();
-}
-
-void Label::setColor(const vector4& color)
-{
-	m_color = color;
-	if (m_renderingCache) m_renderingCache->invalidate();
+	return m_averageFps;
 }
 
 }

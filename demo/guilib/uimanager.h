@@ -94,6 +94,8 @@ public:
 	void injectMouseWheelChange(float delta);
 
 private:
+	void invalidateWidget(gui::WidgetPtr_T widget);
+
 	UIResourcesFactoryPtr_T m_factory;
 	UIRendererPtr_T m_renderer;
 	FontManagerPtr_T m_fontManager;

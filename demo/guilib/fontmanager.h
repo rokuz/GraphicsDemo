@@ -80,10 +80,12 @@ private:
 		Glyph() : x(0), y(0), width(0), height(0), advance(0), bearingX(0), bearingY(0) {}
 	};
 	float m_linesDistance;
+	float m_maxUnderlineDistance;
 	std::vector<Glyph> m_glyphs;
 	std::weak_ptr<IFontResource> m_resource;
 
 	float computeStringWidth(const std::wstring& str, size_t offset, size_t len) const;
+	float computeStringUnderline(const std::wstring& str, size_t offset = 0, size_t len = 0) const;
 };
 
 class IFontResource

@@ -160,25 +160,6 @@ public:
 		m_skyboxTexture.reset(new framework::Texture());
 		if (!m_skyboxTexture->initWithDDS("data/media/textures/nightsky2.dds")) exit();
 
-		// a blend state to disable color writing
-		m_disableColorWriting.reset(new framework::BlendStage());
-		D3D11_BLEND_DESC blendDesc = framework::BlendStage::getDisableColorWriting();
-		m_disableColorWriting->initWithDescription(blendDesc);
-		if (!m_disableColorWriting->isValid()) exit();
-
-		// a depth-stencil state to disable depth test
-		m_disableDepthTest.reset(new framework::DepthStencilStage());
-		D3D11_DEPTH_STENCIL_DESC depthDesc = framework::DepthStencilStage::getDefault();
-		depthDesc.DepthEnable = FALSE;
-		m_disableDepthTest->initWithDescription(depthDesc);
-		if (!m_disableDepthTest->isValid()) exit();
-
-		// a blend state to enable alpha-blending
-		m_alphaBlending.reset(new framework::BlendStage());
-		blendDesc = framework::BlendStage::getAlphaBlending();
-		m_alphaBlending->initWithDescription(blendDesc);
-		if (!m_alphaBlending->isValid()) exit();
-
 		// entity's data buffer
 		m_entityDataBuffer.reset(new framework::UniformBuffer());
 		if (!m_entityDataBuffer->initDefaultConstant<EntityDataRaw>()) exit();
@@ -189,8 +170,6 @@ public:
 
 		// lights
 		initLights();
-
-		//utils::Profiler::instance().run();
 	}
 
 	virtual void shutdown()
@@ -335,11 +314,11 @@ public:
 			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP1, m_gbuffer, 0);
 			m_deferredShading->setUniform<DSAppUniforms>(UF::DATABLOCK_MAP2, m_gbuffer, 1);
 
-			m_disableDepthTest->apply();
-			m_alphaBlending->apply();
+			disableDepthTest()->apply();
+			defaultAlphaBlending()->apply();
 			getPipeline().drawPoints(1);
-			m_disableDepthTest->cancel();
-			m_alphaBlending->cancel();
+			disableDepthTest()->cancel();
+			defaultAlphaBlending()->cancel();
 		}
 
 		// debug rendering
@@ -350,7 +329,7 @@ public:
 	{
 		if (m_skyboxRendering->use())
 		{
-			m_disableDepthTest->apply();
+			disableDepthTest()->apply();
 
 			EntityDataRaw entityDataRaw;
 			matrix44 model;
@@ -365,7 +344,7 @@ public:
 
 			getPipeline().drawPoints(1);
 
-			m_disableDepthTest->cancel();
+			disableDepthTest()->cancel();
 		}
 	}
 
@@ -493,10 +472,6 @@ private:
 	std::shared_ptr<framework::GpuProgram> m_skyboxRendering;
 	// gpu program to deferred shading
 	std::shared_ptr<framework::GpuProgram> m_deferredShading;
-
-	std::shared_ptr<framework::BlendStage> m_disableColorWriting;
-	std::shared_ptr<framework::DepthStencilStage> m_disableDepthTest;
-	std::shared_ptr<framework::BlendStage> m_alphaBlending;
 
 	// entity
 	struct Entity

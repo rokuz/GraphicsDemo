@@ -154,13 +154,6 @@ public:
 		m_disableDepthWriting->initWithDescription(depthDesc);
 		if (!m_disableDepthWriting->isValid()) exit();
 
-		// a depth-stencil state to disable depth test
-		m_disableDepthTest.reset(new framework::DepthStencilStage());
-		depthDesc = framework::DepthStencilStage::getDefault();
-		depthDesc.DepthEnable = FALSE;
-		m_disableDepthTest->initWithDescription(depthDesc);
-		if (!m_disableDepthTest->isValid()) exit();
-
 		// a rasterizer to render without culling
 		m_cullingOff.reset(new framework::RasterizerStage());
 		D3D11_RASTERIZER_DESC rasterizerDesc = defaultRasterizer()->getDesc();
@@ -267,7 +260,8 @@ public:
 		m_debugLabel = framework::UIFactory::createLabel(gui::Coords(1.0f, -300.0f, 1.0f, -150.0f),
 														 gui::Coords::Absolute(300.0f, 150.0f),
 														 gui::RightAligned, gui::BottomAligned,
-														 L"Fragments buffer usage = 0 % \nLost fragments = 0");
+														 L"Fragments buffer usage = 0 %\nLost fragments = 0");
+		m_debugLabel->setVisible(m_renderDebug);
 		root->addChild(m_debugLabel);
 	}
 
@@ -288,9 +282,10 @@ public:
 		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
 
 		// render skybox
-		m_disableDepthTest->apply();
 		if (m_skyboxRendering->use())
 		{
+			disableDepthTest()->apply();
+
 			SpatialData spatialData;
 			matrix44 model;
 			model.set_translation(m_camera.getPosition());
@@ -304,9 +299,10 @@ public:
 			m_skyboxRendering->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
 
 			getPipeline().drawPoints(1);
-		}
-		m_disableDepthTest->cancel();
 
+			disableDepthTest()->cancel();
+		}
+		
 		// render opaque objects
 		if (m_opaqueRendering->use())
 		{
@@ -331,10 +327,10 @@ public:
 		// render transparent objects
 		if (m_transparentRendering->use())
 		{
-			m_disableDepthTest->apply();
+			disableDepthTest()->apply();
 			m_alphaBlending->apply();
 			getPipeline().drawPoints(1);
-			m_disableDepthTest->cancel();
+			disableDepthTest()->cancel();
 			m_alphaBlending->cancel();
 		}
 
@@ -452,7 +448,6 @@ private:
 	std::shared_ptr<framework::BlendStage> m_disableColorWriting;
 	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
 	std::shared_ptr<framework::RasterizerStage> m_cullingOff;
-	std::shared_ptr<framework::DepthStencilStage> m_disableDepthTest;
 	std::shared_ptr<framework::BlendStage> m_alphaBlending;
 
 	// entity

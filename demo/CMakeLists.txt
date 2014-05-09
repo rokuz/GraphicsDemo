@@ -19,14 +19,34 @@ set(GRAPHICS_API ${GRAPHICS_API_OGL} CACHE STRING "Chosen gpaphics API")
 set(GRAPHICS_API_LIST "${GRAPHICS_API_OGL};${GRAPHICS_API_DX11}" CACHE STRING "List of possible graphics APIs")
 set_property(CACHE GRAPHICS_API PROPERTY STRINGS ${GRAPHICS_API_LIST})
 
+set(OS_WINDOWS7 "Windows 7" CACHE STRING "")
+set(OS_WINDOWS8 "Windows 8" CACHE STRING "")
+set(OS_WINDOWS81 "Windows 8.1" CACHE STRING "")
+set(OS ${OS_WINDOWS7} CACHE STRING "Chosen OS")
+set(OS_LIST "${OS_WINDOWS7};${OS_WINDOWS8};${OS_WINDOWS81}" CACHE STRING "List of possible OS")
+set_property(CACHE OS PROPERTY STRINGS ${OS_LIST})
+
 mark_as_advanced(CMAKE_CONFIGURATION_TYPES)
 mark_as_advanced(CMAKE_INSTALL_PREFIX)
 mark_as_advanced(GRAPHICS_API_LIST)
 mark_as_advanced(GRAPHICS_API_OGL)
 mark_as_advanced(GRAPHICS_API_DX11)
 
+mark_as_advanced(OS_LIST)
+mark_as_advanced(OS_WINDOWS7)
+mark_as_advanced(OS_WINDOWS8)
+mark_as_advanced(OS_WINDOWS81)
+
 # Project
 project(${PROJECT_NAME})
+
+if (OS STREQUAL OS_WINDOWS7)
+add_definitions(-D_OS_WINDOWS7)
+elseif (OS STREQUAL OS_WINDOWS8)
+add_definitions(-D_OS_WINDOWS8)
+elseif (OS STREQUAL OS_WINDOWS81)
+add_definitions(-D_OS_WINDOWS81)
+endif()
 
 # Subdirectories
 add_subdirectory(mathlib)

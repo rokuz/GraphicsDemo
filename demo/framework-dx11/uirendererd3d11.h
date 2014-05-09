@@ -28,6 +28,9 @@
 namespace framework
 {
 
+class GpuProgram;
+class UniformBuffer;
+
 // renderer
 class UIRendererD3D11 : public gui::UIRenderer
 {
@@ -43,7 +46,9 @@ private:
 	void renderWidget(gui::WidgetPtr_T widget);
 	void renderLabel(gui::LabelPtr_T label);
 
-	//std::shared_ptr<framework::GpuProgram> m_textRendering;
+	std::shared_ptr<framework::GpuProgram> m_textRendering;
+	std::shared_ptr<framework::UniformBuffer> m_textDataBuffer;
+	std::shared_ptr<framework::UniformBuffer> m_charactersDataBuffer;
 };
 
 // rendering cache

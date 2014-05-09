@@ -38,7 +38,6 @@ public:
 		m_info.title = "Template application (DX11)";
 
 		applyStandardParams(params);
-		m_info.samples = 4;
 		m_info.flags.fullscreen = 0;
 	}
 

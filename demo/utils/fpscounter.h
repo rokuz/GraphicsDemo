@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014 Roman Kuznetsov 
+ * Implementation is borrowed from GLFW
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,45 +22,31 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "label.h"
+#ifndef __FPS_COUNTER_H__
+#define __FPS_COUNTER_H__
 
-namespace gui
+#include "timer.h"
+
+namespace utils
 {
 
-Label::Label() :
-	m_fontId(-1),
-	m_color(1.0f, 1.0f, 1.0f, 1.0f)
+class FpsCounter
 {
-}
+public:
+	FpsCounter();
+	void beginFrame();
+	bool endFrame();
+	double getFps() const;
 
-void Label::setText(const std::wstring& text)
-{
-	m_text = text;
-	if (m_renderingCache) m_renderingCache->invalidate();
-}
-
-void Label::setHorzFormatting(Formatting formatting)
-{
-	m_horzFormatting = formatting;
-	if (m_renderingCache) m_renderingCache->invalidate();
-}
-
-void Label::setVertFormatting(Formatting formatting)
-{
-	m_vertFormatting = formatting;
-	if (m_renderingCache) m_renderingCache->invalidate();
-}
-
-void Label::setFont(int fontId)
-{
-	m_fontId = fontId;
-	if (m_renderingCache) m_renderingCache->invalidate();
-}
-
-void Label::setColor(const vector4& color)
-{
-	m_color = color;
-	if (m_renderingCache) m_renderingCache->invalidate();
-}
+private:
+	double m_fpsTime;
+	double m_fpsStorage;
+	double m_timeSinceLastFpsUpdate;
+	double m_averageFps;
+	size_t m_framesCounter;
+	Timer m_timer;
+};
 
 }
+
+#endif

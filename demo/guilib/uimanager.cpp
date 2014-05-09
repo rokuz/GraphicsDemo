@@ -24,6 +24,7 @@
 #include "uimanager.h"
 #include "utils.h"
 #include "logger.h"
+#include <algorithm>
 
 namespace gui
 {
@@ -60,7 +61,7 @@ bool UIManager::init(size_t width, size_t height, UIResourcesFactoryPtr_T factor
 	if (!m_fontManager->init()) return false;
 
 	// default font
-	m_defaultFont = m_fontManager->createFont("data/gui/DejaVuSans.ttf", 16);
+	m_defaultFont = m_fontManager->createFont("data/gui/DejaVuSans.ttf", 14);
 	if (!m_defaultFont.isValid())
 	{
 		utils::Logger::toLog("Error: failed to initialize ui manager, could not create default font.\n");
@@ -106,6 +107,8 @@ void UIManager::setScreenSize(size_t width, size_t height)
 {
 	m_screenSize.x = (float)width;
 	m_screenSize.y = (float)height;
+
+	if (m_root) invalidateWidget(m_root);
 }
 
 void UIManager::injectFrameTime(double elapsed)
@@ -146,6 +149,20 @@ void UIManager::injectMousePosition(float x, float y)
 void UIManager::injectMouseWheelChange(float delta)
 {
 
+}
+
+void UIManager::invalidateWidget(gui::WidgetPtr_T widget)
+{
+	if (widget->getRenderingCache())
+	{
+		widget->getRenderingCache()->invalidate();
+	}
+
+	std::for_each(widget->getChildren().cbegin(), widget->getChildren().cend(), [&](gui::WidgetWeakPtr_T ptr)
+	{
+		if (!ptr.expired())
+			invalidateWidget(std::move(ptr.lock()));
+	});
 }
 
 }

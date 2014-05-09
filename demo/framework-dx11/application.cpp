@@ -58,11 +58,7 @@ Application* Application::m_self = 0;
 
 Application::Application() : 
 	m_isRunning(false), 
-	m_lastTime(0), 
-	m_fpsStorage(0), 
-	m_timeSinceLastFpsUpdate(0),
-	m_averageFps(0), 
-	m_framesCounter(0),
+	m_lastTime(0),
 	m_factory(0),
 	m_adapter(0),
 	m_driverType(D3D_DRIVER_TYPE_HARDWARE),
@@ -147,63 +143,44 @@ void Application::mainLoop()
 	do
 	{
 		//TRACE_BLOCK("_Frame");
+		m_fpsCounter.beginFrame();
 
-		// events
+		// process events from the window
+		m_window.pollEvents();
+
+		// need to close?
+		if (m_window.shouldClose())
 		{
-			//TRACE_BLOCK("_Events");
-
-			// process events from the window
-			m_window.pollEvents();
-
-			// need to close?
-			if (m_window.shouldClose())
-			{
-				m_isRunning = false;
-			}
+			m_isRunning = false;
 		}
 
 		// pre-render
-		{
-			//TRACE_BLOCK("_PreRender");
-			m_pipeline.beginFrame(defaultRenderTarget());
-			m_defaultRasterizer->apply();
-			m_defaultDepthStencil->apply();
-			m_defaultBlending->apply();
-		}
+		m_pipeline.beginFrame(defaultRenderTarget());
+		m_defaultRasterizer->apply();
+		m_defaultDepthStencil->apply();
+		m_defaultBlending->apply();
 
 		// render frame
-		{
-			//TRACE_BLOCK("_RenderRender");
-			if (fabs(m_lastTime) < 1e-7)
-			{
-				// the first frame
-				render(0);
-				renderGui(0);
-
-				m_lastTime = m_timer.getTime();
-			}
-			else
-			{
-				double curTime = m_timer.getTime();
-				double delta = curTime - m_lastTime;
-
-				// fps counter
-				measureFps(delta);
-
-				// rendering
-				render(delta);
-				renderGui(delta);
-
-				m_lastTime = curTime;
-			}
-		}
-
+		double curTime = m_timer.getTime();
+		if (m_lastTime == 0) m_lastTime = curTime;
+		double delta = curTime - m_lastTime;
+		render(delta);
+		renderGui(delta);
+		m_lastTime = curTime;
+		
 		// post-render
+		m_usingGpuProgram.reset();
+		m_pipeline.endFrame();
+		present();
+
+		if (m_fpsCounter.endFrame())
 		{
-			//TRACE_BLOCK("_PostRender");
-			m_usingGpuProgram.reset();
-			m_pipeline.endFrame();
-			present();
+			if (m_fpsLabel != 0)
+			{
+				static wchar_t buf[100];
+				swprintf(buf, L"%.2f fps", (float)m_fpsCounter.getFps());
+				m_fpsLabel->setText(buf);
+			}
 		}
 	} 
 	while (m_isRunning);
@@ -373,6 +350,25 @@ bool Application::initDevice()
 		return false;
 	}
 
+	// a depth-stencil state to disable depth test
+	m_disableDepthTest.reset(new framework::DepthStencilStage());
+	dsDesc = framework::DepthStencilStage::getDefault();
+	dsDesc.DepthEnable = FALSE;
+	m_disableDepthTest->initWithDescription(dsDesc);
+	if (!m_disableDepthTest->isValid())
+	{
+		return false;
+	}
+
+	// a blend state to enable alpha-blending
+	m_defaultAlphaBlending.reset(new framework::BlendStage());
+	blendDesc = framework::BlendStage::getAlphaBlending();
+	m_defaultAlphaBlending->initWithDescription(blendDesc);
+	if (!m_defaultAlphaBlending->isValid())
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -441,9 +437,14 @@ bool Application::initSwapChain(Device& device)
 	state.BufferCount = BACK_BUFFERS_COUNT;
 	state.OutputWindow = m_window.getHandle();
 	state.Windowed = TRUE;
+#ifdef _OS_WINDOWS7
+	state.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+#elif _OS_WINDOWS8
 	state.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+#elif _OS_WINDOWS81
+	state.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+#endif
 	state.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-
 	// initialization
 	hr = m_factory->CreateSwapChain(device.device, &state, &device.swapChain);
 	if (hr != S_OK)
@@ -551,30 +552,6 @@ void Application::present()
 	}
 }
 
-void Application::measureFps(double delta)
-{
-	m_timeSinceLastFpsUpdate += delta;
-	if (m_timeSinceLastFpsUpdate >= 1.0)
-	{
-		m_averageFps = m_fpsStorage / (m_framesCounter > 0 ? (double)m_framesCounter : 1.0);
-		if (m_fpsLabel != 0)
-		{
-			static wchar_t buf[100];
-			swprintf(buf, L"%.2f fps", (float)m_averageFps);
-			m_fpsLabel->setText(buf);
-		}
-
-		m_timeSinceLastFpsUpdate -= 1.0;
-		m_framesCounter = 0;
-		m_fpsStorage = 0;
-	}
-	else
-	{
-		m_framesCounter++;
-		m_fpsStorage += (1.0 / delta);
-	}
-}
-
 void Application::useDefaultRenderTarget()
 {
 	m_pipeline.setRenderTarget(defaultRenderTarget());
@@ -638,7 +615,7 @@ bool Application::initGui()
 	
 	// create a label to show fps statistics
 	m_fpsLabel = framework::UIFactory::createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
-												   gui::Coords::Absolute(150.0f, 25.0f),
+												   gui::Coords::Absolute(150.0f, 30.0f),
 												   gui::RightAligned, gui::TopAligned, L"0 fps");
 	gui::UIManager::instance().root()->addChild(m_fpsLabel);
 

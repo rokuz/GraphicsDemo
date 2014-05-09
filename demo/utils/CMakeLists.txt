@@ -8,6 +8,8 @@ set(SOURCE_LIB  logger.h
 				profiler.h
 				profiler.cpp
 				inputkeys.h
+				fpscounter.h
+				fpscounter.cpp
 )
 source_group(utils FILES ${SOURCE_LIB})
 add_library(utils STATIC ${SOURCE_LIB})

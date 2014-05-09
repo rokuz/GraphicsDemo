@@ -41,7 +41,7 @@ namespace gui
 
 const int DPI = 96;
 const int BASIC_CHARS_COUNT = 1280;
-const float LINE_DIST_COEF = 1.25f;
+const float LINE_DIST_COEF = 1.15f;
 
 namespace 
 {
@@ -170,7 +170,7 @@ public:
 			if (offsetX + w >= MAX_BUFFER_SIZE)
 			{
 				offsetX = 0;
-				offsetY += maxHeight;
+				offsetY += (maxHeight + 1);
 				maxHeight = h;
 			}
 			if (offsetY + h >= MAX_BUFFER_SIZE)
@@ -202,13 +202,16 @@ public:
 			fontGlyph.bearingY = (char)by;
 			font.m_glyphs.push_back(fontGlyph);
 
+			float underline = float(h - by);
+			if (underline > font.m_maxUnderlineDistance) font.m_maxUnderlineDistance = underline;
+
 			float fby = (float)abs(by);
 			if (fby > font.m_linesDistance) font.m_linesDistance = fby;
 
 			font.m_charToGlyph[index] = charToGlyphIndex;
 			charToGlyphIndex++;
 
-			offsetX += w;
+			offsetX += (w + 1);
 			if (offsetX > maxWidth + 1) maxWidth = offsetX - 1;
 		}
 
@@ -245,7 +248,7 @@ private:
 	FT_Library m_library;
 };
 
-Font::Font() : m_id(-1), m_linesDistance(0)
+Font::Font() : m_id(-1), m_linesDistance(0), m_maxUnderlineDistance(0)
 {
 }
 
@@ -272,6 +275,25 @@ float Font::computeStringWidth(const std::wstring& str, size_t offset, size_t le
 	return w;
 }
 
+float Font::computeStringUnderline(const std::wstring& str, size_t offset, size_t len) const
+{
+	if (str.empty()) return 0;
+	if (len == 0) len = str.length();
+	if (offset >= offset + len - 1) return 0;
+
+	float underline = 0;
+	for (size_t i = offset; i < offset + len; i++)
+	{
+		wchar_t character = (str[i] < BASIC_CHARS_COUNT ? str[i] : L'?');
+		unsigned int glyph = m_charToGlyph[character];
+		const Glyph& glyphData = m_glyphs[glyph];
+		float ul = (float)glyphData.height - (float)glyphData.bearingY;
+		if (ul > underline) underline = ul;
+	}
+
+	return underline;
+}
+
 std::list<Font::Character> Font::computeCharacters(const std::wstring& str, const vector2& rectPos, const vector2& rectSize, gui::Formatting horz, gui::Formatting vert) const
 {
 	std::list<Character> result;
@@ -282,7 +304,8 @@ std::list<Font::Character> Font::computeCharacters(const std::wstring& str, cons
 	float offsetY = rectPos.y;
 	if (vert == gui::BottomAligned)
 	{
-		offsetY = rectPos.y + rectSize.y - m_linesDistance * tokens.size();
+		float underline = computeStringUnderline(str);
+		offsetY = rectPos.y + rectSize.y - m_linesDistance * tokens.size() - underline;
 	}
 	else if (vert == gui::CenterAligned)
 	{

@@ -29,6 +29,7 @@
 #include "vector.h"
 #include "quaternion.h"
 #include "inputkeys.h"
+#include "fpscounter.h"
 
 namespace utils
 {

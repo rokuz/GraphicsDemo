@@ -23,7 +23,13 @@
 
 #pragma once
 #pragma warning(disable:4005 4996)
+#ifdef _OS_WINDOWS7
 #include <d3d11.h>
+#elif _OS_WINDOWS8
+#include <d3d11_1.h>
+#elif _OS_WINDOWS81
+#include <d3d11_2.h>
+#endif
 
 namespace framework
 {

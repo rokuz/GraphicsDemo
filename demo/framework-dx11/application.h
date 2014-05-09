@@ -86,11 +86,23 @@ public:
 
 	static Application* instance();
 	int run(Application* self, const std::string& commandLine);
+	void exit();
+	void resize();
+	void applyStandardParams(const std::map<std::string, int>& params);
+	void setLegend(const std::string& legend);
 
 	const Device& getDevice() const { return m_device; }
 	std::weak_ptr<GpuProgram> getUsingGpuProgram() const { return m_usingGpuProgram; }
 	Pipeline& getPipeline() { return m_pipeline; }
-
+	
+	void useDefaultRenderTarget();
+	const std::shared_ptr<RenderTarget>& defaultRenderTarget() const;
+	const std::shared_ptr<RasterizerStage>& defaultRasterizer() const { return m_defaultRasterizer; }
+	const std::shared_ptr<Sampler>& anisotropicSampler() const { return m_anisotropicSampler; }
+	const std::shared_ptr<Sampler>& linearSampler() const { return m_linearSampler; }
+	const std::shared_ptr<DepthStencilStage>& disableDepthTest() const { return m_disableDepthTest; }
+	const std::shared_ptr<BlendStage>& defaultAlphaBlending() const { return m_defaultAlphaBlending; }
+	
 	void saveTextureToFile(std::shared_ptr<Texture> texture, const std::string& filename);
 
 protected:
@@ -118,20 +130,8 @@ protected:
 	AppInfo m_info;
 	LightManager m_lightManager;
 
-	void exit();
-
-	void applyStandardParams(const std::map<std::string, int>& params);
-	void setLegend(const std::string& legend);
-
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
-
-	void useDefaultRenderTarget();
-	const std::shared_ptr<RenderTarget>& defaultRenderTarget() const;
-	const std::shared_ptr<RasterizerStage>& defaultRasterizer() const { return m_defaultRasterizer; }
-	void resize();
-	const std::shared_ptr<Sampler>& anisotropicSampler() const { return m_anisotropicSampler; }
-	const std::shared_ptr<Sampler>& linearSampler() const { return m_linearSampler; }
 
 private:
 	static Application* m_self;
@@ -139,12 +139,9 @@ private:
 	Window m_window;
 	bool m_isRunning;
 	double m_lastTime;
-	double m_fpsStorage;
 	gui::LabelPtr_T m_fpsLabel;
 	gui::LabelPtr_T m_legendLabel;
-	double m_timeSinceLastFpsUpdate;
-	double m_averageFps;
-	size_t m_framesCounter;
+	utils::FpsCounter m_fpsCounter;
 	std::string m_legend;
 	Pipeline m_pipeline;
 	std::weak_ptr<GpuProgram> m_usingGpuProgram;
@@ -168,6 +165,8 @@ private:
 	std::shared_ptr<RenderTarget> m_multisamplingRenderTarget;
 	std::shared_ptr<Sampler> m_anisotropicSampler;
 	std::shared_ptr<Sampler> m_linearSampler;
+	std::shared_ptr<DepthStencilStage> m_disableDepthTest;
+	std::shared_ptr<BlendStage> m_defaultAlphaBlending;
 
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	void destroyAllDestroyable();
@@ -187,7 +186,6 @@ private:
 	void setUsingGpuProgram(std::weak_ptr<GpuProgram> program) { m_usingGpuProgram = program; }
 
 	void mainLoop();
-	void measureFps(double delta);
 };
 
 }

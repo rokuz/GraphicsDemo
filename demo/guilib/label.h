@@ -26,6 +26,7 @@
 
 #include "widget.h"
 #include <string>
+#include "vector.h"
 
 namespace gui
 {
@@ -41,17 +42,20 @@ public:
 	void setHorzFormatting(Formatting formatting);
 	void setVertFormatting(Formatting formatting);
 	void setFont(int fontId);
+	void setColor(const vector4& color);
 
 	const std::wstring& getText() const { return m_text; }
 	Formatting getHorzFormatting() const { return m_horzFormatting; }
 	Formatting getVertFormatting() const { return m_vertFormatting; }
 	int getFont() const { return m_fontId; }
+	const vector4& getColor() const { return m_color; }
 
 private:
 	std::wstring m_text;
 	Formatting m_horzFormatting;
 	Formatting m_vertFormatting;
 	int m_fontId;
+	vector4 m_color;
 };
 
 DECLARE_PTR(Label);
