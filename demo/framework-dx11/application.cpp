@@ -762,4 +762,35 @@ void Application::saveTextureToFile( std::shared_ptr<Texture> texture, const std
 	DirectX::SaveDDSTextureToFile(m_device.context, texture->getResource(), utils::Utils::toUnicode(filename).c_str());
 }
 
+void Application::applyStandardParams(const std::map<std::string, int>& params)
+{
+	auto w = params.find("w");
+	auto h = params.find("h");
+	if (w != params.end() && h != params.end())
+	{
+		m_info.windowWidth = w->second;
+		m_info.windowHeight = h->second;
+	}
+
+	auto msaa = params.find("msaa");
+	if (msaa != params.end())
+	{
+		m_info.samples = msaa->second;
+	}
+	else
+	{
+		m_info.samples = 0;
+	}
+
+	auto fullscreen = params.find("fullscreen");
+	if (fullscreen != params.end())
+	{
+		m_info.flags.fullscreen = (fullscreen->second != 0 ? 1 : 0);
+	}
+	else
+	{
+		m_info.flags.fullscreen = 0;
+	}
+}
+
 }

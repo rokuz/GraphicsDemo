@@ -27,6 +27,7 @@ struct SpatialData
 
 // constants
 const int MAX_LIGHTS_COUNT = 16;
+const std::string SHADERS_PATH = "data/shaders/dx11/oit/";
 
 // application
 class OITApp : public framework::Application
@@ -47,35 +48,9 @@ public:
 	virtual void init(const std::map<std::string, int>& params)
 	{
 		m_info.title = "Order Independent Transparency (DX11)";
-
-		auto w = params.find("w");
-		auto h = params.find("h");
-		if (w != params.end() && h != params.end())
-		{
-			m_info.windowWidth = w->second;
-			m_info.windowHeight = h->second;
-		}
-
-		auto msaa = params.find("msaa");
-		if (msaa != params.end())
-		{
-			m_info.samples = msaa->second;
-		}
-		else
-		{
-			m_info.samples = 0;
-		}
-
-		auto fullscreen = params.find("fullscreen");
-		if (fullscreen != params.end())
-		{
-			m_info.flags.fullscreen = (fullscreen->second != 0 ? 1 : 0);
-		}
-		else
-		{
-			m_info.flags.fullscreen = 0;
-		}
-
+		
+		applyStandardParams(params);
+		
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 	}
 
@@ -105,8 +80,8 @@ public:
 
 		// gpu programs
 		m_opaqueRendering.reset(new framework::GpuProgram());
-		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.vsh.hlsl");
-		m_opaqueRendering->addShader("data/shaders/dx11/oit/opaque.psh.hlsl");
+		m_opaqueRendering->addShader(SHADERS_PATH + "opaque.vsh.hlsl");
+		m_opaqueRendering->addShader(SHADERS_PATH + "opaque.psh.hlsl");
 		if (!m_opaqueRendering->init()) exit();
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
@@ -116,8 +91,8 @@ public:
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_fragmentsListCreation.reset(new framework::GpuProgram());
-		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/opaque.vsh.hlsl");
-		m_fragmentsListCreation->addShader("data/shaders/dx11/oit/fragmentslist.psh.hlsl");
+		m_fragmentsListCreation->addShader(SHADERS_PATH + "opaque.vsh.hlsl");
+		m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.psh.hlsl");
 		if (!m_fragmentsListCreation->init()) exit();
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
@@ -127,15 +102,15 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
-		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.vsh.hlsl");
-		m_transparentRendering->addShader("data/shaders/dx11/oit/screenquad.gsh.hlsl");
-		m_transparentRendering->addShader("data/shaders/dx11/oit/transparent.psh.hlsl");
+		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
+		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.hlsl");
+		m_transparentRendering->addShader(SHADERS_PATH + "transparent.psh.hlsl");
 		if (!m_transparentRendering->init(true)) exit();
 
 		m_skyboxRendering.reset(new framework::GpuProgram());
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/screenquad.vsh.hlsl");
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.gsh.hlsl");
-		m_skyboxRendering->addShader("data/shaders/dx11/oit/skybox.psh.hlsl");
+		m_skyboxRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
+		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.gsh.hlsl");
+		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.psh.hlsl");
 		if (!m_skyboxRendering->init(true)) exit();
 		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");

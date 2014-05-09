@@ -32,19 +32,18 @@ std::shared_ptr<GpuProgram> StandardGpuPrograms::m_arrowRenderer;
 bool StandardGpuPrograms::init()
 {
 	bool result = true;
-	std::string shadersPath = "data/shaders/dx11/standard/";
 
 	m_lineRenderer.reset(new GpuProgram());
-	m_lineRenderer->addShader(shadersPath + "line.vsh.hlsl");
-	m_lineRenderer->addShader(shadersPath + "line.psh.hlsl");
+	m_lineRenderer->addShader(STANDARD_SHADERS_PATH + "line.vsh.hlsl");
+	m_lineRenderer->addShader(STANDARD_SHADERS_PATH + "line.psh.hlsl");
 	result &= m_lineRenderer->init(true);
 	if (!result) return false;
 	m_lineRenderer->bindUniform<StandardUniforms>(STD_UF::LINE_RENDERER_DATA, "lineData");
 
 	m_arrowRenderer.reset(new GpuProgram());
-	m_arrowRenderer->addShader(shadersPath + "arrow.vsh.hlsl");
-	m_arrowRenderer->addShader(shadersPath + "arrow.psh.hlsl");
-	m_arrowRenderer->addShader(shadersPath + "arrow.gsh.hlsl");
+	m_arrowRenderer->addShader(STANDARD_SHADERS_PATH + "arrow.vsh.hlsl");
+	m_arrowRenderer->addShader(STANDARD_SHADERS_PATH + "arrow.psh.hlsl");
+	m_arrowRenderer->addShader(STANDARD_SHADERS_PATH + "arrow.gsh.hlsl");
 	result &= m_arrowRenderer->init(true);
 	if (!result) return false;
 	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, "arrowData");

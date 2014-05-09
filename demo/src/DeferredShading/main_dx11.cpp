@@ -47,6 +47,7 @@ struct OnFrameDataRaw
 
 // constants
 const int MAX_LIGHTS_COUNT = 64;
+const std::string SHADERS_PATH = "data/shaders/dx11/deferredshading/";
 
 // application
 class DeferredShadingApp : public framework::Application
@@ -68,33 +69,7 @@ public:
 	{
 		m_info.title = "Deferred shading (DX11)";
 
-		auto w = params.find("w");
-		auto h = params.find("h");
-		if (w != params.end() && h != params.end())
-		{
-			m_info.windowWidth = w->second;
-			m_info.windowHeight = h->second;
-		}
-
-		auto msaa = params.find("msaa");
-		if (msaa != params.end())
-		{
-			m_info.samples = msaa->second;
-		}
-		else
-		{
-			m_info.samples = 0;
-		}
-
-		auto fullscreen = params.find("fullscreen");
-		if (fullscreen != params.end())
-		{
-			m_info.flags.fullscreen = (fullscreen->second != 0 ? 1 : 0);
-		}
-		else
-		{
-			m_info.flags.fullscreen = 0;
-		}
+		applyStandardParams(params);
 
 		auto lights = params.find("lights");
 		if (lights != params.end())
@@ -132,8 +107,8 @@ public:
 
 		// gpu programs
 		m_gbufferRendering.reset(new framework::GpuProgram());
-		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.vsh.hlsl");
-		m_gbufferRendering->addShader("data/shaders/dx11/deferredshading/gbuffer.psh.hlsl");
+		m_gbufferRendering->addShader(SHADERS_PATH + "gbuffer.vsh.hlsl");
+		m_gbufferRendering->addShader(SHADERS_PATH + "gbuffer.psh.hlsl");
 		if (!m_gbufferRendering->init()) exit();
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
 		//m_gbufferRendering->bindUniform<DSAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
@@ -143,24 +118,24 @@ public:
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_skyboxRendering.reset(new framework::GpuProgram());
-		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/screenquad.vsh.hlsl");
-		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.gsh.hlsl");
-		m_skyboxRendering->addShader("data/shaders/dx11/deferredshading/skybox.psh.hlsl");
+		m_skyboxRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
+		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.gsh.hlsl");
+		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.psh.hlsl");
 		if (!m_skyboxRendering->init(true)) exit();
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
 		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_deferredShading.reset(new framework::GpuProgram());
-		m_deferredShading->addShader("data/shaders/dx11/deferredshading/screenquad.vsh.hlsl");
-		m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.gsh.hlsl");
+		m_deferredShading->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
+		m_deferredShading->addShader(SHADERS_PATH + "deferredshading.gsh.hlsl");
 		if (m_info.samples == 0)
 		{
-			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading.psh.hlsl");
+			m_deferredShading->addShader(SHADERS_PATH + "deferredshading.psh.hlsl");
 		}
 		else
 		{
-			m_deferredShading->addShader("data/shaders/dx11/deferredshading/deferredshading_msaa.psh.hlsl");
+			m_deferredShading->addShader(SHADERS_PATH + "deferredshading_msaa.psh.hlsl");
 		}
 		if (!m_deferredShading->init(true)) exit();
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_DATA, "lightsData");

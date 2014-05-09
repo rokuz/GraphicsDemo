@@ -53,6 +53,8 @@ struct ArrowRendererData
 };
 #pragma pack (pop)
 
+const std::string STANDARD_SHADERS_PATH = "data/shaders/dx11/standard/";
+
 class StandardGpuPrograms
 {
 public:

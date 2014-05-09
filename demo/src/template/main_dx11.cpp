@@ -1,5 +1,6 @@
 #include "application.h"
 
+// uniforms
 DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
 	SPACE_DATA,
 	LIGHTS_DATA,
@@ -10,6 +11,7 @@ DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<TestAppUniforms>::Uniform
 
+// spatial data
 #pragma pack (push, 1)
 struct SpaceData
 {
@@ -20,8 +22,11 @@ struct SpaceData
 };
 #pragma pack (pop)
 
+// constants
 const int MAX_LIGHTS_COUNT = 16;
+const std::string SHADERS_PATH = "data/shaders/dx11/template/";
 
+// application
 class TestApp : public framework::Application
 {
 public:
@@ -31,6 +36,8 @@ public:
 	virtual void init(const std::map<std::string, int>& params)
 	{
 		m_info.title = "Template application (DX11)";
+
+		applyStandardParams(params);
 		m_info.samples = 4;
 		m_info.flags.fullscreen = 0;
 	}
@@ -44,8 +51,8 @@ public:
 
 		// gpu program
 		m_program.reset(new framework::GpuProgram());
-		m_program->addShader("data/shaders/dx11/template/shader.vsh.hlsl");
-		m_program->addShader("data/shaders/dx11/template/shader.psh.hlsl");
+		m_program->addShader(SHADERS_PATH + "shader.vsh.hlsl");
+		m_program->addShader(SHADERS_PATH + "shader.psh.hlsl");
 		if (!m_program->init()) exit();
 		m_program->bindUniform<TestAppUniforms>(UF::SPACE_DATA, "spaceData");
 		m_program->bindUniform<TestAppUniforms>(UF::LIGHTS_DATA, "lightsData");

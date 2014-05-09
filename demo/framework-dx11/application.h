@@ -120,6 +120,7 @@ protected:
 
 	void exit();
 
+	void applyStandardParams(const std::map<std::string, int>& params);
 	void setLegend(const std::string& legend);
 
 	void renderGui(double elapsedTime);
