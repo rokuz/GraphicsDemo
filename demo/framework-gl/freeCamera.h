@@ -23,9 +23,6 @@
 
 #ifndef __FREE_CAMERA_H__
 #define __FREE_CAMERA_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "camera.h"
 

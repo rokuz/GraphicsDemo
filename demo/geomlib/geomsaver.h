@@ -23,9 +23,6 @@
 
 #ifndef __GEOM_SAVER_H__
 #define __GEOM_SAVER_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "geometrysaver.h"
 

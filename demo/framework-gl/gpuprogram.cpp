@@ -22,18 +22,48 @@
  */
 
 #include "gpuprogram.h"
-
-#include "utils.h"
+#include "application.h"
 
 namespace framework
 {
 
-GpuProgram::GpuProgram() : m_isLoaded(false), m_program(0)
+namespace
+{
+
+int getTypeByExt(const std::list<std::string>& exts)
+{
+#define FIND_EXT(str) std::find(exts.cbegin(), exts.cend(), str) != exts.cend()
+	if (FIND_EXT("vsh") || FIND_EXT("vs")) return VERTEX_SHADER;
+	if (FIND_EXT("gsh") || FIND_EXT("gs")) return GEOMETRY_SHADER;
+	if (FIND_EXT("fsh") || FIND_EXT("fs")) return FRAGMENT_SHADER;
+#undef FIND_EXT
+	return -1;
+}
+
+GLint getOGLShaderType(ShaderType type)
+{
+	switch (type)
+	{
+	case framework::VERTEX_SHADER:
+		return GL_VERTEX_SHADER;
+
+	case framework::GEOMETRY_SHADER:
+		return GL_GEOMETRY_SHADER;
+
+	case framework::FRAGMENT_SHADER:
+		return GL_FRAGMENT_SHADER;
+	}
+	return -1;
+}
+
+}
+
+GpuProgram::GpuProgram() : m_program(0)
 {
 	for (size_t i = 0; i < MAX_UNIFORMS; i++)
-	{
 		m_uniforms[i] = -1;
-	}
+
+	m_shaders.resize(SHADERS_COUNT);
 }
 
 GpuProgram::~GpuProgram()
@@ -41,161 +71,91 @@ GpuProgram::~GpuProgram()
 	destroy();
 }
 
+void GpuProgram::addShader(const std::string& fileName)
+{
+	int shaderType = getTypeByExt(utils::Utils::getExtentions(fileName));
+	if (shaderType < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: could not add shader '%s'. The reason: shader type is undefined.\n", fileName.c_str());
+		return;
+	}
+	m_shaders[shaderType] = fileName;
+}
+
+bool GpuProgram::init()
+{
+	destroy();
+	m_program = glCreateProgram();
+
+	std::list<GLuint> compiledShaders;
+	for (size_t shaderIndex = 0; shaderIndex < SHADERS_COUNT; shaderIndex++)
+	{
+		if (m_shaders[shaderIndex].empty()) continue;
+
+		GLuint shader;
+		if (!compileShader(&shader, getOGLShaderType((ShaderType)shaderIndex), m_shaders[shaderIndex]))
+		{
+			destroy();
+			utils::Logger::toLogWithFormat("Error: failed to compile shader '%s'.\n", m_shaders[shaderIndex].c_str());
+			return false;
+		}
+
+		glAttachShader(m_program, shader);
+		compiledShaders.push_back(shader);
+	}
+
+	if (compiledShaders.empty())
+	{
+		destroy();
+		return false;
+	}
+
+	if (!linkProgram(m_program))
+	{
+		utils::Logger::toLog("Error: failed to link program.\n");
+
+		for (auto it = compiledShaders.begin(); it != compiledShaders.end(); ++it)
+		{
+			glDeleteShader(*it);
+		}
+		destroy();
+		return false;
+	}
+
+	if (!validateProgram(m_program))
+	{
+		utils::Logger::toLog("Error: failed to validate program.\n");
+
+		for (auto it = compiledShaders.begin(); it != compiledShaders.end(); ++it)
+		{
+			glDeleteShader(*it);
+		}
+		destroy();
+		return false;
+	}
+
+	for (auto it = compiledShaders.begin(); it != compiledShaders.end(); ++it)
+	{
+		glDetachShader(m_program, *it);
+		glDeleteShader(*it);
+	}
+
+	initDestroyable();
+	return true;
+}
+
+bool GpuProgram::isValid() const
+{
+	return m_program != 0;
+}
+
 void GpuProgram::destroy()
 {
-	if (m_isLoaded)
+	if (m_program)
 	{
-		if (m_program)
-		{
-			glDeleteProgram(m_program);
-			m_program = 0;
-		}
-
-		m_isLoaded = false;
+		glDeleteProgram(m_program);
+		m_program = 0;
 	}
-}
-
-bool GpuProgram::initWithVFShaders(const std::string& vsFileName, const std::string& fsFileName)
-{
-	destroy();
-
-	GLuint vertShader, fragShader;
-
-	m_program = glCreateProgram();
-
-	if (!compileShader(&vertShader, GL_VERTEX_SHADER, vsFileName.c_str()))
-	{
-		utils::Logger::toLogWithFormat("Failed to compile vertex shader '%s'.\n", vsFileName.c_str());
-		return false;
-	}
-
-	if (!compileShader(&fragShader, GL_FRAGMENT_SHADER, fsFileName.c_str()))
-	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to compile fragment shader '%s'.\n", fsFileName.c_str());
-		return false;
-	}
-
-	glAttachShader(m_program, vertShader);
-	glAttachShader(m_program, fragShader);
-
-	if (!linkProgram(m_program) || !validateProgram(m_program))
-	{
-		utils::Logger::toLog("GpuProgram error: Failed to link/validate program.\n");
-
-		if (vertShader)
-		{
-			glDeleteShader(vertShader);
-			vertShader = 0;
-		}
-		if (fragShader)
-		{
-			glDeleteShader(fragShader);
-			fragShader = 0;
-		}
-		if (m_program)
-		{
-			glDeleteProgram(m_program);
-			m_program = 0;
-		}
-
-		return false;
-	}
-
-	if (vertShader)
-	{
-		glDetachShader(m_program, vertShader);
-		glDeleteShader(vertShader);
-	}
-	if (fragShader)
-	{
-		glDetachShader(m_program, fragShader);
-		glDeleteShader(fragShader);
-	}
-
-	m_isLoaded = true;
-
-	if (m_isLoaded) initDestroyable();
-	return m_isLoaded;
-}
-
-bool GpuProgram::initWithVGFShaders(const std::string& vsFileName, const std::string& gsFileName, const std::string& fsFileName)
-{
-	destroy();
-
-	GLuint vertShader, fragShader, geomShader;
-
-	m_program = glCreateProgram();
-
-	if (!compileShader(&vertShader, GL_VERTEX_SHADER, vsFileName.c_str()))
-	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to compile vertex shader '%s'.\n", vsFileName.c_str());
-		return false;
-	}
-
-	if (!compileShader(&fragShader, GL_FRAGMENT_SHADER, fsFileName.c_str()))
-	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to compile fragment shader '%s'.\n", fsFileName.c_str());
-		return false;
-	}
-
-	if (!compileShader(&geomShader, GL_GEOMETRY_SHADER, gsFileName.c_str()))
-	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to compile geometry shader '%s'.\n", gsFileName.c_str());
-		return false;
-	}
-
-	glAttachShader(m_program, vertShader);
-	glAttachShader(m_program, fragShader);
-	glAttachShader(m_program, geomShader);
-
-	if (!linkProgram(m_program) || !validateProgram(m_program))
-	{
-		utils::Logger::toLog("Failed to link/validate program.\n");
-
-		if (vertShader)
-		{
-			glDeleteShader(vertShader);
-			vertShader = 0;
-		}
-		if (fragShader)
-		{
-			glDeleteShader(fragShader);
-			fragShader = 0;
-		}
-		if (geomShader)
-		{
-			glDeleteShader(geomShader);
-			geomShader = 0;
-		}
-		if (m_program)
-		{
-			glDeleteProgram(m_program);
-			m_program = 0;
-		}
-
-		return false;
-	}
-
-	if (vertShader)
-	{
-		glDetachShader(m_program, vertShader);
-		glDeleteShader(vertShader);
-	}
-	if (fragShader)
-	{
-		glDetachShader(m_program, fragShader);
-		glDeleteShader(fragShader);
-	}
-	if (geomShader)
-	{
-		glDetachShader(m_program, geomShader);
-		glDeleteShader(geomShader);
-	}
-
-	m_isLoaded = true;
-
-	if (m_isLoaded) initDestroyable();
-	return m_isLoaded;
 }
 
 bool GpuProgram::compileShader( GLuint* shader, GLenum type, const std::string& fileName )
@@ -204,7 +164,7 @@ bool GpuProgram::compileShader( GLuint* shader, GLenum type, const std::string& 
 	utils::Utils::readFileToString(fileName, sourceStr);
 	if (sourceStr.empty())
 	{
-		utils::Logger::toLogWithFormat("GpuProgram error: Failed to load shader '%s'.\n", fileName.c_str());
+		utils::Logger::toLogWithFormat("Error: failed to load shader '%s'.\n", fileName.c_str());
 		return false;
 	}
 
@@ -215,17 +175,18 @@ bool GpuProgram::compileShader( GLuint* shader, GLenum type, const std::string& 
 	glShaderSource(*shader, 1, &source, NULL);
 	glCompileShader(*shader);
 
-#if defined(_DEBUG)
-	GLint logLength;
-	glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logLength);
-	if (logLength > 0)
+	if (Application::instance()->isDebugEnabled())
 	{
-		GLchar *log = new GLchar[logLength];
-		glGetShaderInfoLog(*shader, logLength, &logLength, log);
-		utils::Logger::toLogWithFormat("Shader compile log:\n%s\n", log);
-		delete [] log;
+		GLint logLength;
+		glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logLength);
+		if (logLength > 0)
+		{
+			GLchar *log = new GLchar[logLength];
+			glGetShaderInfoLog(*shader, logLength, &logLength, log);
+			utils::Logger::toLogWithFormat("Shader compilation log:\n%s", log);
+			delete[] log;
+		}
 	}
-#endif
 
 	glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
 	if (status == 0)
@@ -242,17 +203,18 @@ bool GpuProgram::linkProgram( GLuint prog )
 	GLint status;
 	glLinkProgram(prog);
 
-#if defined(_DEBUG)
-	GLint logLength;
-	glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
-	if (logLength > 0)
+	if (Application::instance()->isDebugEnabled())
 	{
-		GLchar *log = new GLchar[logLength];
-		glGetProgramInfoLog(prog, logLength, &logLength, log);
-		utils::Logger::toLogWithFormat("Shader link log:\n%s\n", log);
-		delete [] log;
+		GLint logLength;
+		glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
+		if (logLength > 0)
+		{
+			GLchar *log = new GLchar[logLength];
+			glGetProgramInfoLog(prog, logLength, &logLength, log);
+			utils::Logger::toLogWithFormat("Gpu program linkage log:\n%s", log);
+			delete[] log;
+		}
 	}
-#endif
 
 	glGetProgramiv(prog, GL_LINK_STATUS, &status);
 	if (status == 0)
@@ -273,7 +235,7 @@ bool GpuProgram::validateProgram( GLuint prog )
 	{
 		GLchar *log = new GLchar[logLength];
 		glGetProgramInfoLog(prog, logLength, &logLength, log);
-		utils::Logger::toLogWithFormat("Shader validate log:\n%s\n", log);
+		utils::Logger::toLogWithFormat("Gpu program validation log:\n%s", log);
 		delete [] log;
 	}
 
@@ -288,32 +250,10 @@ bool GpuProgram::validateProgram( GLuint prog )
 
 bool GpuProgram::use()
 {
-	if (!m_isLoaded) return false;
+	if (!isValid()) return false;
 
 	glUseProgram(m_program);
-
 	return true;
-}
-
-float* GpuProgram::convert(const vector4& v)
-{
-	static float arr[4];
-	arr[0] = v.x; arr[1] = v.y; arr[2] = v.z; arr[3] = v.w;
-	return arr;
-}
-
-float* GpuProgram::convert(const vector3& v)
-{
-	static float arr[3];
-	arr[0] = v.x; arr[1] = v.y; arr[2] = v.z;
-	return arr;
-}
-
-float* GpuProgram::convert(const quaternion& q)
-{
-	static float arr[4];
-	arr[0] = q.x; arr[1] = q.y; arr[2] = q.z; arr[3] = q.w;
-	return arr;
 }
 
 }

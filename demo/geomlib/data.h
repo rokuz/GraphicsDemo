@@ -23,9 +23,6 @@
 
 #ifndef __GEOMETRY_DATA_H__
 #define __GEOMETRY_DATA_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include <vector>
 #include <memory>

@@ -23,9 +23,6 @@
 
 #ifndef __GPUPROGRAM_H__
 #define __GPUPROGRAM_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "GL/gl3w.h"
 #include "destroyable.h"
@@ -33,6 +30,7 @@
 #include "vector.h"
 #include "quaternion.h"
 #include "matrix.h"
+#include "utils.h"
 #include "logger.h"
 #include "uniformBuffer.h"
 
@@ -55,7 +53,14 @@ public:
 template<> class framework::UniformBase<UniformType> { public: enum Uniform {
 #define DECLARE_UNIFORMS_END() }; }; 
 
-#define CV(val) framework::GpuProgram::convert(val)
+enum ShaderType
+{
+	VERTEX_SHADER = 0,
+	GEOMETRY_SHADER,
+	FRAGMENT_SHADER,
+
+	SHADERS_COUNT
+};
 
 class GpuProgram : public Destroyable
 {
@@ -65,32 +70,33 @@ public:
 	GpuProgram();
 	virtual ~GpuProgram();
 
-	bool initWithVFShaders(const std::string& vsFileName, const std::string& fsFileName);
-	bool initWithVGFShaders(const std::string& vsFileName, const std::string& gsFileName, const std::string& fsFileName);
+	void addShader(const std::string& fileName);
+	bool init();
+	bool isValid() const;
 
 	template<typename UniformType>
 	void bindUniform(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
 	{
-		if (!m_isLoaded) return;
+		if (!isValid()) return;
 		if (uniform >= MAX_UNIFORMS) return;
 
 		m_uniforms[uniform] = glGetUniformLocation(m_program, name.c_str());
 		if (m_uniforms[uniform] < 0)
 		{
-			utils::Logger::toLogWithFormat("GpuProgram error: Uniform '%s' has not been found to bind.\n", name.c_str());
+			utils::Logger::toLogWithFormat("Error: Uniform '%s' has not been found to bind.\n", name.c_str());
 		}
 	}
 
 	template<typename UniformType>
 	void bindUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
 	{
-		if (!m_isLoaded) return;
+		if (!isValid()) return;
 		if (uniform >= MAX_UNIFORMS) return;
 
 		m_uniforms[uniform] = glGetUniformBlockIndex(m_program, name.c_str());
 		if (m_uniforms[uniform] < 0)
 		{
-			utils::Logger::toLogWithFormat("GpuProgram error: Uniform buffer '%s' has not been found to bind.\n", name.c_str());
+			utils::Logger::toLogWithFormat("Error: Uniform buffer '%s' has not been found to bind.\n", name.c_str());
 		}
 	}
 
@@ -120,7 +126,7 @@ public:
 	{
 		GLint uf = getUniformBuffer<UniformType>(uniform);
 		if (uf < 0) return;
-		glUniform3fv(uf, 1, CV(vec));
+		glUniform3fv(uf, 1, utils::Utils::convert(vec));
 	}
 
 	template<typename UniformType>
@@ -128,7 +134,7 @@ public:
 	{
 		GLint uf = getUniformBuffer<UniformType>(uniform);
 		if (uf < 0) return;
-		glUniform4fv(uf, 1, CV(vec));
+		glUniform4fv(uf, 1, utils::Utils::convert(vec));
 	}
 
 	template<typename UniformType>
@@ -136,7 +142,7 @@ public:
 	{
 		GLint uf = getUniformBuffer<UniformType>(uniform);
 		if (uf < 0) return;
-		glUniform4fv(uf, 1, CV(quat));
+		glUniform4fv(uf, 1, utils::Utils::convert(quat));
 	}
 
 	template<typename UniformType>
@@ -149,14 +155,10 @@ public:
 
 	bool use();
 
-	static float* convert(const vector4& v);
-	static float* convert(const vector3& v);
-	static float* convert(const quaternion& q);
-
 private:
-	bool m_isLoaded;
 	GLuint m_program;
 	GLint m_uniforms[MAX_UNIFORMS];
+	std::vector<std::string> m_shaders;
 
 	bool compileShader(GLuint* shader, GLenum type, const std::string& fileName);
 	bool linkProgram(GLuint prog);

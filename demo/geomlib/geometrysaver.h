@@ -23,9 +23,6 @@
 
 #ifndef __GEOMETRY_SAVER_H__
 #define __GEOMETRY_SAVER_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "data.h"
 

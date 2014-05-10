@@ -23,9 +23,6 @@
 
 #ifndef __RENDER_TARGET_H__
 #define __RENDER_TARGET_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "GL/gl3w.h"
 #include "destroyable.h"

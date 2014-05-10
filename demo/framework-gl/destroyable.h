@@ -23,9 +23,6 @@
 
 #ifndef __DESTROYABLE_H__
 #define __DESTROYABLE_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include <memory>
 

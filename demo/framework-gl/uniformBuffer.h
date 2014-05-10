@@ -23,9 +23,6 @@
 
 #ifndef __UNIFORM_BUFFER_H__
 #define __UNIFORM_BUFFER_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "GL/gl3w.h"
 #include "destroyable.h"

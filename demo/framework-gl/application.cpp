@@ -49,14 +49,7 @@ Application* Application::m_self = 0;
 
 Application::Application() : 
 	m_isRunning(false), 
-	m_lastTime(0), 
-	m_fpsStorage(0), 
-	m_timeSinceLastFpsUpdate(0),
-	m_averageFps(0), 
-	m_framesCounter(0),
-	m_axisX(0), 
-	m_axisY(0), 
-	m_axisZ(0) 
+	m_lastTime(0)
 {
 }
 
@@ -136,6 +129,8 @@ void Application::mainLoop()
 {
 	while (m_isRunning)
 	{
+		m_fpsCounter.beginFrame();
+
 		// process events from the window
 		m_context.getWindow().pollEvents();
 
@@ -145,62 +140,38 @@ void Application::mainLoop()
 			m_isRunning = false;
 		}
 
+		// rendering
+		double curTime = m_timer.getTime();
+		if (m_lastTime == 0) m_lastTime = curTime;
+		double delta = curTime - m_lastTime;
 		Texture::beginFrame();
-		if (fabs(m_lastTime) < 1e-7)
-		{
-			render(0);
-			Texture::endFrame();
-			renderGui(0);
-
-			m_lastTime = m_timer.getTime();
-		}
-		else
-		{
-			double curTime = m_timer.getTime();
-			double delta = curTime - m_lastTime;
-
-			// fps counter
-			measureFps(delta);
-
-			// rendering
-			render(delta);
-			Texture::endFrame();
-			renderGui(delta);
-
-			m_lastTime = curTime;
-		}
+		render(delta);
+		renderGui(delta);
+		Texture::endFrame();
+		m_lastTime = curTime;
 
 		m_context.present();
-	}
-}
 
-void Application::measureFps(double delta)
-{
-	m_timeSinceLastFpsUpdate += delta;
-	if (m_timeSinceLastFpsUpdate >= 1.0)
-	{
-		m_averageFps = m_fpsStorage / (m_framesCounter > 0 ? (double)m_framesCounter : 1.0);
-		if (m_fpsLabel != 0)
+		if (m_fpsCounter.endFrame())
 		{
-			static wchar_t buf[100];
-			swprintf(buf, L"%.2f fps", (float)m_averageFps);
-			m_fpsLabel->setText(buf);
+			if (m_fpsLabel != 0)
+			{
+				static wchar_t buf[100];
+				swprintf(buf, L"%.2f fps", (float)m_fpsCounter.getFps());
+				m_fpsLabel->setText(buf);
+			}
 		}
-
-		m_timeSinceLastFpsUpdate -= 1.0;
-		m_framesCounter = 0;
-		m_fpsStorage = 0;
-	}
-	else
-	{
-		m_framesCounter++;
-		m_fpsStorage += (1.0 / delta);
 	}
 }
 
 void Application::exit()
 {
 	m_isRunning = false;
+}
+
+bool Application::isDebugEnabled() const
+{
+	return m_info.flags.debug != 0;
 }
 
 void Application::resize()

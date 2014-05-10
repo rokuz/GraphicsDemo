@@ -78,6 +78,9 @@ public:
 
 	static Application* instance();
 	int run(Application* self, const std::string& commandLine);
+	void exit();
+	void resize();
+	bool isDebugEnabled() const;
 
 protected:
 	struct AppInfo
@@ -105,9 +108,6 @@ protected:
 	AppInfo m_info;
 	LightManager m_lightManager;
 
-	void exit();
-	void resize();
-
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
 
@@ -117,12 +117,9 @@ private:
 	utils::Timer m_timer;
 	bool m_isRunning;
 	double m_lastTime;
-	double m_fpsStorage;
 	gui::WidgetPtr_T m_rootWindow;
 	gui::LabelPtr_T m_fpsLabel;
-	double m_timeSinceLastFpsUpdate;
-	double m_averageFps;
-	size_t m_framesCounter;
+	utils::FpsCounter m_fpsCounter;
 	std::list<std::weak_ptr<Destroyable> > m_destroyableList;
 	std::shared_ptr<Line3D> m_axisX;
 	std::shared_ptr<Line3D> m_axisY;
@@ -138,7 +135,6 @@ private:
 	void initInput();
 
 	void mainLoop();
-	void measureFps(double delta);
 
 	static void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, GLvoid* userParam);
 };

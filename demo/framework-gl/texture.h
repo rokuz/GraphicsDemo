@@ -23,9 +23,6 @@
 
 #ifndef __TEXTURE_H__
 #define __TEXTURE_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "GL/gl3w.h"
 #include "destroyable.h"
@@ -35,7 +32,7 @@
 namespace framework
 {
 
-#define MAX_BOUND_TEXTURES 32
+const int MAX_BOUND_TEXTURES = 32;
 
 class Texture : public Destroyable
 {

@@ -23,9 +23,6 @@
 
 #ifndef __GEOMETRY_3D_H__
 #define __GEOMETRY_3D_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "GL/gl3w.h"
 #include "geometry.h"

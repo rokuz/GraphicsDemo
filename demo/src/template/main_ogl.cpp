@@ -1,5 +1,6 @@
 #include "application.h"
 
+// uniforms
 DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
 	MODELVIEWPROJECTION_MATRIX,
 	MODEL_MATRIX,
@@ -11,8 +12,11 @@ DECLARE_UNIFORMS_BEGIN(TestAppUniforms)
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<TestAppUniforms>::Uniform
 
+// constants
 const int MAX_LIGHTS_COUNT = 16;
+const std::string SHADERS_PATH = "data/shaders/gl/win32/template/";
 
+// application
 class TestApp : public framework::Application
 {
 public:
@@ -32,19 +36,21 @@ public:
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
 
 		m_geometry.reset(new framework::Geometry3D());
-		m_geometry->init("data/media/spaceship/spaceship.geom");
+		if (!m_geometry->init("data/media/spaceship/spaceship.geom")) exit();
     
 		m_texture.reset(new framework::Texture());
-		m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx");
+		if (!m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx")) exit();
 
 		m_specularTexture.reset(new framework::Texture());
-		m_specularTexture->initWithKtx("data/media/spaceship/spaceship_specular.ktx");
+		if (!m_specularTexture->initWithKtx("data/media/spaceship/spaceship_specular.ktx")) exit();
 
 		m_normalTexture.reset(new framework::Texture());
-		m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx");
+		if (!m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx")) exit();
 
 		m_program.reset(new framework::GpuProgram());
-		m_program->initWithVFShaders("data/shaders/gl/win32/template/shader.vsh.glsl", "data/shaders/gl/win32/template/shader.fsh.glsl");
+		m_program->addShader(SHADERS_PATH + "shader.vsh.glsl");
+		m_program->addShader(SHADERS_PATH + "shader.fsh.glsl");
+		if (!m_program->init()) exit();
 		m_program->bindUniform<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
 		m_program->bindUniform<TestAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
 		m_program->bindUniform<TestAppUniforms>(UF::DIFFUSE_MAP, "diffuseSampler");
@@ -66,7 +72,7 @@ public:
 		m_lightManager.addLightSource(source);
 
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT);
+		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
 
 		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
 		for (int i = 0; i < lightsCount; i++)

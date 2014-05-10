@@ -23,9 +23,6 @@
 
 #ifndef __GEOM_LOADER_H__
 #define __GEOM_LOADER_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "geometryloader.h"
 

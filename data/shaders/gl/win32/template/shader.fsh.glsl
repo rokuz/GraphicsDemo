@@ -49,7 +49,7 @@ void main()
 	vec3 h = normalize(viewDirTS + lightDirTS);
 	vec3 specular = light[0].specularColor * texture(specularSampler, fs_in.uv0).rgb * pow(max(dot(normalTS, h), 0), specPower);
 	
-	vec3 ambient = light[0].ambientColor;
+	vec3 ambient = diffColor * light[0].ambientColor;
 	
-    color = vec4(ambient + diffuse + specular, 1); //vec4(texture(diffuseSampler, fs_in.uv0).rgb, 1);
+    color = vec4(ambient + diffuse + specular, 1);
 }

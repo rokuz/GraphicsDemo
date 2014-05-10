@@ -23,9 +23,6 @@
 
 #ifndef __LIGHT_MANAGER_H__
 #define __LIGHT_MANAGER_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "vector.h"
 #include "quaternion.h"

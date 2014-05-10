@@ -23,9 +23,6 @@
 
 #ifndef __STANDARD_GPU_PROGRAMS_H__
 #define __STANDARD_GPU_PROGRAMS_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include <memory>
 #include "gpuprogram.h"

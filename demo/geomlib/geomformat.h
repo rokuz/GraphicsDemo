@@ -23,9 +23,6 @@
 
 #ifndef __GEOM_FORMAT_H__
 #define __GEOM_FORMAT_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 namespace geom
 {

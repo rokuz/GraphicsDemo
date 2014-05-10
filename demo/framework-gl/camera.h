@@ -23,9 +23,6 @@
 
 #ifndef __CAMERA_H__
 #define __CAMERA_H__
-#ifdef WIN32
-    #pragma once
-#endif
 
 #include "ncamera2.h"
 #include "quaternion.h"
