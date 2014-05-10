@@ -47,11 +47,11 @@ Application::AppInfo::AppInfo() :
 	flags.all = 0;
 	flags.fullscreen = 0;
 	flags.cursor = 1;
-	#ifdef _DEBUG
+#ifdef _DEBUG
 	flags.debug = 1;
-	#else
+#else
 	flags.debug = 0;
-	#endif
+#endif
 }
 
 Application* Application::m_self = 0;
@@ -104,9 +104,9 @@ int Application::run(Application* self, const std::string& commandLine)
 	initInput();
 
 	// init D3D device
-	if (!initDevice())
+	if (!initD3D11())
 	{
-		destroyDevice();
+		destroyD3D11();
 		destroyAllDestroyable();
 		return EXIT_FAILURE;
 	}
@@ -114,7 +114,7 @@ int Application::run(Application* self, const std::string& commandLine)
 	// init other subsystems
 	if (!StandardGpuPrograms::init() || !initGui())
 	{
-		destroyDevice();
+		destroyD3D11();
 		destroyAllDestroyable();
 		return EXIT_FAILURE;
 	}
@@ -130,7 +130,7 @@ int Application::run(Application* self, const std::string& commandLine)
 	shutdown();
 	destroyAllDestroyable();
 	destroyGui();
-	destroyDevice();
+	destroyD3D11();
 	m_window.destroy();
 	
 	return EXIT_SUCCESS;
@@ -204,24 +204,47 @@ void Application::resize()
 	onResize(m_info.windowWidth, m_info.windowHeight);
 }
 
-bool Application::initDevice()
+bool Application::initFactoryAndAdapter()
 {
 	HRESULT hr = S_OK;
+	HRESULT hr2 = S_OK;
 
 	// dxgi factory
-	IDXGIFactory* factory = 0;
-	hr = CreateDXGIFactory1(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory));
+	IDXGIFactory_T* factory = 0;
+#ifdef _OS_WINDOWS7
+	hr = CreateDXGIFactory(__uuidof(IDXGIFactory_T), reinterpret_cast<void**>(&factory));
+#elif _OS_WINDOWS8
+	hr = CreateDXGIFactory1(__uuidof(IDXGIFactory_T), reinterpret_cast<void**>(&factory));
+#elif _OS_WINDOWS81
+	UINT flags = m_info.flags.debug != 0 ? DXGI_CREATE_FACTORY_DEBUG : 0;
+	hr = CreateDXGIFactory2(flags, __uuidof(IDXGIFactory_T), reinterpret_cast<void**>(&factory));
+#endif
 	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not create DXGI factory.\n");
 		return false;
 	}
 	m_factory = factory;
-	hr = m_factory->MakeWindowAssociation(m_window.getHandle(), DXGI_MWA_NO_ALT_ENTER);
 
 	// adapter
-	IDXGIAdapter* adapter = 0;
-	if (factory->EnumAdapters(0, &adapter) == DXGI_ERROR_NOT_FOUND)
+	IDXGIAdapter_T* adapter = 0;
+#ifdef _OS_WINDOWS7
+	hr = factory->EnumAdapters(0, &adapter);
+	hr2 = S_OK;
+#elif _OS_WINDOWS8
+	hr = factory->EnumAdapters1(0, &adapter);
+	hr2 = S_OK;
+#elif _OS_WINDOWS81
+	IDXGIAdapter1* adapterTmp = 0;
+	hr = factory->EnumAdapters1(0, &adapterTmp);
+	if (hr != DXGI_ERROR_NOT_FOUND)
+	{
+		hr2 = adapterTmp->QueryInterface(__uuidof(IDXGIAdapter_T), reinterpret_cast<void**>(&adapter));
+		adapterTmp->Release();
+		adapterTmp = 0;
+	}
+#endif
+	if (hr == DXGI_ERROR_NOT_FOUND || hr2 != S_OK)
 	{
 		utils::Logger::toLog("Error: could not find a graphics adapter.\n");
 		return false;
@@ -229,13 +252,33 @@ bool Application::initDevice()
 	m_adapter = adapter;
 
 	// adapter description
-	DXGI_ADAPTER_DESC desc;
-	if (adapter->GetDesc(&desc) != S_OK)
+	DXGI_ADAPTER_DESC_T desc;
+#ifdef _OS_WINDOWS7
+	hr = adapter->GetDesc(&desc);
+#elif _OS_WINDOWS8
+	hr = adapter->GetDesc1(&desc);
+#elif _OS_WINDOWS81
+	hr = adapter->GetDesc2(&desc);
+#endif
+	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not find a graphics adapter.\n");
 		return false;
 	}
 	utils::Logger::toLog(L"Video adapter: " + std::wstring(desc.Description) + L".\n");
+
+	return true;
+}
+
+bool Application::initD3D11()
+{
+	HRESULT hr = S_OK;
+
+	// factory and adapter
+	if (!initFactoryAndAdapter())
+	{
+		return false;
+	}
 
 	// check for feature level
 	if (!isFeatureLevelSupported(m_info.featureLevel))
@@ -250,6 +293,7 @@ bool Application::initDevice()
 		return false;
 	}
 
+	// device creation
 	UINT CreateDeviceFlags = 0;
 	if (m_info.flags.debug)
 	{
@@ -258,12 +302,32 @@ bool Application::initDevice()
 
 	D3D_FEATURE_LEVEL level[] = { m_info.featureLevel };
 	D3D_FEATURE_LEVEL createdLevel;
-	hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, CreateDeviceFlags, level, 1, D3D11_SDK_VERSION, &m_device.device, &createdLevel, &m_device.context);
+
+	ID3D11Device* deviceTmp = 0;
+	ID3D11DeviceContext* contextTmp = 0;
+	hr = D3D11CreateDevice(m_adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, CreateDeviceFlags, level, 1, D3D11_SDK_VERSION, &deviceTmp, &createdLevel, &contextTmp);
 	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not create D3D device.\n");
 		return false;
 	}
+	hr = deviceTmp->QueryInterface(__uuidof(ID3D11Device_T), reinterpret_cast<void**>(&m_device.device));
+	deviceTmp->Release();
+	deviceTmp = 0;
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not convert ID3D11Device to specific version.\n");
+		return false;
+	}
+	hr = contextTmp->QueryInterface(__uuidof(ID3D11DeviceContext_T), reinterpret_cast<void**>(&m_device.context));
+	contextTmp->Release();
+	contextTmp = 0;
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not convert ID3D11DeviceContext to specific version.\n");
+		return false;
+	}
+
 	m_device.featureLevel = createdLevel;
 	utils::Logger::toLogWithFormat("Feature level: %s.\n", toString(m_info.featureLevel).c_str());
 
@@ -375,25 +439,50 @@ bool Application::initDevice()
 bool Application::findDisplayMode()
 {
 	HRESULT hr = S_OK;
+	HRESULT hr2 = S_OK;
 
-	IDXGIOutput* output = NULL; 
-	hr = m_adapter->EnumOutputs(0, &output);
-	if (hr != S_OK)
+	// enumerate outputs
+	IDXGIOutput_T* output = 0;
+	IDXGIOutput* outputTmp = 0;
+	hr = m_adapter->EnumOutputs(0, &outputTmp);
+	if (hr == S_OK)
+	{
+		hr2 = outputTmp->QueryInterface(__uuidof(IDXGIOutput_T), reinterpret_cast<void**>(&output));
+		outputTmp->Release();
+		outputTmp = 0;
+	}
+	if (hr != S_OK || hr2 != S_OK)
 	{
 		utils::Logger::toLog("Error: could not enumarate outputs.\n");
 		return false;
 	}
+
+	// get display modes number
 	UINT numModes = 0;
 	DXGI_FORMAT format = DISPLAY_FORMAT;
+#ifdef _OS_WINDOWS7
 	hr = output->GetDisplayModeList(format, 0, &numModes, NULL);
+#elif _OS_WINDOWS8
+	hr = output->GetDisplayModeList1(format, 0, &numModes, NULL);
+#elif _OS_WINDOWS81
+	hr = output->GetDisplayModeList1(format, 0, &numModes, NULL);
+#endif
 	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not get display modes number.\n");
 		return false;
 	}
-	std::vector<DXGI_MODE_DESC> displayModes;
+	
+	// get display modes
+	std::vector<DXGI_MODE_DESC_T> displayModes;
 	displayModes.resize(numModes);
+#ifdef _OS_WINDOWS7
 	hr = output->GetDisplayModeList(format, 0, &numModes, displayModes.data());
+#elif _OS_WINDOWS8
+	hr = output->GetDisplayModeList1(format, 0, &numModes, displayModes.data());
+#elif _OS_WINDOWS81
+	hr = output->GetDisplayModeList1(format, 0, &numModes, displayModes.data());
+#endif
 	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not get display modes number.\n");
@@ -401,7 +490,8 @@ bool Application::findDisplayMode()
 	}
 	output->Release();
 	
-	auto it = std::find_if(displayModes.begin(), displayModes.end(), [&](const DXGI_MODE_DESC& desc)
+	// find display appropriate mode
+	auto it = std::find_if(displayModes.begin(), displayModes.end(), [&](const DXGI_MODE_DESC_T& desc)
 	{
 		return desc.Width == (UINT)m_info.windowWidth && desc.Height == (UINT)m_info.windowHeight;
 	});
@@ -423,6 +513,7 @@ bool Application::initSwapChain(Device& device)
 	HRESULT hr = S_OK;
 
 	// parameters
+#if defined (_OS_WINDOWS7) || defined (_OS_WINDOWS8)
 	DXGI_SWAP_CHAIN_DESC state;
 	state.BufferDesc.Width = m_displayDesc.Width;
 	state.BufferDesc.Height = m_displayDesc.Height;
@@ -437,31 +528,64 @@ bool Application::initSwapChain(Device& device)
 	state.BufferCount = BACK_BUFFERS_COUNT;
 	state.OutputWindow = m_window.getHandle();
 	state.Windowed = TRUE;
-#ifdef _OS_WINDOWS7
-	state.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-#elif _OS_WINDOWS8
 	state.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-#elif _OS_WINDOWS81
-	state.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-#endif
 	state.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+#else
+	DXGI_SWAP_CHAIN_DESC1 state;
+	state.Width = m_displayDesc.Width;
+	state.Height = m_displayDesc.Height;
+	state.Format = DISPLAY_FORMAT;
+	state.Stereo = FALSE;
+	state.SampleDesc.Count = 1;
+	state.SampleDesc.Quality = 0;
+	state.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	state.BufferCount = BACK_BUFFERS_COUNT;
+	state.Scaling = DXGI_SCALING_STRETCH;
+	state.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+	state.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+	state.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+	fullscreenDesc.RefreshRate.Numerator = m_displayDesc.RefreshRate.Numerator;
+	fullscreenDesc.RefreshRate.Denominator = m_displayDesc.RefreshRate.Denominator;
+	fullscreenDesc.Scaling = m_displayDesc.Scaling;
+	fullscreenDesc.ScanlineOrdering = m_displayDesc.ScanlineOrdering;
+	fullscreenDesc.Windowed = TRUE;
+#endif
+
 	// initialization
-	hr = m_factory->CreateSwapChain(device.device, &state, &device.swapChain);
+#if defined (_OS_WINDOWS7) || defined (_OS_WINDOWS8)
+	IDXGISwapChain* swapChainTmp = 0;
+	hr = m_factory->CreateSwapChain(device.device, &state, &swapChainTmp);
+#else
+	IDXGISwapChain1* swapChainTmp = 0;
+	hr = m_factory->CreateSwapChainForHwnd(device.device, m_window.getHandle(), &state, &fullscreenDesc, 0, &swapChainTmp);
+#endif
 	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not create a swap chain.\n");
+		return false;
+	}
+	hr = swapChainTmp->QueryInterface(__uuidof(IDXGISwapChain_T), reinterpret_cast<void**>(&device.swapChain));
+	swapChainTmp->Release();
+	swapChainTmp = 0;
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not convert IDXGISwapChain to specific version.\n");
 		return false;
 	}
 
 	// set fullscreen
 	if (m_info.flags.fullscreen)
 	{
+	#if defined (_OS_WINDOWS7)
 		hr = m_device.swapChain->ResizeTarget(&m_displayDesc);
 		if (hr != S_OK)
 		{
 			utils::Logger::toLog("Error: failed ResizeTarget in swap chain.\n");
 			return false;
 		}
+	#endif
 		
 		hr = m_device.swapChain->SetFullscreenState(TRUE, NULL);
 		if (hr != S_OK)
@@ -504,7 +628,7 @@ bool Application::initSwapChain(Device& device)
 	return true;
 }
 
-void Application::destroyDevice()
+void Application::destroyD3D11()
 {
 	if (m_device.swapChain != 0) 
 	{ 
@@ -542,8 +666,13 @@ void Application::present()
 		{
 			m_device.context->ResolveSubresource(m_defaultRenderTarget->getTexture(0), 0, m_multisamplingRenderTarget->getTexture(0), 0, DISPLAY_FORMAT);
 		}
-
+	#if defined (_OS_WINDOWS7)
 		HRESULT hr = m_device.swapChain->Present(0, 0);
+	#else
+		static DXGI_PRESENT_PARAMETERS presentParams;
+		memset(&presentParams, 0, sizeof(DXGI_PRESENT_PARAMETERS));
+		HRESULT hr = m_device.swapChain->Present1(0, 0, &presentParams);
+	#endif
 		if (hr != S_OK && hr != DXGI_STATUS_OCCLUDED)
 		{
 			utils::Logger::toLog("Error: application was stopped bacause of Present failure.\n");

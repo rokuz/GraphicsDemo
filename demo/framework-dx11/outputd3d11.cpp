@@ -43,6 +43,8 @@ std::string toString(D3D_FEATURE_LEVEL featureLevel)
 		return "Direct 3D 10.1";
 	case D3D_FEATURE_LEVEL_11_0:
 		return "Direct 3D 11";
+	case D3D_FEATURE_LEVEL_11_1:
+		return "Direct 3D 11.1";
 	default:
 		return "Direct 3D Unknown";
 	}

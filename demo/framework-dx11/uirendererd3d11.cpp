@@ -123,7 +123,7 @@ void UIRendererD3D11::renderWidget(gui::WidgetPtr_T widget)
 	}
 	else if (widget->getType() == gui::OverlayType)
 	{
-		// TODO
+		// TODO: implement
 	}
 	
 	std::for_each(widget->getChildren().cbegin(), widget->getChildren().cend(), [&](gui::WidgetWeakPtr_T ptr)

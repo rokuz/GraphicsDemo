@@ -146,13 +146,14 @@ private:
 	Pipeline m_pipeline;
 	std::weak_ptr<GpuProgram> m_usingGpuProgram;
 
-	IDXGIFactory* m_factory;
-	IDXGIAdapter* m_adapter;
+	IDXGIFactory_T* m_factory;
+	IDXGIAdapter_T* m_adapter;
+	DXGI_MODE_DESC_T m_displayDesc;
+
 	Device m_device;
 	D3D_DRIVER_TYPE m_driverType;
 	unsigned int m_multisamplingQuality;
-	DXGI_MODE_DESC m_displayDesc;
-
+	
 	std::list<std::weak_ptr<Destroyable> > m_destroyableList;
 	std::shared_ptr<Line3D> m_axisX;
 	std::shared_ptr<Line3D> m_axisY;
@@ -171,12 +172,13 @@ private:
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	void destroyAllDestroyable();
 
-	bool initDevice();
+	bool initD3D11();
+	bool initFactoryAndAdapter();
 	bool isFeatureLevelSupported(D3D_FEATURE_LEVEL level);
 	bool findDisplayMode();
 	bool initSwapChain(Device& device);
 	void present();
-	void destroyDevice();
+	void destroyD3D11();
 
 	bool initGui();
 	void destroyGui();

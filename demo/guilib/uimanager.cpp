@@ -113,42 +113,42 @@ void UIManager::setScreenSize(size_t width, size_t height)
 
 void UIManager::injectFrameTime(double elapsed)
 {
-
+	// TODO: implement
 }
 
 void UIManager::injectKeyDown(InputKeys::Scan scan)
 {
-
+	// TODO: implement
 }
 
 void UIManager::injectKeyUp(InputKeys::Scan scan)
 {
-
+	// TODO: implement
 }
 
 void UIManager::injectChar(int character)
 {
-
+	// TODO: implement
 }
 
 void UIManager::injectMouseButtonDown(InputKeys::MouseButton button)
 {
-
+	// TODO: implement
 }
 
 void UIManager::injectMouseButtonUp(InputKeys::MouseButton button)
 {
-
+	// TODO: implement
 }
 
 void UIManager::injectMousePosition(float x, float y)
 {
-
+	// TODO: implement
 }
 
 void UIManager::injectMouseWheelChange(float delta)
 {
-
+	// TODO: implement
 }
 
 void UIManager::invalidateWidget(gui::WidgetPtr_T widget)

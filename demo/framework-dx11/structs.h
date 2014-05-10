@@ -34,12 +34,44 @@
 namespace framework
 {
 
+#ifdef _OS_WINDOWS7
+	typedef ID3D11Device ID3D11Device_T;
+	typedef ID3D11DeviceContext ID3D11DeviceContext_T;
+	typedef IDXGISwapChain IDXGISwapChain_T;
+	typedef IDXGIFactory IDXGIFactory_T;
+	typedef IDXGIAdapter IDXGIAdapter_T;
+	typedef DXGI_MODE_DESC DXGI_MODE_DESC_T;
+	typedef DXGI_ADAPTER_DESC DXGI_ADAPTER_DESC_T;
+	typedef IDXGIOutput IDXGIOutput_T;
+	typedef DXGI_SWAP_CHAIN_DESC DXGI_SWAP_CHAIN_DESC_T;
+#elif _OS_WINDOWS8
+	typedef ID3D11Device1 ID3D11Device_T;
+	typedef ID3D11DeviceContext1 ID3D11DeviceContext_T;
+	typedef IDXGISwapChain1 IDXGISwapChain_T;
+	typedef IDXGIFactory1 IDXGIFactory_T;
+	typedef IDXGIAdapter1 IDXGIAdapter_T;
+	typedef DXGI_MODE_DESC1 DXGI_MODE_DESC_T;
+	typedef DXGI_ADAPTER_DESC1 DXGI_ADAPTER_DESC_T;
+	typedef IDXGIOutput1 IDXGIOutput_T;
+	typedef DXGI_SWAP_CHAIN_DESC DXGI_SWAP_CHAIN_DESC_T;
+#elif _OS_WINDOWS81
+	typedef ID3D11Device2 ID3D11Device_T;
+	typedef ID3D11DeviceContext2 ID3D11DeviceContext_T;
+	typedef IDXGISwapChain2 IDXGISwapChain_T;
+	typedef IDXGIFactory2 IDXGIFactory_T;
+	typedef IDXGIAdapter2 IDXGIAdapter_T;
+	typedef DXGI_MODE_DESC1 DXGI_MODE_DESC_T;
+	typedef DXGI_ADAPTER_DESC2 DXGI_ADAPTER_DESC_T;
+	typedef IDXGIOutput2 IDXGIOutput_T;
+	typedef DXGI_SWAP_CHAIN_DESC1 DXGI_SWAP_CHAIN_DESC_T;
+#endif
+
 struct Device
 {
-	ID3D11Device* device;
-	ID3D11DeviceContext* context;
+	ID3D11Device_T* device;
+	ID3D11DeviceContext_T* context;
+	IDXGISwapChain_T* swapChain;
 	ID3D11Debug* debugger;
-	IDXGISwapChain* swapChain;
 	D3D_FEATURE_LEVEL featureLevel;
 	Device() : device(0), context(0), debugger(0), swapChain(0) {}
 };
