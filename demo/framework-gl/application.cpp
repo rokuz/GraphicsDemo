@@ -22,6 +22,7 @@
  */
 
 #include "application.h"
+#include "uirenderer.h"
 #include <algorithm>
 
 namespace framework
@@ -106,8 +107,7 @@ int Application::run(Application* self, const std::string& commandLine)
     }
 
 	initInput();
-	initGui();
-	if (!StandardGpuPrograms::init())
+	if (!initGui() || !StandardGpuPrograms::init())
 	{
 		m_context.destroy();
 		return EXIT_FAILURE;
@@ -221,16 +221,23 @@ void Application::destroyAllDestroyable()
 	m_destroyableList.clear();
 }
 
-void Application::initGui()
+bool Application::initGui()
 {
-	gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight, gui::UIResourcesFactoryPtr_T(), gui::UIRendererPtr_T());
+	gui::UIResourcesFactoryPtr_T factory(new UIResourcesFactoryOGL());
+	gui::UIRendererPtr_T renderer(new UIRendererOGL());
+	if (!gui::UIManager::instance().init((size_t)m_info.windowWidth, (size_t)m_info.windowHeight, factory, renderer))
+	{
+		return false;
+	}
 	m_rootWindow = gui::UIManager::instance().root();
 
 	// create a label to show fps statistics
-	/*m_fpsLabel = gui::UIManager::instance().createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
-														gui::Coords::Absolute(150.0f, 25.0f),
-														gui::RightAligned, gui::TopAligned, L"0 fps");
-	m_rootWindow->addChild(m_fpsLabel);*/
+	m_fpsLabel = UIFactory::createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
+										gui::Coords::Absolute(150.0f, 25.0f),
+										gui::RightAligned, gui::TopAligned, L"0 fps");
+	m_rootWindow->addChild(m_fpsLabel);
+
+	return true;
 }
 
 void Application::destroyGui()

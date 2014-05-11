@@ -42,6 +42,7 @@
 #include "matrix.h"
 
 #include "uimanager.h"
+#include "uifactory.h"
 
 #include "destroyable.h"
 #include "geometry3D.h"
@@ -128,7 +129,7 @@ private:
 	void registerDestroyable(std::weak_ptr<Destroyable> ptr);
 	void destroyAllDestroyable();
 
-	void initGui();
+	bool initGui();
 	void destroyGui();
 
 	void initAxes();

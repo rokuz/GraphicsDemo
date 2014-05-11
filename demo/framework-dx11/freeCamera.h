@@ -51,6 +51,7 @@ private:
 	vector2 m_lastMousePosition;
 	vector2 m_currentMousePosition;
 	vector2 m_angles;
+	double m_updateTime;
 };
 
 }

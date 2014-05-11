@@ -42,7 +42,8 @@ public:
 	static bool readFileToString(const std::string& fileName, std::string& out);
 	static std::string getExtention(const std::string& fileName);
 	static std::list<std::string> getExtentions(const std::string& fileName);
-	static std::string getPath(const std::string& fileName);
+	static std::string getPath(const std::string& path);
+	static std::string getFilename(const std::string& path);
 	static float* convert(const vector4& v);
 	static float* convert(const vector3& v);
 	static float* convert(const quaternion& q);

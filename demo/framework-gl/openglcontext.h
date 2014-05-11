@@ -61,4 +61,7 @@ private:
 	int getPixelFormat(int samples, bool enableStencil);
 };
 
+bool checkForOpenGLError(const char* file, const char* function, int line);
+#define CHECK_GL_ERROR checkForOpenGLError(__FILE__, __FUNCTION__, __LINE__)
+
 }

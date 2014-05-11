@@ -24,7 +24,7 @@
 #ifndef __TEXTURE_H__
 #define __TEXTURE_H__
 
-#include "GL/gl3w.h"
+#include "openglcontext.h"
 #include "destroyable.h"
 #include <string>
 #include <vector>
@@ -38,25 +38,22 @@ class Texture : public Destroyable
 {
     friend class KtxLoader;
 	friend class Application;
+	friend void saveTextureToTga(const std::string&, std::shared_ptr<Texture>);
     
-    GLuint m_texture;
-    GLenum m_target;
-    bool m_isLoaded;
-	static int m_freeTextureSlot;
-
-	virtual void destroy();
-
 public:
     Texture();
 	virtual ~Texture();
     
     bool initWithKtx(const std::string& fileName);
+	bool initWithData(GLint format, const std::vector<unsigned char>& buffer, size_t width, size_t height, bool mipmaps = false);
 
 	static void beginFrame();
 	static void endFrame();
 	static void resetSlots();
     
     void setToSampler(int samplerIndex);
+	size_t getWidth() const { return m_width; }
+	size_t getHeight() const { return m_height; }
     
     class Loader
     {
@@ -64,7 +61,21 @@ public:
         virtual ~Loader() {}
         virtual bool load(Texture* texture, const std::string& fileName) = 0;
     };
+
+private:
+	GLuint m_texture;
+	GLenum m_target;
+	size_t m_width;
+	size_t m_height;
+	bool m_isLoaded;
+	static int m_freeTextureSlot;
+
+	void setSampling();
+	void generateMipmaps();
+	virtual void destroy();
 };
+
+void saveTextureToTga(const std::string& filename, std::shared_ptr<Texture> texture);
 
 }
 

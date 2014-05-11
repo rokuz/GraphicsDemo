@@ -94,6 +94,7 @@ public:
 	const Device& getDevice() const { return m_device; }
 	std::weak_ptr<GpuProgram> getUsingGpuProgram() const { return m_usingGpuProgram; }
 	Pipeline& getPipeline() { return m_pipeline; }
+	vector2 getScreenSize() const { return vector2((float)m_info.windowWidth, (float)m_info.windowHeight); }
 	
 	void useDefaultRenderTarget();
 	const std::shared_ptr<RenderTarget>& defaultRenderTarget() const;
@@ -148,6 +149,7 @@ private:
 
 	IDXGIFactory_T* m_factory;
 	IDXGIAdapter_T* m_adapter;
+	IDXGIOutput_T* m_output;
 	DXGI_MODE_DESC_T m_displayDesc;
 
 	Device m_device;

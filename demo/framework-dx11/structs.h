@@ -28,7 +28,7 @@
 #elif _OS_WINDOWS8
 #include <d3d11_1.h>
 #elif _OS_WINDOWS81
-#include <d3d11_2.h>
+#include <d3d11_2.h> // VS 2013 only
 #endif
 
 namespace framework

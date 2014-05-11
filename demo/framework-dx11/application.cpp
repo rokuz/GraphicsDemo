@@ -61,6 +61,7 @@ Application::Application() :
 	m_lastTime(0),
 	m_factory(0),
 	m_adapter(0),
+	m_output(0),
 	m_driverType(D3D_DRIVER_TYPE_HARDWARE),
 	m_multisamplingQuality(0)
 {
@@ -341,6 +342,20 @@ bool Application::initD3D11()
 		}
 	}
 
+	// check for display format supporting
+	UINT isSupport = 0;
+	hr = m_device.device->CheckFormatSupport(DISPLAY_FORMAT, &isSupport);
+	if (hr != S_OK)
+	{
+		utils::Logger::toLog("Error: could not check display format supporting.\n");
+		return false;
+	}
+	if ((isSupport & (UINT)D3D11_FORMAT_SUPPORT_DISPLAY) == 0)
+	{
+		utils::Logger::toLog("Error: display format is not supported.\n");
+		return false;
+	}
+
 	// check for multisampling level
 	if (m_info.samples != 0)
 	{
@@ -442,12 +457,11 @@ bool Application::findDisplayMode()
 	HRESULT hr2 = S_OK;
 
 	// enumerate outputs
-	IDXGIOutput_T* output = 0;
 	IDXGIOutput* outputTmp = 0;
 	hr = m_adapter->EnumOutputs(0, &outputTmp);
 	if (hr == S_OK)
 	{
-		hr2 = outputTmp->QueryInterface(__uuidof(IDXGIOutput_T), reinterpret_cast<void**>(&output));
+		hr2 = outputTmp->QueryInterface(__uuidof(IDXGIOutput_T), reinterpret_cast<void**>(&m_output));
 		outputTmp->Release();
 		outputTmp = 0;
 	}
@@ -461,11 +475,11 @@ bool Application::findDisplayMode()
 	UINT numModes = 0;
 	DXGI_FORMAT format = DISPLAY_FORMAT;
 #ifdef _OS_WINDOWS7
-	hr = output->GetDisplayModeList(format, 0, &numModes, NULL);
+	hr = m_output->GetDisplayModeList(format, 0, &numModes, NULL);
 #elif _OS_WINDOWS8
-	hr = output->GetDisplayModeList1(format, 0, &numModes, NULL);
+	hr = m_output->GetDisplayModeList1(format, 0, &numModes, NULL);
 #elif _OS_WINDOWS81
-	hr = output->GetDisplayModeList1(format, 0, &numModes, NULL);
+	hr = m_output->GetDisplayModeList1(format, 0, &numModes, NULL);
 #endif
 	if (hr != S_OK)
 	{
@@ -477,19 +491,18 @@ bool Application::findDisplayMode()
 	std::vector<DXGI_MODE_DESC_T> displayModes;
 	displayModes.resize(numModes);
 #ifdef _OS_WINDOWS7
-	hr = output->GetDisplayModeList(format, 0, &numModes, displayModes.data());
+	hr = m_output->GetDisplayModeList(format, 0, &numModes, displayModes.data());
 #elif _OS_WINDOWS8
-	hr = output->GetDisplayModeList1(format, 0, &numModes, displayModes.data());
+	hr = m_output->GetDisplayModeList1(format, 0, &numModes, displayModes.data());
 #elif _OS_WINDOWS81
-	hr = output->GetDisplayModeList1(format, 0, &numModes, displayModes.data());
+	hr = m_output->GetDisplayModeList1(format, 0, &numModes, displayModes.data());
 #endif
 	if (hr != S_OK)
 	{
 		utils::Logger::toLog("Error: could not get display modes number.\n");
 		return false;
 	}
-	output->Release();
-	
+
 	// find display appropriate mode
 	auto it = std::find_if(displayModes.begin(), displayModes.end(), [&](const DXGI_MODE_DESC_T& desc)
 	{
@@ -586,8 +599,8 @@ bool Application::initSwapChain(Device& device)
 			return false;
 		}
 	#endif
-		
-		hr = m_device.swapChain->SetFullscreenState(TRUE, NULL);
+
+		hr = m_device.swapChain->SetFullscreenState(TRUE, m_output);
 		if (hr != S_OK)
 		{
 			utils::Logger::toLog("Error: failed SetFullscreenState in swap chain.\n");
@@ -651,6 +664,7 @@ void Application::destroyD3D11()
 	}
 	
 	if (m_device.device != 0) { m_device.device->Release(); m_device.device = 0; }
+	if (m_output != 0) { m_output->Release(); m_output = 0; }
 	if (m_adapter != 0) { m_adapter->Release(); m_adapter = 0; }
 	if (m_factory != 0) { m_factory->Release(); m_factory = 0; }
 }

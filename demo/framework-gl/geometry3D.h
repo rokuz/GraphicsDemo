@@ -24,7 +24,7 @@
 #ifndef __GEOMETRY_3D_H__
 #define __GEOMETRY_3D_H__
 
-#include "GL/gl3w.h"
+#include "openglcontext.h"
 #include "geometry.h"
 #include "destroyable.h"
 #include "vector.h"
@@ -40,8 +40,6 @@ class Line3D;
 class Geometry3D : public Destroyable
 {
 	friend class Application;
-    friend class FbxLoader;
-	friend class GeomLoader;
 
 	GLuint m_vertexArray;
 	GLuint m_vertexBuffer;
@@ -68,13 +66,6 @@ public:
     void renderMesh(size_t index);
 	void renderAllMeshes();
 	void renderBoundingBox(const matrix44& mvp);
-
-    class Loader
-    {
-    public:
-        virtual ~Loader() {}
-        virtual bool load(Geometry3D* geometry, const std::string& fileName) = 0;
-    };
 };
 
 }

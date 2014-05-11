@@ -55,13 +55,25 @@ Geometry3D::~Geometry3D()
 
 void Geometry3D::destroy()
 {
-	if (m_isLoaded)
-    {
-        glDeleteBuffers(1, &m_vertexBuffer);
-        glDeleteBuffers(1, &m_indexBuffer);
+	if (m_vertexBuffer != 0)
+	{
+		glDeleteBuffers(1, &m_vertexBuffer);
+		m_vertexBuffer = 0;
+	}
+
+	if (m_indexBuffer != 0)
+	{
+		glDeleteBuffers(1, &m_indexBuffer);
+		m_indexBuffer = 0;
+	}
+
+	if (m_vertexArray != 0)
+	{
         glDeleteVertexArrays(1, &m_vertexArray);
-        m_isLoaded = false;
+		m_vertexArray = 0;
     }
+
+	m_isLoaded = false;
 
 	if (m_boundingBoxLine)
 	{
@@ -115,6 +127,12 @@ bool Geometry3D::init(const std::string& fileName)
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indicesCount * sizeof(unsigned int), data.getIndexBuffer().data(), GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	if (CHECK_GL_ERROR)
+	{
+		destroy();
+		return false;
+	}
 
 	m_isLoaded = true;
 

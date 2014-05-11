@@ -126,7 +126,19 @@ void Logger::start(unsigned char flags)
 
 void Logger::finish()
 {
-	if (g_logFile.is_open()) g_logFile.close();
+	if (g_logFile.is_open()) 
+	{
+		g_logFile.flush();
+		g_logFile.close();
+	}
+}
+
+void Logger::flush()
+{
+	if (g_logFile.is_open()) 
+	{
+		g_logFile.flush();
+	}
 }
 
 }

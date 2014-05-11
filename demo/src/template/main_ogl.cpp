@@ -27,6 +27,7 @@ public:
 	{
 		m_info.title = "Test application (OpenGL 4.x)";
 		m_info.flags.fullscreen = 0;
+		m_info.samples = 4;
 	}
 
 	virtual void startup(gui::WidgetPtr_T root)

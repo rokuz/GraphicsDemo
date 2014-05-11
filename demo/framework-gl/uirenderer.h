@@ -21,37 +21,45 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __LOGGER_H__
-#define __LOGGER_H__
-#include <string>
+#ifndef __UI_RENDERER_H__
+#define __UI_RENDERER_H__
 
-namespace utils
+#include "uimanager.h"
+#include <list>
+
+namespace framework
 {
 
-class Logger
+class GpuProgram;
+class UniformBuffer;
+
+// renderer
+class UIRendererOGL : public gui::UIRenderer
 {
 public:
-	enum OutputFlags
-	{
-		IDE_OUTPUT	= 1 << 0,
-		CONSOLE		= 1 << 1,
-		FILE		= 1 << 2
-	};
+	UIRendererOGL(){}
+	~UIRendererOGL(){}
 
-	static void start(unsigned char flags);
-	static void finish();
-
-	static void toLog(const std::string& message);
-	static void toLog(const std::wstring& message);
-	static void toLogWithFormat(const char* format, ...);
-
-	static void setOutputFlags(unsigned char flags);
-	static void setOutputFlagsToDefault();
-
-	static void flush();
+	virtual bool init();
+	virtual void render();
+	virtual void cleanup();
 
 private:
-	static unsigned char outputFlags;
+	void renderWidget(gui::WidgetPtr_T widget);
+	void renderLabel(gui::LabelPtr_T label);
+
+	std::shared_ptr<framework::GpuProgram> m_textRendering;
+	std::shared_ptr<framework::UniformBuffer> m_textDataBuffer;
+	std::shared_ptr<framework::UniformBuffer> m_charactersDataBuffer;
+};
+
+// rendering cache
+class LabelRenderingCache : public gui::WidgetRenderingCache
+{
+public:
+	vector2 position;
+	vector2 size;
+	std::list<gui::Font::Character> characters;
 };
 
 }

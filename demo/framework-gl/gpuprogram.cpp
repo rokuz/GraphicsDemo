@@ -235,7 +235,10 @@ bool GpuProgram::validateProgram( GLuint prog )
 	{
 		GLchar *log = new GLchar[logLength];
 		glGetProgramInfoLog(prog, logLength, &logLength, log);
-		utils::Logger::toLogWithFormat("Gpu program validation log:\n%s", log);
+		if (strcmp(log, "Validation successful.\n"))
+		{
+			utils::Logger::toLogWithFormat("Gpu program '%s' validation log:\n%s", getProgramName().c_str(), log);
+		}	
 		delete [] log;
 	}
 
@@ -246,6 +249,18 @@ bool GpuProgram::validateProgram( GLuint prog )
 	}
 
 	return true;
+}
+
+std::string GpuProgram::getProgramName()
+{
+	std::string str;
+	for (size_t shaderIndex = 0; shaderIndex < SHADERS_COUNT; shaderIndex++)
+	{	
+		if (m_shaders[shaderIndex].empty()) continue;
+		if (!str.empty()) str += "-";
+		str += utils::Utils::getFilename(m_shaders[shaderIndex]);
+	}
+	return str;
 }
 
 bool GpuProgram::use()

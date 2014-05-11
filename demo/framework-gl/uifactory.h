@@ -21,37 +21,52 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __LOGGER_H__
-#define __LOGGER_H__
-#include <string>
+#ifndef __UI_FACTORY_H__
+#define __UI_FACTORY_H__
 
-namespace utils
+#include "uimanager.h"
+#include "texture.h"
+#include <list>
+
+namespace framework
 {
 
-class Logger
+// widgets
+class UIFactory
+{
+public:	
+	static gui::LabelPtr_T createLabel(const gui::Coords& position, const gui::Coords& size,
+									   gui::Formatting hformatting = gui::LeftAligned,
+									   gui::Formatting vformatting = gui::CenterAligned,
+									   const std::wstring& text = L"");
+
+	static gui::OverlayPtr_T createOverlay(const gui::Coords& position, const gui::Coords& size);
+};
+
+// resources
+class FontResourceOGL : public gui::IFontResource
 {
 public:
-	enum OutputFlags
-	{
-		IDE_OUTPUT	= 1 << 0,
-		CONSOLE		= 1 << 1,
-		FILE		= 1 << 2
-	};
+	virtual ~FontResourceOGL(){}
+	virtual bool createResource(const gui::Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height);
 
-	static void start(unsigned char flags);
-	static void finish();
-
-	static void toLog(const std::string& message);
-	static void toLog(const std::wstring& message);
-	static void toLogWithFormat(const char* format, ...);
-
-	static void setOutputFlags(unsigned char flags);
-	static void setOutputFlagsToDefault();
-
-	static void flush();
+	std::shared_ptr<Texture> getTexture() const { return m_texture; }
 
 private:
-	static unsigned char outputFlags;
+	std::shared_ptr<Texture> m_texture;
+};
+
+class UIResourcesFactoryOGL : public gui::UIResourcesFactory
+{
+public:
+	UIResourcesFactoryOGL(){}
+	virtual ~UIResourcesFactoryOGL(){}
+
+	virtual void cleanup();
+	virtual std::weak_ptr<gui::IFontResource> createFontResource();
+
+private:
+	std::list<std::shared_ptr<FontResourceOGL> > m_fonts;
 };
 
 }

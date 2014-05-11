@@ -136,6 +136,16 @@ std::string Utils::getPath(const std::string& fileName)
 	return std::move(path);
 }
 
+std::string Utils::getFilename(const std::string& path)
+{
+	std::string p = path;
+	std::replace(p.begin(), p.end(), '\\', '/');
+	auto tokens = tokenize<std::string>(p, '/');
+	if (tokens.empty()) return path;
+	auto it = tokens.rbegin();
+	return p.substr(it->first, it->second - it->first + 1);
+}
+
 float* Utils::convert(const vector4& v)
 {
 	static float arr[4];

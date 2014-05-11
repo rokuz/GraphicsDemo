@@ -163,6 +163,7 @@ private:
 	bool compileShader(GLuint* shader, GLenum type, const std::string& fileName);
 	bool linkProgram(GLuint prog);
 	bool validateProgram(GLuint prog);
+	std::string getProgramName();
 
 	virtual void destroy();
 };

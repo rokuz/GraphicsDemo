@@ -24,12 +24,48 @@
 #include "openglcontext.h"
 
 #include "GL/gl3w.h"
+#include "logger.h"
 #include <algorithm>
 
 #pragma comment(lib, "opengl32.lib")
 
 namespace framework
 {
+
+bool checkForOpenGLError(const char* file, const char* function, int line)
+{
+	GLenum err(glGetError());
+
+	bool result = false;
+	while (err != GL_NO_ERROR) 
+	{
+		result = true;
+		std::string error;
+
+		switch (err) {
+		case GL_INVALID_OPERATION:      
+			error = "INVALID_OPERATION";      
+			break;
+		case GL_INVALID_ENUM:           
+			error = "INVALID_ENUM";           
+			break;
+		case GL_INVALID_VALUE:          
+			error = "INVALID_VALUE";          
+			break;
+		case GL_OUT_OF_MEMORY:         
+			error = "OUT_OF_MEMORY";          
+			break;
+		case GL_INVALID_FRAMEBUFFER_OPERATION:  
+			error = "INVALID_FRAMEBUFFER_OPERATION";  
+			break;
+		}
+
+		utils::Logger::toLogWithFormat("OpenGL error: %s (%s > %s, line: %d).\n", error.c_str(), file, function, line);
+		err = glGetError();
+	}
+
+	return result;
+}
 
 bool OpenGLContext::init( size_t width, size_t height, const std::string& title, bool fullscreen, int samples, bool vsync, bool enableStencil )
 {
