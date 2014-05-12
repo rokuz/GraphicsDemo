@@ -12,7 +12,8 @@ struct CharacterData
 {
 	vec4 rectangle;
 	vec2 uv;
-	uint dummy[2];
+	uint dummy1;
+	uint dummy2;
 };
 layout(std140) uniform charactersData
 {
@@ -54,4 +55,5 @@ void main()
 
 	gl_Position = positions[0]; uv0 = uvs[0];
 	EmitVertex();
+	EndPrimitive();
 }
