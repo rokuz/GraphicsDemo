@@ -106,6 +106,7 @@ int Application::run(Application* self, const std::string& commandLine)
         }
     }
 
+	Texture::init();
 	initInput();
 	if (!initGui() || !StandardGpuPrograms::init())
 	{
@@ -120,6 +121,7 @@ int Application::run(Application* self, const std::string& commandLine)
 	shutdown();
 	destroyAllDestroyable();
 	destroyGui();
+	Texture::cleanup();
 	m_context.destroy();
 
 	return EXIT_SUCCESS;
@@ -182,9 +184,12 @@ void Application::resize()
 
 void Application::renderGui(double elapsedTime)
 {
-	//TODO
-
 	gui::UIManager::instance().injectFrameTime(elapsedTime);
+
+	if (gui::UIManager::instance().renderer())
+	{
+		gui::UIManager::instance().renderer()->render();
+	}
 }
 
 void Application::renderAxes(const matrix44& viewProjection)

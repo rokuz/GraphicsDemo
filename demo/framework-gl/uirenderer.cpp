@@ -33,19 +33,25 @@ namespace framework
 const std::string GUI_SHADERS_PATH = "data/gui/shaders/gl/win32/";
 const size_t MAX_CHARACTERS_PER_CALL = 256;
 
-//halfScreenSize
-//textureSize
-//charactersData
-//textColor
-//area
-//charactersMap
 DECLARE_UNIFORMS_BEGIN(UIUniforms)
+	HALF_SCREEN_SIZE,
+	TEXTURE_SIZE,
 	CHARACTERS_DATA,
-	TEXT_DATA,
-	CHARACTERS_MAP,
-	DEFAULT_SAMPLER
+	TEXT_COLOR,
+	AREA,
+	CHARACTERS_MAP
 DECLARE_UNIFORMS_END()
 #define UIUF UniformBase<UIUniforms>::Uniform
+
+#pragma pack (push, 1)
+struct CharacterData
+{
+	vector4 rectangle;
+	vector2 uv;
+	unsigned int : 32;
+	unsigned int : 32;
+};
+#pragma pack (pop)
 
 bool UIRendererOGL::init()
 {
@@ -53,32 +59,25 @@ bool UIRendererOGL::init()
 	m_textRendering.reset(new framework::GpuProgram());
 	m_textRendering->addShader(GUI_SHADERS_PATH + "text.vsh.glsl");
 	m_textRendering->addShader(GUI_SHADERS_PATH + "text.gsh.glsl");
-	m_textRendering->addShader(GUI_SHADERS_PATH + "text.gsh.glsl");
+	m_textRendering->addShader(GUI_SHADERS_PATH + "text.fsh.glsl");
 	if (!m_textRendering->init())
 	{
 		utils::Logger::toLog("Error: could not initialize text rendering shader.\n");
 		return false;
 	}
-	/*m_textRendering->bindUniform<UIUniforms>(UIUF::CHARACTERS_DATA, "charactersData");
-	m_textRendering->bindUniform<UIUniforms>(UIUF::TEXT_DATA, "textData");
+	m_textRendering->bindUniformBuffer<UIUniforms>(UIUF::CHARACTERS_DATA, "charactersData");
+	m_textRendering->bindUniform<UIUniforms>(UIUF::HALF_SCREEN_SIZE, "halfScreenSize");
+	m_textRendering->bindUniform<UIUniforms>(UIUF::TEXTURE_SIZE, "textureSize");
+	m_textRendering->bindUniform<UIUniforms>(UIUF::TEXT_COLOR, "textColor");
+	m_textRendering->bindUniform<UIUniforms>(UIUF::AREA, "area");
 	m_textRendering->bindUniform<UIUniforms>(UIUF::CHARACTERS_MAP, "charactersMap");
-	m_textRendering->bindUniform<UIUniforms>(UIUF::DEFAULT_SAMPLER, "defaultSampler");
 
-	// text data buffer
-	m_textDataBuffer.reset(new framework::UniformBuffer());
-	if (!m_textDataBuffer->initDefaultConstant<TextData>())
-	{
-		utils::Logger::toLog("Error: could not initialize text data buffer.\n");
-		return false;
-	}
-
-	// characters data buffer
 	m_charactersDataBuffer.reset(new framework::UniformBuffer());
-	if (!m_charactersDataBuffer->initDefaultStructured<CharacterData>(MAX_CHARACTERS_PER_CALL))
+	if (!m_charactersDataBuffer->init<framework::CharacterData>(MAX_CHARACTERS_PER_CALL))
 	{
 		utils::Logger::toLog("Error: could not initialize characters data buffer.\n");
 		return false;
-	}*/
+	}
 
 	return true;
 }
@@ -86,7 +85,6 @@ bool UIRendererOGL::init()
 void UIRendererOGL::cleanup()
 {
 	m_charactersDataBuffer.reset();
-	m_textDataBuffer.reset();
 	m_textRendering.reset();
 }
 
@@ -121,13 +119,11 @@ void UIRendererOGL::renderWidget(gui::WidgetPtr_T widget)
 
 void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 {
-	/*const Device& device = Application::instance()->getDevice();
-
 	int fontId = label->getFont();
 	const gui::Font& font = fontId < 0 ? gui::UIManager::instance().defaultFont() :
 										 gui::UIManager::instance().fontManager()->getFont(fontId);
 	if (!font.isValid()) return;
-	auto fontResource = std::static_pointer_cast<FontResourceD3D11>(font.getResource().lock());
+	auto fontResource = std::static_pointer_cast<FontResourceOGL>(font.getResource().lock());
 
 	if (label->getRenderingCache().get() != nullptr)
 	{
@@ -140,31 +136,32 @@ void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 														  label->getHorzFormatting(), label->getVertFormatting());
 			cachePtr->setValid();
 		}
-		if (cachePtr->characters.empty()) return;
-
-		vector2 halfScreeSize = gui::UIManager::instance().getScreenSize() * 0.5f;
-
-		// set up text data
-		TextData textData;
-		textData.textColor = label->getColor();
-		textData.halfScreenSize = vector4(halfScreeSize.x, halfScreeSize.y, 1.0f / halfScreeSize.x, -1.0f / halfScreeSize.y);
-		textData.area = vector4(cachePtr->position.x, cachePtr->position.y,
-								cachePtr->position.x + cachePtr->size.x, cachePtr->position.y + cachePtr->size.y);
-		textData.textureSize = vector2(1.0f / (float)fontResource->getTexture()->getDesc2D().Width,
-									   1.0f / (float)fontResource->getTexture()->getDesc2D().Height);
-		m_textDataBuffer->setData(textData);
-		m_textDataBuffer->applyChanges();
+		if (cachePtr->characters.empty()) return;		
 
 		// rendering
 		if (m_textRendering->use())
 		{
-			Application::instance()->disableDepthTest()->apply();
-			Application::instance()->defaultAlphaBlending()->apply();
+			//Application::instance()->disableDepthTest()->apply();
+			//Application::instance()->defaultAlphaBlending()->apply();
 
-			m_textRendering->setUniform<UIUniforms>(UIUF::TEXT_DATA, m_textDataBuffer);
-			m_textRendering->setUniform<UIUniforms>(UIUF::CHARACTERS_MAP, fontResource->getTexture());
-			m_textRendering->setUniform<UIUniforms>(UIUF::DEFAULT_SAMPLER, Application::instance()->anisotropicSampler());
+			GLboolean depthTestEnable = glIsEnabled(GL_DEPTH_TEST);
+			GLboolean blendingEnable = glIsEnabled(GL_BLEND);
 
+			glDisable(GL_DEPTH_TEST);
+			glEnable(GL_BLEND);
+
+			// set up text data
+			vector2 halfScreeSize = gui::UIManager::instance().getScreenSize() * 0.5f;
+			m_textRendering->setVector<UIUniforms>(UIUF::HALF_SCREEN_SIZE, vector4(halfScreeSize.x, halfScreeSize.y, 
+																				   1.0f / halfScreeSize.x, -1.0f / halfScreeSize.y));
+			m_textRendering->setVector<UIUniforms>(UIUF::TEXTURE_SIZE, vector2(1.0f / (float)fontResource->getTexture()->getWidth(),
+																			   1.0f / (float)fontResource->getTexture()->getHeight()));				
+			m_textRendering->setVector<UIUniforms>(UIUF::TEXT_COLOR, label->getColor());
+			m_textRendering->setVector<UIUniforms>(UIUF::AREA, vector4(cachePtr->position.x, cachePtr->position.y,
+																	   cachePtr->position.x + cachePtr->size.x, 
+																	   cachePtr->position.y + cachePtr->size.y));
+			fontResource->getTexture()->setToSampler(m_textRendering->getUniform<UIUniforms>(UIUF::CHARACTERS_MAP));
+				
 			auto charIt = cachePtr->characters.begin();
 			size_t callsCount = (cachePtr->characters.size() / MAX_CHARACTERS_PER_CALL) + 1;
 			for (size_t call = 0; call < callsCount; call++)
@@ -179,18 +176,16 @@ void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 					charDat.uv = charIt->texturePos;
 					m_charactersDataBuffer->setElement(i, std::move(charDat));
 				}
-				m_charactersDataBuffer->applyChanges();
+				m_textRendering->setUniformBuffer<UIUniforms>(UIUF::CHARACTERS_DATA, *m_charactersDataBuffer, 0);
 
 				// draw
-				m_textRendering->setUniform<UIUniforms>(UIUF::CHARACTERS_DATA, m_charactersDataBuffer);
-				device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-				device.context->DrawInstanced(1, i, 0, 0);
+				glDrawArraysInstanced(GL_POINTS, 0, 1, i);
 			}
 
-			Application::instance()->disableDepthTest()->cancel();
-			Application::instance()->defaultAlphaBlending()->cancel();
+			if (depthTestEnable) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+			if (blendingEnable) glEnable(GL_BLEND); else glDisable(GL_BLEND);
 		}
-	}*/
+	}
 }
 
 }

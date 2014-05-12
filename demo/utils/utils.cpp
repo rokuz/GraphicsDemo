@@ -160,6 +160,13 @@ float* Utils::convert(const vector3& v)
 	return arr;
 }
 
+float* Utils::convert(const vector2& v)
+{
+	static float arr[2];
+	arr[0] = v.x; arr[1] = v.y;
+	return arr;
+}
+
 float* Utils::convert(const quaternion& q)
 {
 	static float arr[4];

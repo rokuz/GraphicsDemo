@@ -54,6 +54,20 @@ add_custom_command(TARGET ${demo_name}
 		COMMAND ${CMAKE_COMMAND} -E copy "${FBXSDK_COPIABLE_BINARIES_DIR_RELEASE}/${item}" "${CMAKE_CURRENT_BINARY_DIR}/Release/${item}")
 endforeach()
 ENDIF(USE_FBX)
+
+# set copying FreeImage binaries
+if( GRAPHICS_API STREQUAL GRAPHICS_API_OGL )
+foreach(item IN LISTS FREEIMAGE_COPIABLE_BINARIES_DEBUG)
+add_custom_command(TARGET ${demo_name}
+		PRE_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy "${FREEIMAGE_COPIABLE_BINARIES_DIR_DEBUG}/${item}" "${CMAKE_CURRENT_BINARY_DIR}/Debug/${item}")
+endforeach()
+foreach(item IN LISTS FREEIMAGE_COPIABLE_BINARIES_RELEASE)
+add_custom_command(TARGET ${demo_name}
+		PRE_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy "${FREEIMAGE_COPIABLE_BINARIES_DIR_RELEASE}/${item}" "${CMAKE_CURRENT_BINARY_DIR}/Release/${item}")
+endforeach()
+endif()
 endif (IS_INITED)
 endmacro(INIT_DEMO)
 

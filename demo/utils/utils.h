@@ -46,6 +46,7 @@ public:
 	static std::string getFilename(const std::string& path);
 	static float* convert(const vector4& v);
 	static float* convert(const vector3& v);
+	static float* convert(const vector2& v);
 	static float* convert(const quaternion& q);
 	static std::string fromUnicode(const std::wstring& str);
 	static std::wstring toUnicode(const std::string& str);

@@ -1,6 +1,6 @@
 #version 430 core
 
-out int instanceID;
+out flat int instanceID;
 
 void main()
 {

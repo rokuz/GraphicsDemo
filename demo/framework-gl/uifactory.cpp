@@ -57,8 +57,6 @@ bool FontResourceOGL::createResource(const gui::Font& font, const std::vector<un
 		return false;
 	}
 
-	//saveTextureToTga("font.tga", m_texture);
-
 	return true;
 }
 

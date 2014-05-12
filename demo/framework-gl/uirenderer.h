@@ -49,7 +49,6 @@ private:
 	void renderLabel(gui::LabelPtr_T label);
 
 	std::shared_ptr<framework::GpuProgram> m_textRendering;
-	std::shared_ptr<framework::UniformBuffer> m_textDataBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_charactersDataBuffer;
 };
 

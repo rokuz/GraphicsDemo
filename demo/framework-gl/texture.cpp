@@ -25,6 +25,7 @@
 #include "logger.h"
 #include "utils.h"
 #include <ktx.h>
+#include <FreeImage.h>
 
 namespace framework
 {
@@ -65,6 +66,11 @@ public:
 
 namespace
 {
+	void freeImageOutput(FREE_IMAGE_FORMAT fif, const char *msg)
+	{
+		utils::Logger::toLogWithFormat("FreeImage: %s.\n", msg);
+	}
+
 	int getPixelFormat(int textureFormat)
 	{
 		switch (textureFormat)
@@ -230,6 +236,17 @@ void Texture::setToSampler(int samplerIndex)
 	m_freeTextureSlot++;
 }
 
+void Texture::init()
+{
+	FreeImage_Initialise();
+	FreeImage_SetOutputMessage(freeImageOutput);
+}
+
+void Texture::cleanup()
+{
+	FreeImage_DeInitialise();
+}
+
 void Texture::resetSlots()
 {
 	m_freeTextureSlot = 0;
@@ -254,7 +271,7 @@ void Texture::destroy()
 	m_isLoaded = false;
 }
 
-void saveTextureToTga(const std::string& filename, std::shared_ptr<Texture> texture)
+void saveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture)
 {
 	if (!texture) return;
 
@@ -281,24 +298,17 @@ void saveTextureToTga(const std::string& filename, std::shared_ptr<Texture> text
 	size_t bufSize = texture->getWidth() * texture->getHeight() * sz;
 	pixels.reset(new unsigned char[bufSize]);
 
-	glReadPixels(0, 0, texture->getWidth(), texture->getHeight(), getPixelFormat(format), GL_UNSIGNED_BYTE, pixels.get());
+	glGetTexImage(texture->m_target, 0, getPixelFormat(format), GL_UNSIGNED_BYTE, pixels.get());
 	if (CHECK_GL_ERROR) return;
 	
-	//?
-	//glPixelStorei(GL_UNPACK_ROW_LENGTH, stride)
-
-	/*if ((image = fopen(filename.c_str(), "wb")) == NULL) return;
-
-	unsigned char TGAheader[12] = { 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	unsigned char header[6] = { ((unsigned char)(texture->getWidth() & 0x00FF)),
-								((unsigned char)((texture->getWidth() & 0xFF00) / 256)),
-								((unsigned char)(texture->getHeight() & 0x00FF)),
-								((unsigned char)((texture->getHeight() & 0xFF00) / 256)), sz * 8, 0 };
-	fwrite(TGAheader, sizeof(unsigned char), 12, image);
-	fwrite(header, sizeof(unsigned char), 6, image);
-	fwrite(pixels.get(), sizeof(unsigned char), bufSize, image);
-	fclose(image);
-	glBindTexture(texture->m_target, 0);*/
+	FIBITMAP *bitmap = FreeImage_AllocateT(FIT_BITMAP, texture->getWidth(), texture->getHeight(), sz * 8);
+	if (bitmap != 0)
+	{
+		auto dat = FreeImage_GetBits(bitmap);
+		memcpy(dat, pixels.get(), bufSize);
+		BOOL r = FreeImage_Save(FIF_PNG, bitmap, filename.c_str());
+		FreeImage_Unload(bitmap);
+	}
 }
 
 }

@@ -38,7 +38,7 @@ class Texture : public Destroyable
 {
     friend class KtxLoader;
 	friend class Application;
-	friend void saveTextureToTga(const std::string&, std::shared_ptr<Texture>);
+	friend void saveTextureToPng(const std::string&, std::shared_ptr<Texture>);
     
 public:
     Texture();
@@ -47,6 +47,8 @@ public:
     bool initWithKtx(const std::string& fileName);
 	bool initWithData(GLint format, const std::vector<unsigned char>& buffer, size_t width, size_t height, bool mipmaps = false);
 
+	static void init();
+	static void cleanup();
 	static void beginFrame();
 	static void endFrame();
 	static void resetSlots();
@@ -75,7 +77,7 @@ private:
 	virtual void destroy();
 };
 
-void saveTextureToTga(const std::string& filename, std::shared_ptr<Texture> texture);
+void saveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture);
 
 }
 
