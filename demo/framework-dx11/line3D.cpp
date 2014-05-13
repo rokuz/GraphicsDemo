@@ -21,12 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "line3D.h"
-#include "gpuprogram.h"
-#include "standardgpuprograms.h"
-#include "uniformbuffer.h"
-#include "geometry3D.h"
-#include "application.h"
 
 namespace framework
 {

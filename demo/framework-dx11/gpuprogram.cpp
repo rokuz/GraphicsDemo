@@ -21,14 +21,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "gpuprogram.h"
 
 #include <d3dcompiler.h>
-#include <algorithm>
-#include <fstream>
-#include "utils.h"
-#include "outputd3d11.h"
-#include "application.h"
 
 static const char* VS_MODEL = "vs_5_0";
 static const char* PS_MODEL = "ps_5_0";

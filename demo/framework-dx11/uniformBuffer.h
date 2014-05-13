@@ -22,10 +22,6 @@
  */
 
 #pragma once
-#include "structs.h"
-#include "destroyable.h"
-#include "resourceview.h"
-#include <vector>
 
 namespace framework
 {

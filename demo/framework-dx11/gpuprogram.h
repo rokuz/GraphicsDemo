@@ -22,18 +22,6 @@
  */
 
 #pragma once
-#include "structs.h"
-#include "destroyable.h"
-#include <string>
-#include <list>
-#include "vector.h"
-#include "quaternion.h"
-#include "matrix.h"
-#include "logger.h"
-#include "uniformbuffer.h"
-#include "texture.h"
-#include "sampler.h"
-#include "renderTarget.h"
 
 namespace framework
 {

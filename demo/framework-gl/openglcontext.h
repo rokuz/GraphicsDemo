@@ -23,13 +23,6 @@
 
 #pragma once
 
-#include <string>
-#include <list>
-#include <vector>
-#include "GL/gl3w.h"
-#include "GL/wglext.h"
-#include "window.h"
-
 namespace framework
 {
 

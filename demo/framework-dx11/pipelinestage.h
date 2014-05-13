@@ -22,17 +22,12 @@
  */
 
 #pragma once
-#include "structs.h"
-#include <vector>
-
-#include "vector.h"
-#include "destroyable.h"
-#include "structs.h"
-#include "renderTarget.h"
-#include "unorderedaccessiblebatch.h"
 
 namespace framework
 {
+
+class RenderTarget;
+struct UnorderedAccessibleBatch;
 
 enum PipelineStageType
 {

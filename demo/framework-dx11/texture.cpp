@@ -21,10 +21,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "texture.h"
-#include "logger.h"
-#include "utils.h"
-#include "application.h"
+
 #include "dds/DDSTextureLoader.h"
 
 namespace framework

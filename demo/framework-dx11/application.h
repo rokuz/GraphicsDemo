@@ -25,43 +25,6 @@
 
 #pragma once
 
-#include "structs.h"
-#include <string>
-#include <list>
-#include <algorithm>
-
-#include "matrix.h"
-#include "logger.h"
-#include "utils.h"
-#include "timer.h"
-#include "profiler.h"
-
-#include "uimanager.h"
-#include "uifactoryd3d11.h"
-
-#include "window.h"
-#include "outputd3d11.h"
-#include "destroyable.h"
-#include "pipelinestage.h"
-#include "rasterizerstage.h"
-#include "depthstencilstage.h"
-#include "blendstage.h"
-#include "renderTarget.h"
-#include "geometry3D.h"
-#include "line3D.h"
-#include "texture.h"
-#include "gpuprogram.h"
-#include "standardgpuprograms.h"
-#include "freeCamera.h"
-#include "lightManager.h"
-#include "uniformbuffer.h"
-#include "unorderedaccessbuffer.h"
-#include "unorderedaccessiblebatch.h"
-#include "sampler.h"
-
-#undef min
-#undef max
-
 namespace framework
 {
 

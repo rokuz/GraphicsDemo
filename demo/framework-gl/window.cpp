@@ -21,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "window.h"
-#include "inputkeys.h"
 
 namespace framework
 {

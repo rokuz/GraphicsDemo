@@ -24,12 +24,6 @@
 #ifndef __GEOMETRY_DATA_H__
 #define __GEOMETRY_DATA_H__
 
-#include <vector>
-#include <memory>
-#include <string>
-#include "vector.h"
-#include "bbox.h"
-
 namespace geom
 {
 

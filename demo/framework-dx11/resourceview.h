@@ -22,9 +22,6 @@
  */
 
 #pragma once
-#include "structs.h"
-#include <utility>
-#include <vector>
 
 namespace framework
 {

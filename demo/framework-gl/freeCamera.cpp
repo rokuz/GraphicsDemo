@@ -21,9 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "freeCamera.h"
-#include "logger.h"
-#include "inputkeys.h"
 
 namespace framework
 {

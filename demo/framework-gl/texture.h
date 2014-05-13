@@ -24,11 +24,6 @@
 #ifndef __TEXTURE_H__
 #define __TEXTURE_H__
 
-#include "openglcontext.h"
-#include "destroyable.h"
-#include <string>
-#include <vector>
-
 namespace framework
 {
 

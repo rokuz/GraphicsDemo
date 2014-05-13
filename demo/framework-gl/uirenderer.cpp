@@ -21,11 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "uirenderer.h"
-#include "application.h"
-#include "texture.h"
-#include "gpuprogram.h"
-#include "uniformBuffer.h"
 
 namespace framework
 {

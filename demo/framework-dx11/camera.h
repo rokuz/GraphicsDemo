@@ -22,8 +22,6 @@
  */
 
 #pragma once
-#include "ncamera2.h"
-#include "quaternion.h"
 
 namespace framework
 {

@@ -26,37 +26,6 @@
 #ifndef __APPLICATION_H__
 #define __APPLICATION_H__
 
-#pragma warning(disable:4996)
-
-#include "openglcontext.h"
-
-#include <string>
-#include <list>
-#include <map>
-#include <algorithm>
-
-#include "logger.h"
-#include "utils.h"
-#include "timer.h"
-#include "profiler.h"
-#include "matrix.h"
-
-#include "uimanager.h"
-#include "uifactory.h"
-
-#include "destroyable.h"
-#include "geometry3D.h"
-#include "line3D.h"
-#include "texture.h"
-#include "gpuprogram.h"
-#include "standardGpuPrograms.h"
-#include "freeCamera.h"
-#include "lightManager.h"
-#include "uniformBuffer.h"
-
-#undef min
-#undef max
-
 namespace framework
 {
 

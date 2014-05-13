@@ -21,11 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "unorderedaccessiblebatch.h"
-#include "unorderedaccessbuffer.h"
-#include "renderTarget.h"
-#include "logger.h"
-#include <algorithm>
 
 namespace framework
 {

@@ -1,5 +1,7 @@
 #sources
-set(SOURCE_LIB  application.h 
+set(PRECOMPILED stdafx.cpp stdafx.h)
+set(SOURCE_LIB  framework.h
+				application.h 
 				camera.h 
 				freeCamera.h 
 				geometry3D.h 
@@ -43,7 +45,8 @@ set(SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arr
 )
 source_group(shaders FILES ${SHADERS})
 source_group(core FILES ${SOURCE_LIB})
-add_library(framework STATIC ${SOURCE_LIB} ${SHADERS})
+source_group(precompiled FILES ${PRECOMPILED})
+add_library(framework STATIC ${PRECOMPILED} ${SOURCE_LIB} ${SHADERS})
 
 #preprocessor
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -90,3 +93,8 @@ CACHE INTERNAL "")
 
 #link libraries
 target_link_libraries(framework ${DEPS_LIBS})
+
+#precompiled headers
+set_target_properties(framework PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "stdafx.h")
+set_target_properties(framework PROPERTIES COTIRE_ADD_UNITY_BUILD FALSE)
+cotire(framework)

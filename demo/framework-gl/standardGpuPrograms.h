@@ -24,9 +24,6 @@
 #ifndef __STANDARD_GPU_PROGRAMS_H__
 #define __STANDARD_GPU_PROGRAMS_H__
 
-#include <memory>
-#include "gpuprogram.h"
-
 namespace framework
 {
 

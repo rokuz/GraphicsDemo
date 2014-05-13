@@ -22,8 +22,6 @@
  */
 
 #pragma once
-#include "pipelinestage.h"
-#include "vector.h"
 
 namespace framework
 {

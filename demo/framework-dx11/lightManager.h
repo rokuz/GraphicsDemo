@@ -22,12 +22,6 @@
  */
 
 #pragma once
-#include "structs.h"
-#include "vector.h"
-#include "quaternion.h"
-#include "matrix.h"
-#include <vector>
-#include <memory>
 
 namespace framework
 {

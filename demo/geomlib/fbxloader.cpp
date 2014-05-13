@@ -21,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "fbxloader.h"
-#include <algorithm>
 
 namespace geom
 {

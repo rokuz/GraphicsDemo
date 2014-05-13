@@ -24,12 +24,6 @@
 #ifndef __LIGHT_MANAGER_H__
 #define __LIGHT_MANAGER_H__
 
-#include "vector.h"
-#include "quaternion.h"
-#include "matrix.h"
-#include <vector>
-#include <memory>
-
 namespace framework
 {
 

@@ -24,9 +24,7 @@
 #ifndef __GEOMETRY_H__
 #define __GEOMETRY_H__
 
-#include <string>
-#include <map>
-#include <memory>
+#include "data.h"
 #include "geometryloader.h"
 #include "geometrysaver.h"
 

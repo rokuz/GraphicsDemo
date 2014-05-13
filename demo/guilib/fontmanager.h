@@ -24,14 +24,6 @@
 #ifndef __FONT_MANAGER_H__
 #define __FONT_MANAGER_H__
 
-#include <memory>
-#include <functional>
-#include <vector>
-#include <map>
-#include <list>
-#include "uistructs.h"
-#include "vector.h"
-
 namespace gui
 {
 

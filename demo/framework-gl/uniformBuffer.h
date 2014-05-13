@@ -24,10 +24,6 @@
 #ifndef __UNIFORM_BUFFER_H__
 #define __UNIFORM_BUFFER_H__
 
-#include "GL/gl3w.h"
-#include "destroyable.h"
-#include <vector>
-
 namespace framework
 {
 

@@ -21,15 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "geometry.h"
-
-#include "geomloader.h"
-#include "geomsaver.h"
-#ifdef _USE_FBX
-#include "fbxloader.h"
-#endif
-
-#include "utils.h"
 
 namespace geom
 {

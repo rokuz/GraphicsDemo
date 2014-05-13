@@ -21,8 +21,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "application.h"
-#include <algorithm>
+
 #include "uirendererd3d11.h"
 #include "dds/ScreenGrab.h"
 

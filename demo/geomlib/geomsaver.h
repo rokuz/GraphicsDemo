@@ -24,8 +24,6 @@
 #ifndef __GEOM_SAVER_H__
 #define __GEOM_SAVER_H__
 
-#include "geometrysaver.h"
-
 namespace geom
 {
 

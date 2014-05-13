@@ -22,7 +22,6 @@
  */
 
 #pragma once
-#include <memory>
 
 namespace framework
 {

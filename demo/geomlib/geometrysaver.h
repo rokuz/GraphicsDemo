@@ -24,8 +24,6 @@
 #ifndef __GEOMETRY_SAVER_H__
 #define __GEOMETRY_SAVER_H__
 
-#include "data.h"
-
 namespace geom
 {
 

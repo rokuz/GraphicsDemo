@@ -24,13 +24,7 @@
 #ifndef __GEOMETRY_3D_H__
 #define __GEOMETRY_3D_H__
 
-#include "openglcontext.h"
 #include "geometry.h"
-#include "destroyable.h"
-#include "vector.h"
-#include "bbox.h"
-#include <string>
-#include <vector>
 
 namespace framework
 {

@@ -24,9 +24,6 @@
 #ifndef __UI_RENDERER_H__
 #define __UI_RENDERER_H__
 
-#include "uimanager.h"
-#include <list>
-
 namespace framework
 {
 

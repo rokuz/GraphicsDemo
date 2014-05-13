@@ -1,4 +1,4 @@
-#include "application.h"
+#include "framework.h"
 
 // uniforms
 DECLARE_UNIFORMS_BEGIN(TestAppUniforms)

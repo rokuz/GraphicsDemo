@@ -1,5 +1,7 @@
 #sources
-set(SOURCE_CORE application.h 
+set(PRECOMPILED stdafx.cpp stdafx.h)
+set(SOURCE_CORE framework.h
+				application.h 
 				application.cpp
 				structs.h
 				window.h
@@ -65,7 +67,8 @@ source_group(core FILES ${SOURCE_CORE})
 source_group(pipeline FILES ${SOURCE_PIP})
 source_group(entities FILES ${SOURCE_ENT})
 source_group(shaders FILES ${SHADERS})
-add_library(framework STATIC ${SOURCE_CORE} ${SOURCE_PIP} ${SOURCE_ENT} ${SHADERS})
+source_group(precompiled FILES ${PRECOMPILED})
+add_library(framework STATIC ${PRECOMPILED} ${SOURCE_CORE} ${SOURCE_PIP} ${SOURCE_ENT} ${SHADERS})
 
 #preprocessor
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -81,3 +84,8 @@ set(DEPS_LIBS utils mathlib geomlib guilib ddslib)
 
 #link libraries
 target_link_libraries(framework ${DEPS_LIBS})
+
+#precompiled headers
+set_target_properties(framework PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "stdafx.h")
+set_target_properties(framework PROPERTIES COTIRE_ADD_UNITY_BUILD FALSE)
+cotire(framework)

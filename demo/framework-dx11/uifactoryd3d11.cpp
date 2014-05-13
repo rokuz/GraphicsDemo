@@ -21,8 +21,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "uifactoryd3d11.h"
-#include "application.h"
+
 #include "uirendererd3d11.h"
 
 namespace framework

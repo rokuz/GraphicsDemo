@@ -21,9 +21,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "application.h"
 #include "uirenderer.h"
-#include <algorithm>
 
 namespace framework
 {

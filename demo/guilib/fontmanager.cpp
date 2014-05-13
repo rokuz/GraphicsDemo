@@ -21,14 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "fontmanager.h"
-#include "logger.h"
-#include "uimanager.h"
-#include "utils.h"
-
-#include <map>
-#include <sstream>
-#include <algorithm>
 
 #include <ft2build.h>
 #include <freetype/freetype.h>

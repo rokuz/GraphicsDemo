@@ -21,9 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "texture.h"
-#include "logger.h"
-#include "utils.h"
 #include <ktx.h>
 #include <FreeImage.h>
 

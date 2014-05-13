@@ -24,10 +24,6 @@
 #ifndef __RENDER_TARGET_H__
 #define __RENDER_TARGET_H__
 
-#include "GL/gl3w.h"
-#include "destroyable.h"
-#include <vector>
-
 namespace framework
 {
 

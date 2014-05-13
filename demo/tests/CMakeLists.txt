@@ -7,10 +7,16 @@ add_executable(tests ${SOURCE_TESTS})
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -DGTEST_HAS_TR1_TUPLE=0)
 
 #dependences
-set (LINKED_PROJECTS mathlib utils)
+set (LINKED_PROJECTS framework )
 
 #headers search
-include_directories(../mathlib ../utils)
+if( GRAPHICS_API STREQUAL GRAPHICS_API_OGL )
+set(FRAMEWORK_DIR "../framework-gl")
+endif()
+if( GRAPHICS_API STREQUAL GRAPHICS_API_DX11 )
+set(FRAMEWORK_DIR "../framework-dx11")
+endif()
+include_directories(../mathlib ../geomlib ../utils ../guilib ${FRAMEWORK_DIR})
 
 #link gtest
 set(LIBRARY_NAME gtest)

@@ -21,10 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "sampler.h"
-#include "logger.h"
-#include "outputd3d11.h"
-#include "application.h"
 
 namespace framework
 {

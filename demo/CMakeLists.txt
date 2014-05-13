@@ -1,5 +1,8 @@
 cmake_minimum_required (VERSION 2.8.11)
 
+set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
+include(cotire)
+
 # Set up the name of the demo
 set (PROJECT_NAME Demo)
 
@@ -36,6 +39,14 @@ mark_as_advanced(OS_LIST)
 mark_as_advanced(OS_WINDOWS7)
 mark_as_advanced(OS_WINDOWS8)
 mark_as_advanced(OS_WINDOWS81)
+
+mark_as_advanced(COTIRE_DEBUG)
+mark_as_advanced(COTIRE_VERBOSE)
+mark_as_advanced(COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS)
+mark_as_advanced(COTIRE_MAXIMUM_NUMBER_OF_UNITY_INCLUDES)
+mark_as_advanced(COTIRE_MINIMUM_NUMBER_OF_TARGET_SOURCES)
+mark_as_advanced(COTIRE_ADDITIONAL_PREFIX_HEADER_IGNORE_EXTENSIONS)
+mark_as_advanced(COTIRE_ADDITIONAL_PREFIX_HEADER_IGNORE_PATH)
 
 # Project
 project(${PROJECT_NAME})

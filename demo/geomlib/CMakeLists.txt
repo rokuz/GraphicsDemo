@@ -1,4 +1,5 @@
 #sources
+set(PRECOMPILED stdafx.cpp stdafx.h)
 set(SOURCE_LIB 	geometryloader.h
 				geometryloader.cpp
 				geometry.h
@@ -16,8 +17,9 @@ set(SOURCE_LIB 	geometryloader.h
 IF (USE_FBX)
 set (SOURCE_LIB ${SOURCE_LIB} fbxloader.h fbxloader.cpp)
 ENDIF(USE_FBX)
-source_group(geomlib FILES ${SOURCE_LIB})
-add_library(geomlib STATIC ${SOURCE_LIB})
+source_group(core FILES ${SOURCE_LIB})
+source_group(precompiled FILES ${PRECOMPILED})
+add_library(geomlib STATIC ${PRECOMPILED} ${SOURCE_LIB})
 
 #preprocessor
 IF (USE_FBX)
@@ -55,3 +57,8 @@ set (FBXSDK_COPIABLE_BINARIES_DIR_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../../deps
 set(FBXSDK_COPIABLE_BINARIES_RELEASE libfbxsdk.dll
 CACHE INTERNAL "")
 ENDIF(USE_FBX)
+
+#precompiled headers
+set_target_properties(geomlib PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "stdafx.h")
+set_target_properties(geomlib PROPERTIES COTIRE_ADD_UNITY_BUILD FALSE)
+cotire(geomlib)

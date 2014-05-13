@@ -21,9 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "uniformbuffer.h"
-#include "logger.h"
-#include "application.h"
 
 namespace framework
 {

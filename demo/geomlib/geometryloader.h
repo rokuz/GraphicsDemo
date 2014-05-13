@@ -24,8 +24,6 @@
 #ifndef __GEOMETRY_LOADER_H__
 #define __GEOMETRY_LOADER_H__
 
-#include "data.h"
-
 namespace geom
 {
 

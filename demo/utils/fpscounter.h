@@ -25,8 +25,6 @@
 #ifndef __FPS_COUNTER_H__
 #define __FPS_COUNTER_H__
 
-#include "timer.h"
-
 namespace utils
 {
 

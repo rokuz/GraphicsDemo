@@ -21,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "outputd3d11.h"
-#include <sstream>
 
 namespace framework
 {

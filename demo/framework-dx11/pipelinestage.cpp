@@ -21,12 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "pipelinestage.h"
-#include "application.h"
-#include "utils.h"
-#include <algorithm>
-#undef min
-#undef max
 
 namespace framework
 {

@@ -22,11 +22,6 @@
  */
 
 #pragma once
-#include "structs.h"
-#include "destroyable.h"
-#include "matrix.h"
-#include "vector.h"
-#include <vector>
 
 namespace framework
 {

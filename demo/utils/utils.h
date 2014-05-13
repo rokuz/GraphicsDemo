@@ -23,13 +23,6 @@
 
 #ifndef __UTILS_H__
 #define __UTILS_H__
-#include <string>
-#include <map>
-#include <list>
-#include "vector.h"
-#include "quaternion.h"
-#include "inputkeys.h"
-#include "fpscounter.h"
 
 namespace utils
 {

@@ -21,9 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "resourceview.h"
-#include "application.h"
-#include "logger.h"
 
 namespace framework
 {

@@ -23,14 +23,6 @@
 
 #ifndef __FBX_LOADER_H__
 #define __FBX_LOADER_H__
-#ifdef WIN32
-    #pragma once
-#endif
-
-#include "geometryloader.h"
-#include <fbxsdk.h>
-#include <list>
-#include <map>
 
 namespace geom
 {

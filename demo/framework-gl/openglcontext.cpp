@@ -21,11 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "openglcontext.h"
-
-#include "GL/gl3w.h"
-#include "logger.h"
-#include <algorithm>
 
 #pragma comment(lib, "opengl32.lib")
 

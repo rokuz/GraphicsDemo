@@ -24,16 +24,6 @@
 #ifndef __GPUPROGRAM_H__
 #define __GPUPROGRAM_H__
 
-#include "GL/gl3w.h"
-#include "destroyable.h"
-#include <string>
-#include "vector.h"
-#include "quaternion.h"
-#include "matrix.h"
-#include "utils.h"
-#include "logger.h"
-#include "uniformBuffer.h"
-
 namespace framework
 {
 

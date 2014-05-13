@@ -23,9 +23,6 @@
 
 #pragma once
 
-#include <memory>
-#include "gpuprogram.h"
-
 namespace framework
 {
 

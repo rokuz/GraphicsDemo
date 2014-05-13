@@ -24,8 +24,6 @@
 #ifndef __DESTROYABLE_H__
 #define __DESTROYABLE_H__
 
-#include <memory>
-
 namespace framework
 {
 

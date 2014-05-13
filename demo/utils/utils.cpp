@@ -21,22 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "utils.h"
-#include "profiler.h"
-
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN 1
-#include <Windows.h>
-#include <stdio.h>
-#include <algorithm>
-#endif
-#include <locale>
-#include <memory>
-#include <time.h>
-#include <list>
-
-#undef max
-#undef min
 
 namespace utils
 {

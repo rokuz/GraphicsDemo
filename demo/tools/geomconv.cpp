@@ -21,11 +21,20 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <list>
+#include <map>
+#include <vector>
+#include <memory>
+#include <string>
+#include <algorithm>
 #include <stdio.h>
 #include <io.h>
 #include <fcntl.h>
-#include <string>
 #include <iostream>
+
+#include "vector.h"
+#include "bbox.h"
+
 #include "geometry.h"
 
 using namespace std;

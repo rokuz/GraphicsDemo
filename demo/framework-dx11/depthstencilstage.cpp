@@ -21,12 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "depthstencilstage.h"
-#include "logger.h"
-#include "outputd3d11.h"
-#include <algorithm>
-#undef min
-#undef max
 
 namespace framework
 {

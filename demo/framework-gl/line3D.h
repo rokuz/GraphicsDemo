@@ -24,12 +24,6 @@
 #ifndef __LINE_3D_H__
 #define __LINE_3D_H__
 
-#include "GL/gl3w.h"
-#include "destroyable.h"
-#include "matrix.h"
-#include "vector.h"
-#include <vector>
-
 namespace framework
 {
 

@@ -21,14 +21,8 @@
 * DEALINGS IN THE SOFTWARE.
 */
 
+#include "stdafx.h"
 #include "profiler.h"
-#include <algorithm>
-#include <fstream>
-
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN 1
-#include <windows.h>
-#endif
 
 namespace
 {

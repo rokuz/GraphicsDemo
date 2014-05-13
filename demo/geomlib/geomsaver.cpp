@@ -21,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "geomsaver.h"
-#include "geomformat.h"
 
 namespace geom
 {

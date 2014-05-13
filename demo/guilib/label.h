@@ -25,8 +25,6 @@
 #define __LABEL_H__
 
 #include "widget.h"
-#include <string>
-#include "vector.h"
 
 namespace gui
 {

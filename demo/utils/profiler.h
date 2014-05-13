@@ -24,14 +24,6 @@
 #ifndef __PROFILER_H__
 #define __PROFILER_H__
 
-#include <list>
-#include <vector>
-#include <string>
-#include <map>
-#include <mutex>
-#include <functional>
-#include "timer.h"
-
 namespace utils
 {
 

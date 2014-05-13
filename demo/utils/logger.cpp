@@ -21,19 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "logger.h"
-#include "utils.h"
-#include <vector>
-
-#ifdef WIN32
-    #define WIN32_LEAN_AND_MEAN 1
-    #include <Windows.h>
-	#include <stdarg.h>
-	#include <stdio.h>
-	#include <algorithm>
-	#include <iostream>
-	#include <fstream>
-#endif
 
 namespace utils
 {

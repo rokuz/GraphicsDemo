@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
+#include "framework.h"
 
-#include "vector.h"
 #include <stdlib.h>
 #include <time.h>
 

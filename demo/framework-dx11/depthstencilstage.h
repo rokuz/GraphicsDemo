@@ -22,7 +22,6 @@
  */
 
 #pragma once
-#include "pipelinestage.h"
 
 namespace framework
 {

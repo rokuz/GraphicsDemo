@@ -24,10 +24,6 @@
 #ifndef __UI_STRUCTS_H__
 #define __UI_STRUCTS_H__
 
-#include <memory>
-#include "vector.h"
-#include "inputkeys.h"
-
 namespace gui
 {
 

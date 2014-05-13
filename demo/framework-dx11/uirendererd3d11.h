@@ -22,8 +22,6 @@
  */
 
 #pragma once
-#include "uimanager.h"
-#include <list>
 
 namespace framework
 {

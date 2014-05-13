@@ -22,9 +22,6 @@
  */
 
 #pragma once
-#include "uimanager.h"
-#include "texture.h"
-#include <list>
 
 namespace framework
 {

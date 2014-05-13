@@ -21,13 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "blendstage.h"
-#include "logger.h"
-#include "outputd3d11.h"
-#include <algorithm>
-#include "utils.h"
-#undef min
-#undef max
 
 namespace framework
 {

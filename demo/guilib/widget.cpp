@@ -21,9 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "stdafx.h"
 #include "widget.h"
-#include "uimanager.h"
-#include <algorithm>
 
 namespace gui
 {

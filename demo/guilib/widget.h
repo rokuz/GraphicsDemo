@@ -24,11 +24,6 @@
 #ifndef __WIDGET_H__
 #define __WIDGET_H__
 
-#include <memory>
-#include <list>
-#include "uistructs.h"
-#include "vector.h"
-
 namespace gui
 {
 

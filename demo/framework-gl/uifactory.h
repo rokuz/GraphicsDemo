@@ -24,10 +24,6 @@
 #ifndef __UI_FACTORY_H__
 #define __UI_FACTORY_H__
 
-#include "uimanager.h"
-#include "texture.h"
-#include <list>
-
 namespace framework
 {
 

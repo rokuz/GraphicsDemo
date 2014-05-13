@@ -22,14 +22,8 @@
  */
 
 #pragma once
-#include "structs.h"
+
 #include "geometry.h"
-#include "destroyable.h"
-#include "vector.h"
-#include "bbox.h"
-#include <string>
-#include <vector>
-#include <list>
 
 namespace framework
 {
