@@ -56,20 +56,6 @@ public:
 		// overlays
 		initOverlays(root);
 
-		m_rotation = 0.0f;
-
-		m_geometry.reset(new framework::Geometry3D());
-		if (!m_geometry->init("data/media/spaceship/spaceship.geom")) exit();
-    
-		m_texture.reset(new framework::Texture());
-		if (!m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx")) exit();
-
-		m_specularTexture.reset(new framework::Texture());
-		if (!m_specularTexture->initWithKtx("data/media/spaceship/spaceship_specular.ktx")) exit();
-
-		m_normalTexture.reset(new framework::Texture());
-		if (!m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx")) exit();
-
 		m_program.reset(new framework::GpuProgram());
 		m_program->addShader(SHADERS_PATH + "shader.vsh.glsl");
 		m_program->addShader(SHADERS_PATH + "shader.fsh.glsl");
@@ -81,6 +67,27 @@ public:
 		m_program->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularSampler");
 		m_program->bindUniform<DSAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_program->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");
+
+		// entity
+		m_entity = initEntity("data/media/cube/cube.geom",
+							  "data/media/cube/cube_diff.ktx",
+							  "data/media/cube/cube_normal.ktx",
+							  "data/media/textures/full_specular.png");
+
+		m_entitiesData.resize(25);
+		for (size_t i = 0; i < m_entitiesData.size(); i++)
+		{
+			m_entitiesData[i].model.set_translation(utils::Utils::random(-70.0f, 70.0f));
+		}
+
+		// skybox texture
+		m_skyboxTexture.reset(new framework::Texture());
+		if (!m_skyboxTexture->initAsCubemap("data/media/textures/nightsky_front.jpg",
+											"data/media/textures/nightsky_back.jpg",
+											"data/media/textures/nightsky_left.jpg",
+											"data/media/textures/nightsky_right.jpg",
+											"data/media/textures/nightsky_top.jpg",
+											"data/media/textures/nightsky_bottom.jpg")) exit();
 
 		// lights
 		initLights();
@@ -119,19 +126,19 @@ public:
 		if (!texture.empty())
 		{
 			ent.texture.reset(new framework::Texture());
-			//ent.texture->initWithDDS(texture);
+			ent.texture->init(texture);
 		}
 
 		if (!normalTexture.empty())
 		{
 			ent.normalTexture.reset(new framework::Texture());
-			//ent.normalTexture->initWithDDS(normalTexture);
+			ent.normalTexture->init(normalTexture);
 		}
 
 		if (!specularTexture.empty())
 		{
 			ent.specularTexture.reset(new framework::Texture());
-			//ent.specularTexture->initWithDDS(specularTexture);
+			ent.specularTexture->init(specularTexture);
 		}
 
 		return std::move(ent);
@@ -194,19 +201,6 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
-		quaternion quat;
-		quat.set_rotate_x(n_deg2rad(-90.0f));
-		quaternion quat2;
-		quat2.set_rotate_z(-n_deg2rad(m_rotation));
-		matrix44 model(quat * quat2);
-		quaternion quat3;
-		quat3.set_rotate_y(-n_deg2rad(m_rotation));
-		model.set_translation(quat3.z_direction() * 30.0f);
-
-		m_mvp = (model * m_camera.getView()) * m_camera.getProjection();
-
-		m_rotation += (float)elapsedTime * 70.0f;
-
 		const GLfloat color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		GLfloat depth = 1.0f;
 		glClearBufferfv(GL_COLOR, 0, color);
@@ -214,20 +208,38 @@ public:
     
 		if (m_program->use())
 		{
-			m_program->setMatrix<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);
-			m_program->setMatrix<DSAppUniforms>(UF::MODEL_MATRIX, model);
-			m_program->setVector<DSAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
-			m_program->setUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, *m_lightsBuffer, 0);
-
-			m_texture->setToSampler(m_program->getUniform<DSAppUniforms>(UF::DIFFUSE_MAP));
-			m_normalTexture->setToSampler(m_program->getUniform<DSAppUniforms>(UF::NORMAL_MAP));
-			m_specularTexture->setToSampler(m_program->getUniform<DSAppUniforms>(UF::SPECULAR_MAP));
-
-			m_geometry->renderAllMeshes();
+			for (size_t i = 0; i < m_entitiesData.size(); i++)
+			{
+				renderEntity(m_entity, m_entitiesData[i]);
+			}
 		}
 
 		// debug rendering
 		renderDebug();
+	}
+
+	void renderEntity(const Entity& entity, const EntityData& entityData)
+	{
+		if (!entityData.isVisible) return;
+
+		//EntityDataRaw entityDataRaw;
+		//entityDataRaw.modelViewProjection = entityData.mvp;
+		//entityDataRaw.model = entityData.model;
+		//entityDataRaw.modelView = entityData.mv;
+		//entityDataRaw.specularPower = entityData.specularPower;
+		//entityDataRaw.materialId = entityData.materialId;
+		//m_entityDataBuffer->setData(entityDataRaw);
+		//m_entityDataBuffer->applyChanges();
+
+		m_program->setMatrix<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
+		m_program->setMatrix<DSAppUniforms>(UF::MODEL_MATRIX, entityData.model);
+		m_program->setVector<DSAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
+		m_program->setUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, m_lightsBuffer, 0);
+		m_program->setTexture<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
+		m_program->setTexture<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
+		m_program->setTexture<DSAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
+
+		entity.geometry->renderAllMeshes();
 	}
 
 	void renderDebug()
@@ -358,15 +370,10 @@ private:
 
 	// -----
 	std::shared_ptr<framework::GpuProgram> m_program;
-	std::shared_ptr<framework::Geometry3D> m_geometry;
-	std::shared_ptr<framework::Texture> m_texture;
-	std::shared_ptr<framework::Texture> m_normalTexture;
-	std::shared_ptr<framework::Texture> m_specularTexture;
-	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
-	matrix44 m_mvp;
-	float m_rotation;
 	// -----
-
+	
+	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
+	
 	std::shared_ptr<framework::Texture> m_skyboxTexture;
 	framework::FreeCamera m_camera;
 

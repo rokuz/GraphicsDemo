@@ -246,6 +246,11 @@ bool Texture::initWithKtx(const std::string& fileName)
 
 bool Texture::init(const std::string& fileName)
 {
+	if (utils::Utils::getExtention(fileName) == "ktx")
+	{
+		return initWithKtx(fileName);
+	}
+
 	destroy();
 
 	ImageInfo info;
@@ -343,7 +348,7 @@ bool Texture::initAsCubemap( const std::string& frontFilename, const std::string
 	glTexStorage2D(m_target, 1, format, m_width, m_height);
 	for (size_t i = 0; i < 6; i++)
 	{
-		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, m_width, m_height, pixelFormat, GL_UNSIGNED_BYTE, info[i].dib);
+		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, m_width, m_height, pixelFormat, GL_UNSIGNED_BYTE, info[i].data);
 	}
 	setSampling();
 	generateMipmaps();
@@ -385,19 +390,6 @@ void Texture::generateMipmaps()
 	}
 }
 
-void Texture::setToSampler(int samplerIndex)
-{
-    if (!m_isLoaded) return;
-	if (samplerIndex < 0) return;
-	if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
-	
-	glUniform1i(samplerIndex, m_freeTextureSlot);
-	glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
-	glBindTexture(m_target, m_texture);
-
-	m_freeTextureSlot++;
-}
-
 void Texture::init()
 {
 	FreeImage_Initialise();
@@ -409,21 +401,6 @@ void Texture::cleanup()
 	FreeImage_DeInitialise();
 }
 
-void Texture::resetSlots()
-{
-	m_freeTextureSlot = 0;
-}
-
-void Texture::beginFrame()
-{
-	m_freeTextureSlot = 0;
-}
-
-void Texture::endFrame()
-{
-	resetSlots();
-}
-
 void Texture::destroy()
 {
 	if (m_texture != 0)
@@ -431,6 +408,11 @@ void Texture::destroy()
 		glDeleteTextures(1, &m_texture);
 	}
 	m_isLoaded = false;
+}
+
+void Texture::bind()
+{
+	glBindTexture(m_target, m_texture);
 }
 
 void saveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture)

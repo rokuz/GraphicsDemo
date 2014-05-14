@@ -33,6 +33,8 @@ public:
 	PipelineState(GLenum state, bool enabled);
 	~PipelineState();
 
+	void setBlending(GLint src, GLint dest);
+
 	void apply();
 	void cancel();
 
@@ -40,6 +42,11 @@ private:
 	GLenum m_state;
 	bool m_isEnabled;
 	bool m_wasEnabled;
+
+	GLint m_oldBlendSrc;
+	GLint m_oldBlendDst;
+	GLint m_blendSrc;
+	GLint m_blendDst;
 };
 
 }

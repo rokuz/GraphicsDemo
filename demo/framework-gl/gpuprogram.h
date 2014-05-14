@@ -28,6 +28,7 @@ namespace framework
 {
 
 const int MAX_UNIFORMS = 256;
+const int MAX_BOUND_TEXTURES = 32;
 
 template<typename UniformType>
 class UniformBase
@@ -51,6 +52,8 @@ enum ShaderType
 
 	SHADERS_COUNT
 };
+
+class Texture;
 
 class GpuProgram : public Destroyable
 {
@@ -103,11 +106,14 @@ public:
 	}
 
 	template<typename UniformType>
-	void setUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, UniformBuffer& buffer, int index)
+	void setUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer, int index)
 	{
+		if (!buffer) return;
+
 		GLint uf = getUniformBuffer<UniformType>(uniform);
 		if (uf < 0) return;
-		buffer.bind(index);
+
+		buffer->bind(index);
 		glUniformBlockBinding(m_program, uf, index);
 	}
 
@@ -151,12 +157,29 @@ public:
 		glUniformMatrix4fv(uf, 1, false, &mat.m[0][0]);
 	}
 
+	template<typename UniformType>
+	void setTexture(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<Texture> texture)
+	{
+		if (!texture) return;
+
+		GLint uf = getUniformBuffer<UniformType>(uniform);
+		if (uf < 0) return;
+		if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
+
+		glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
+		texture->bind();
+		glUniform1i(uf, m_freeTextureSlot);
+
+		m_freeTextureSlot++;
+	}
+
 	bool use();
 
 private:
 	GLuint m_program;
 	GLint m_uniforms[MAX_UNIFORMS];
 	std::vector<std::string> m_shaders;
+	int m_freeTextureSlot;
 
 	bool compileShader(GLuint* shader, GLenum type, const std::string& fileName);
 	bool linkProgram(GLuint prog);

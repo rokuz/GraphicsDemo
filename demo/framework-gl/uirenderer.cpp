@@ -140,6 +140,7 @@ void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 		{
 			PipelineState depthTestDisable(GL_DEPTH_TEST, false);
 			PipelineState blendingEnable(GL_BLEND, true);
+			blendingEnable.setBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 			depthTestDisable.apply();
 			blendingEnable.apply();
@@ -154,7 +155,7 @@ void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 			m_textRendering->setVector<UIUniforms>(UIUF::AREA, vector4(cachePtr->position.x, cachePtr->position.y,
 																	   cachePtr->position.x + cachePtr->size.x, 
 																	   cachePtr->position.y + cachePtr->size.y));
-			fontResource->getTexture()->setToSampler(m_textRendering->getUniform<UIUniforms>(UIUF::CHARACTERS_MAP));
+			m_textRendering->setTexture<UIUniforms>(UIUF::CHARACTERS_MAP, fontResource->getTexture());
 				
 			auto charIt = cachePtr->characters.begin();
 			size_t callsCount = (cachePtr->characters.size() / MAX_CHARACTERS_PER_CALL) + 1;
@@ -170,7 +171,7 @@ void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 					charDat.uv = charIt->texturePos;
 					m_charactersDataBuffer->setElement(i, std::move(charDat));
 				}
-				m_textRendering->setUniformBuffer<UIUniforms>(UIUF::CHARACTERS_DATA, *m_charactersDataBuffer, 0);
+				m_textRendering->setUniformBuffer<UIUniforms>(UIUF::CHARACTERS_DATA, m_charactersDataBuffer, 0);
 
 				// draw
 				glDrawArraysInstanced(GL_POINTS, 0, 1, i);

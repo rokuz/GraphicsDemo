@@ -40,13 +40,13 @@ public:
 		if (!m_geometry->init("data/media/spaceship/spaceship.geom")) exit();
     
 		m_texture.reset(new framework::Texture());
-		if (!m_texture->initWithKtx("data/media/spaceship/spaceship_diff.ktx")) exit();
+		if (!m_texture->init("data/media/spaceship/spaceship_diff.ktx")) exit();
 
 		m_specularTexture.reset(new framework::Texture());
-		if (!m_specularTexture->initWithKtx("data/media/spaceship/spaceship_specular.ktx")) exit();
+		if (!m_specularTexture->init("data/media/spaceship/spaceship_specular.ktx")) exit();
 
 		m_normalTexture.reset(new framework::Texture());
-		if (!m_normalTexture->initWithKtx("data/media/spaceship/spaceship_normal.ktx")) exit();
+		if (!m_normalTexture->init("data/media/spaceship/spaceship_normal.ktx")) exit();
 
 		m_program.reset(new framework::GpuProgram());
 		m_program->addShader(SHADERS_PATH + "shader.vsh.glsl");
@@ -127,11 +127,10 @@ public:
 			m_program->setMatrix<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);
 			m_program->setMatrix<TestAppUniforms>(UF::MODEL_MATRIX, model);
 			m_program->setVector<TestAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
-			m_program->setUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, *m_lightsBuffer, 0);
-
-			m_texture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::DIFFUSE_MAP));
-			m_normalTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::NORMAL_MAP));
-			m_specularTexture->setToSampler(m_program->getUniform<TestAppUniforms>(UF::SPECULAR_MAP));
+			m_program->setUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, m_lightsBuffer, 0);
+			m_program->setTexture<TestAppUniforms>(UF::DIFFUSE_MAP, m_texture);
+			m_program->setTexture<TestAppUniforms>(UF::NORMAL_MAP, m_normalTexture);
+			m_program->setTexture<TestAppUniforms>(UF::SPECULAR_MAP, m_specularTexture);
 
 			m_geometry->renderAllMeshes();
 		}

@@ -58,7 +58,9 @@ GLint getOGLShaderType(ShaderType type)
 
 }
 
-GpuProgram::GpuProgram() : m_program(0)
+GpuProgram::GpuProgram() : 
+	m_program(0),
+	m_freeTextureSlot(0)
 {
 	for (size_t i = 0; i < MAX_UNIFORMS; i++)
 		m_uniforms[i] = -1;
@@ -268,6 +270,8 @@ bool GpuProgram::use()
 	if (!isValid()) return false;
 
 	glUseProgram(m_program);
+	m_freeTextureSlot = 0;
+
 	return true;
 }
 

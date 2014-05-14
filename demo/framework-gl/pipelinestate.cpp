@@ -30,12 +30,25 @@ namespace framework
 PipelineState::PipelineState(GLenum state, bool enabled) :
 	m_state(state),
 	m_isEnabled(enabled),
-	m_wasEnabled(false)
+	m_wasEnabled(false),
+	m_oldBlendSrc(-1),
+	m_oldBlendDst(-1),
+	m_blendSrc(-1),
+	m_blendDst(-1)
 {
 }
 
 PipelineState::~PipelineState()
 {
+}
+
+void PipelineState::setBlending(GLint src, GLint dest)
+{
+	glGetIntegerv(GL_BLEND_SRC_ALPHA, &m_oldBlendSrc);
+	glGetIntegerv(GL_BLEND_DST_ALPHA, &m_oldBlendDst);
+
+	m_blendSrc = src;
+	m_blendDst = dest;
 }
 
 void PipelineState::apply()
@@ -45,6 +58,11 @@ void PipelineState::apply()
 	{
 		if (m_isEnabled) glEnable(m_state); else glDisable(m_state);
 	}
+
+	if (m_blendSrc != m_oldBlendSrc || m_blendDst != m_oldBlendDst)
+	{
+		glBlendFunc(m_blendSrc, m_blendDst);
+	}
 }
 
 void PipelineState::cancel()
@@ -52,6 +70,11 @@ void PipelineState::cancel()
 	if (m_wasEnabled != m_isEnabled)
 	{
 		if (m_wasEnabled) glEnable(m_state); else glDisable(m_state);
+	}
+
+	if (m_blendSrc != m_oldBlendSrc || m_blendDst != m_oldBlendDst)
+	{
+		glBlendFunc(m_oldBlendSrc, m_oldBlendDst);
 	}
 }
 

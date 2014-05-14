@@ -146,10 +146,8 @@ void Application::mainLoop()
 		double curTime = m_timer.getTime();
 		if (m_lastTime == 0) m_lastTime = curTime;
 		double delta = curTime - m_lastTime;
-		Texture::beginFrame();
 		render(delta);
 		renderGui(delta);
-		Texture::endFrame();
 		m_lastTime = curTime;
 
 		m_context.present();

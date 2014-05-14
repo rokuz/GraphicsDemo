@@ -27,8 +27,6 @@
 namespace framework
 {
 
-const int MAX_BOUND_TEXTURES = 32;
-
 class Texture : public Destroyable
 {
     friend class KtxLoader;
@@ -39,7 +37,7 @@ public:
     Texture();
 	virtual ~Texture();
     
-    bool initWithKtx(const std::string& fileName);
+    
 	bool init(const std::string& fileName);
 	bool initWithData(GLint format, const unsigned char* buffer, size_t width, size_t height, bool mipmaps = false);
 	bool initAsCubemap(const std::string& frontFilename, const std::string& backFilename,
@@ -48,11 +46,9 @@ public:
 
 	static void init();
 	static void cleanup();
-	static void beginFrame();
-	static void endFrame();
-	static void resetSlots();
+
+	void bind();
     
-    void setToSampler(int samplerIndex);
 	size_t getWidth() const { return m_width; }
 	size_t getHeight() const { return m_height; }
     
@@ -73,6 +69,9 @@ private:
 
 	void setSampling();
 	void generateMipmaps();
+
+	bool initWithKtx(const std::string& fileName);
+
 	virtual void destroy();
 };
 
