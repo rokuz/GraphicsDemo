@@ -33,7 +33,8 @@ FreeCamera::FreeCamera():
 	m_moveLeft(false),
 	m_moveRight(false),
 	m_rotationMode(false),
-	m_speed(50.0f)
+	m_speed(50.0f),
+	m_updateTime(0)
 {
 
 }
@@ -85,6 +86,7 @@ void FreeCamera::onMouseButton(double xpos, double ypos, int button, bool presse
 			m_lastMousePosition.x = (float)xpos;
 			m_lastMousePosition.y = (float)ypos;
 			m_currentMousePosition = m_lastMousePosition;
+			m_updateTime = 0;
 		}
 		else m_rotationMode = false;
 	}
@@ -100,6 +102,44 @@ void FreeCamera::onMouseMove(double xpos, double ypos)
 
 void FreeCamera::update(double elapsedTime)
 {
+	if (m_rotationMode)
+	{
+		m_updateTime += elapsedTime;
+		if (m_updateTime >= 1.0f / 60.0f)
+		{
+			vector2 delta = m_currentMousePosition - m_lastMousePosition;
+			if (fabs(delta.x) > 1e-5 || fabs(delta.y) > 1e-5)
+			{
+				float ang = this->m_camera.GetAngleOfView() * 0.5f;
+				float w = this->m_camera.GetNearPlane() * n_tan(n_deg2rad(ang));
+				float h = w / this->m_camera.GetAspectRatio();
+
+				vector2 screenSize = Application::instance()->getScreenSize();
+				float ax = n_rad2deg(atan2(w * (2.0f * delta.x / screenSize.x), this->m_camera.GetNearPlane()));
+				float ay = n_rad2deg(atan2(h * (2.0f * delta.y / screenSize.y), this->m_camera.GetNearPlane()));
+
+				vector2 old_angles = m_angles;
+				m_angles.x -= float(ax * 100.0 * m_updateTime);
+				m_angles.y += float(ay * 100.0 * m_updateTime);
+				if (m_angles.y > 89.9f) m_angles.y = 89.9f;
+				if (m_angles.y < -89.9) m_angles.y = -89.9f;
+
+				if (!old_angles.isequal(m_angles, 0.00001f))
+				{
+					quaternion q1;
+					q1.set_rotate_axis_angle(vector3(0, 1, 0), n_deg2rad(m_angles.x));
+					quaternion q2;
+					q2.set_rotate_axis_angle(vector3(1, 0, 0), n_deg2rad(m_angles.y));
+					m_orientation = q1 * q2;
+				}
+
+				m_lastMousePosition = m_currentMousePosition;
+			}
+
+			m_updateTime -= 1.0f / 60.0f;
+		}
+	}
+
 	if (m_moveForward)
 	{
 		m_position += (m_orientation.z_direction() * m_speed * (float)elapsedTime);
@@ -118,28 +158,6 @@ void FreeCamera::update(double elapsedTime)
 	if (m_moveRight)
 	{
 		m_position -= (m_orientation.x_direction() * m_speed * (float)elapsedTime);
-	}
-
-	if (m_rotationMode)
-	{
-		vector2 delta = m_currentMousePosition - m_lastMousePosition;
-		vector2 old_angles = m_angles;
-		m_angles.x -= delta.x * 200.0f * (float)elapsedTime;
-		m_angles.y += delta.y * 200.0f * (float)elapsedTime;
-		if (m_angles.y > 89.9f) m_angles.y = 89.9f;
-		if (m_angles.y < -89.9) m_angles.y = -89.9f;
-		//utils::Logger::toLogWithFormat("angles = (%.2f; %.2f)\n", m_angles.x, m_angles.y);
-
-		if (!old_angles.isequal(m_angles, 0.001f))
-		{
-			quaternion q1;
-			q1.set_rotate_axis_angle(vector3(0, 1, 0), n_deg2rad(m_angles.x));
-			quaternion q2;
-			q2.set_rotate_axis_angle(vector3(1, 0, 0), n_deg2rad(m_angles.y));
-			m_orientation = q1 * q2;
-		}
-
-		m_lastMousePosition = m_currentMousePosition;
 	}
 }
 

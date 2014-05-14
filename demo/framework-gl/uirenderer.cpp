@@ -138,14 +138,11 @@ void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 		// rendering
 		if (m_textRendering->use())
 		{
-			//Application::instance()->disableDepthTest()->apply();
-			//Application::instance()->defaultAlphaBlending()->apply();
+			PipelineState depthTestDisable(GL_DEPTH_TEST, false);
+			PipelineState blendingEnable(GL_BLEND, true);
 
-			GLboolean depthTestEnable = glIsEnabled(GL_DEPTH_TEST);
-			GLboolean blendingEnable = glIsEnabled(GL_BLEND);
-
-			glDisable(GL_DEPTH_TEST);
-			glEnable(GL_BLEND);
+			depthTestDisable.apply();
+			blendingEnable.apply();
 
 			// set up text data
 			vector2 halfScreeSize = gui::UIManager::instance().getScreenSize() * 0.5f;
@@ -179,8 +176,8 @@ void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 				glDrawArraysInstanced(GL_POINTS, 0, 1, i);
 			}
 
-			if (depthTestEnable) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-			if (blendingEnable) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+			depthTestDisable.cancel();
+			blendingEnable.cancel();
 		}
 	}
 }

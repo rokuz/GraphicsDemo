@@ -59,6 +59,7 @@
 #include "line3D.h"
 #include "texture.h"
 #include "uniformBuffer.h"
+#include "renderTarget.h"
 #include "gpuprogram.h"
 #include "standardGpuPrograms.h"
 
@@ -67,6 +68,8 @@
 
 #include "uimanager.h"
 #include "uifactory.h"
+
+#include "pipelinestate.h"
 
 #include "application.h"
 

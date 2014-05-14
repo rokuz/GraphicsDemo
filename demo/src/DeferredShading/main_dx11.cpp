@@ -172,15 +172,6 @@ public:
 		initLights();
 	}
 
-	virtual void shutdown()
-	{
-		if (utils::Profiler::instance().isRun())
-		{
-			utils::Profiler::instance().stop();
-		}
-		utils::Profiler::instance().saveToFile();
-	}
-
 	Entity initEntity(const std::string& geometry, 
 					  const std::string& texture, 
 					  const std::string& normalTexture, 
@@ -267,9 +258,18 @@ public:
 		m_debugLabel->setVisible(m_renderDebug);
 	}
 
+	virtual void shutdown()
+	{
+		if (utils::Profiler::instance().isRun())
+		{
+			utils::Profiler::instance().stop();
+		}
+		utils::Profiler::instance().saveToFile();
+	}
+
 	virtual void render(double elapsedTime)
 	{
-		TRACE_FUNCTION_HISTORICAL
+		TRACE_FUNCTION
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 

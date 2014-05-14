@@ -114,7 +114,7 @@ int Application::run(Application* self, const std::string& commandLine)
 		return EXIT_FAILURE;
 	}
 	initAxes();
-	startup(m_rootWindow);
+	startup(gui::UIManager::instance().root());
 
 	mainLoop();
 
@@ -234,13 +234,20 @@ bool Application::initGui()
 	{
 		return false;
 	}
-	m_rootWindow = gui::UIManager::instance().root();
 
 	// create a label to show fps statistics
 	m_fpsLabel = UIFactory::createLabel(gui::Coords::Coords(1.0f, -150.0f, 0.0f, 0.0f),
 										gui::Coords::Absolute(150.0f, 25.0f),
 										gui::RightAligned, gui::TopAligned, L"0 fps");
-	m_rootWindow->addChild(m_fpsLabel);
+	gui::UIManager::instance().root()->addChild(m_fpsLabel);
+
+	// create a label to show the legend
+	m_legendLabel = framework::UIFactory::createLabel(gui::Coords::Coords(0.0f, 0.0f, 0.0f, 0.0f),
+													  gui::Coords::Absolute(500.0f, 500.0f),
+													  gui::LeftAligned, gui::TopAligned,
+													  utils::Utils::toUnicode(m_legend));
+	m_legendLabel->setVisible(!m_legend.empty());
+	gui::UIManager::instance().root()->addChild(m_legendLabel);
 
 	return true;
 }
@@ -319,6 +326,52 @@ void Application::initAxes()
 
 	m_axisZ.reset(new Line3D());
 	m_axisZ->initWithArray(points_z);
+}
+
+void Application::applyStandardParams(const std::map<std::string, int>& params)
+{
+	auto w = params.find("w");
+	auto h = params.find("h");
+	if (w != params.end() && h != params.end())
+	{
+		m_info.windowWidth = w->second;
+		m_info.windowHeight = h->second;
+	}
+
+	auto msaa = params.find("msaa");
+	if (msaa != params.end())
+	{
+		m_info.samples = msaa->second;
+	}
+	else
+	{
+		m_info.samples = 0;
+	}
+
+	auto fullscreen = params.find("fullscreen");
+	if (fullscreen != params.end())
+	{
+		m_info.flags.fullscreen = (fullscreen->second != 0 ? 1 : 0);
+	}
+	else
+	{
+		m_info.flags.fullscreen = 0;
+	}
+}
+
+void Application::setLegend(const std::string& legend)
+{
+	m_legend = legend;
+	if (m_legendLabel != 0)
+	{
+		m_legendLabel->setVisible(!m_legend.empty());
+		m_legendLabel->setText(utils::Utils::toUnicode(m_legend.c_str()));
+	}
+}
+
+vector2 Application::getScreenSize()
+{
+	return vector2((float)m_info.windowWidth, (float)m_info.windowHeight);
 }
 
 void APIENTRY Application::debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,

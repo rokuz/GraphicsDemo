@@ -21,50 +21,27 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __GEOMETRY_3D_H__
-#define __GEOMETRY_3D_H__
-
-#include "geometry.h"
+#ifndef __PIPELINE_STATE_H__
+#define __PIPELINE_STATE_H__
 
 namespace framework
 {
 
-class Line3D;
-
-class Geometry3D : public Destroyable
+class PipelineState
 {
-	friend class Application;
-
 public:
-    Geometry3D();
-    virtual ~Geometry3D();
-	
-	bool init(const std::string& fileName);
-    
-    size_t getMeshesCount() const;
-    void renderMesh(size_t index);
-	void renderAllMeshes();
-	void renderBoundingBox(const matrix44& mvp);
+	PipelineState(GLenum state, bool enabled);
+	~PipelineState();
 
-	const bbox3& getBoundingBox() const { return m_boundingBox; }
+	void apply();
+	void cancel();
 
 private:
-	GLuint m_vertexArray;
-	GLuint m_vertexBuffer;
-	GLuint m_indexBuffer;
-
-	geom::Data::Meshes m_meshes;
-	size_t m_additionalUVsCount;
-	size_t m_verticesCount;
-	size_t m_indicesCount;
-	bbox3 m_boundingBox;
-
-	bool m_isLoaded;
-	std::shared_ptr<Line3D> m_boundingBoxLine;
-
-	virtual void destroy();
+	GLenum m_state;
+	bool m_isEnabled;
+	bool m_wasEnabled;
 };
 
 }
 
-#endif //__GEOMETRY_3D_H__
+#endif

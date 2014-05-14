@@ -21,50 +21,38 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __GEOMETRY_3D_H__
-#define __GEOMETRY_3D_H__
-
-#include "geometry.h"
+#include "stdafx.h"
+#include "pipelinestate.h"
 
 namespace framework
 {
 
-class Line3D;
-
-class Geometry3D : public Destroyable
+PipelineState::PipelineState(GLenum state, bool enabled) :
+	m_state(state),
+	m_isEnabled(enabled),
+	m_wasEnabled(false)
 {
-	friend class Application;
-
-public:
-    Geometry3D();
-    virtual ~Geometry3D();
-	
-	bool init(const std::string& fileName);
-    
-    size_t getMeshesCount() const;
-    void renderMesh(size_t index);
-	void renderAllMeshes();
-	void renderBoundingBox(const matrix44& mvp);
-
-	const bbox3& getBoundingBox() const { return m_boundingBox; }
-
-private:
-	GLuint m_vertexArray;
-	GLuint m_vertexBuffer;
-	GLuint m_indexBuffer;
-
-	geom::Data::Meshes m_meshes;
-	size_t m_additionalUVsCount;
-	size_t m_verticesCount;
-	size_t m_indicesCount;
-	bbox3 m_boundingBox;
-
-	bool m_isLoaded;
-	std::shared_ptr<Line3D> m_boundingBoxLine;
-
-	virtual void destroy();
-};
-
 }
 
-#endif //__GEOMETRY_3D_H__
+PipelineState::~PipelineState()
+{
+}
+
+void PipelineState::apply()
+{
+	m_wasEnabled = (glIsEnabled(m_state) != 0);
+	if (m_wasEnabled != m_isEnabled)
+	{
+		if (m_isEnabled) glEnable(m_state); else glDisable(m_state);
+	}
+}
+
+void PipelineState::cancel()
+{
+	if (m_wasEnabled != m_isEnabled)
+	{
+		if (m_wasEnabled) glEnable(m_state); else glDisable(m_state);
+	}
+}
+
+}

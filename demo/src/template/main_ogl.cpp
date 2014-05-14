@@ -25,7 +25,7 @@ public:
 
 	virtual void init(const std::map<std::string, int>& params)
 	{
-		m_info.title = "Test application (OpenGL 4.x)";
+		m_info.title = "Test application (OpenGL 4)";
 		m_info.flags.fullscreen = 0;
 		m_info.samples = 4;
 	}
@@ -81,8 +81,11 @@ public:
 			m_lightsBuffer->setElement(i, m_lightManager.getRawLightData(i));
 		}
 
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
+		framework::PipelineState depthTestEnable(GL_DEPTH_TEST, true);
+		depthTestEnable.apply();
+
+		framework::PipelineState cullingEnable(GL_CULL_FACE, true);
+		cullingEnable.apply();
 	}
 
 	virtual void shutdown()

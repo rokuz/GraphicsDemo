@@ -63,11 +63,77 @@ public:
     }
 };
 
+struct ImageInfo
+{
+	FIBITMAP* dib;
+	BYTE* data;
+	DWORD width;
+	DWORD height;
+	unsigned int bpp;
+	ImageInfo() : dib(0), data(0), width(0), height(0), bpp(0) {}
+};
+
 namespace
 {
 	void freeImageOutput(FREE_IMAGE_FORMAT fif, const char *msg)
 	{
 		utils::Logger::toLogWithFormat("FreeImage: %s.\n", msg);
+	}
+
+	bool gatherImageInfo(ImageInfo& info, const std::string& fileName)
+	{
+		if (!utils::Utils::exists(fileName))
+		{
+			utils::Logger::toLogWithFormat("Error: file '%s' has not been found.\n", fileName.c_str());
+			return false;
+		}
+
+		FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+		fif = FreeImage_GetFileType(fileName.c_str(), 0);
+		if (fif == FIF_UNKNOWN)
+		{
+			fif = FreeImage_GetFIFFromFilename(fileName.c_str());
+		}
+		if (fif == FIF_UNKNOWN)
+		{
+			utils::Logger::toLogWithFormat("Error: format of file '%s' is unknown.\n", fileName.c_str());
+			return false;
+		}
+
+		info.dib = FreeImage_Load(fif, fileName.c_str());
+		if (info.dib == 0)
+		{
+			utils::Logger::toLogWithFormat("Error: could not load file '%s'.\n", fileName.c_str());
+			return false;
+		}
+
+		info.data = FreeImage_GetBits(info.dib);
+		info.width = FreeImage_GetWidth(info.dib);
+		info.height = FreeImage_GetHeight(info.dib);
+		info.bpp = FreeImage_GetBPP(info.dib);
+
+		return true;
+	}
+
+	bool getFormatByImageInfo(const ImageInfo& info, GLint& format)
+	{
+		if (info.bpp == 32) 
+		{
+			format = GL_RGBA8;
+			return true;
+		}
+		else if (info.bpp == 24) 
+		{
+			format = GL_RGB8;
+			return true;
+		}
+
+		return false;
+	}
+
+	bool compareImageInfos(ImageInfo& info1, ImageInfo& info2)
+	{
+		return (info1.width == info2.width) && (info1.height == info2.height) && (info1.bpp == info2.bpp);
 	}
 
 	int getPixelFormat(int textureFormat)
@@ -177,11 +243,37 @@ bool Texture::initWithKtx(const std::string& fileName)
 	}
 	return m_isLoaded;
 }
-bool Texture::initWithData(GLint format, const std::vector<unsigned char>& buffer, size_t width, size_t height, bool mipmaps)
+
+bool Texture::init(const std::string& fileName)
 {
 	destroy();
 
-	m_isLoaded = true;
+	ImageInfo info;
+	if (!gatherImageInfo(info, fileName))
+	{
+		return false;
+	}
+
+	GLint format;
+	if (!getFormatByImageInfo(info, format))
+	{
+		utils::Logger::toLogWithFormat("Error: format of file '%s' is unsupported.\n", fileName.c_str());
+		return false;
+	}
+
+	bool result = initWithData(format, info.data, info.width, info.height, true);
+
+	if (info.dib != 0) 
+	{
+		FreeImage_Unload(info.dib);
+	}
+
+	return result;
+}
+
+bool Texture::initWithData(GLint format, const unsigned char* buffer, size_t width, size_t height, bool mipmaps)
+{
+	destroy();
 
 	m_target = GL_TEXTURE_2D;
 	m_width = width;
@@ -189,7 +281,7 @@ bool Texture::initWithData(GLint format, const std::vector<unsigned char>& buffe
 	glGenTextures(1, &m_texture);
 	glBindTexture(m_target, m_texture);
 	glTexStorage2D(m_target, 1, format, width, height);
-	glTexSubImage2D(m_target, 0, 0, 0, width, height, getPixelFormat(format), GL_UNSIGNED_BYTE, buffer.data());
+	glTexSubImage2D(m_target, 0, 0, 0, width, height, getPixelFormat(format), GL_UNSIGNED_BYTE, buffer);
 	setSampling();
 	if (mipmaps) generateMipmaps();
 	glBindTexture(m_target, 0);
@@ -200,7 +292,74 @@ bool Texture::initWithData(GLint format, const std::vector<unsigned char>& buffe
 		return false;
 	}
 
+	m_isLoaded = true;
 	initDestroyable();
+	return m_isLoaded;
+}
+
+bool Texture::initAsCubemap( const std::string& frontFilename, const std::string& backFilename, 
+							 const std::string& leftFilename, const std::string& rightFilename, 
+							 const std::string& topFilename, const std::string& bottomFilename )
+{
+	destroy();
+
+	std::string filenames[6] = { rightFilename, leftFilename, topFilename, bottomFilename, frontFilename, backFilename };
+	ImageInfo info[6];
+	auto cleanFunc = [&]()
+	{
+		for (size_t i = 0; i < 6; i++) if (info[i].dib != 0) FreeImage_Unload(info[i].dib);
+	};
+
+	for (size_t i = 0; i < 6; i++)
+	{
+		if (!gatherImageInfo(info[i], filenames[i]))
+		{
+			cleanFunc();
+			return false;
+		}
+
+		if (i > 0 && !compareImageInfos(info[i], info[i - 1]))
+		{			
+			utils::Logger::toLogWithFormat("Error: could not create a cubemap, files have different properties (width, height, bpp).\n");
+			cleanFunc();
+			return false;
+		}
+	}
+
+	GLint format;
+	if (!getFormatByImageInfo(info[0], format))
+	{
+		utils::Logger::toLogWithFormat("Error: format of a cubemap is unsupported.\n");
+		cleanFunc();
+		return false;
+	}
+	int pixelFormat = getPixelFormat(format);
+
+	m_target = GL_TEXTURE_CUBE_MAP;
+	m_width = info[0].width;
+	m_height = info[0].height;
+	glGenTextures(1, &m_texture);
+	glBindTexture(m_target, m_texture);
+	glTexStorage2D(m_target, 1, format, m_width, m_height);
+	for (size_t i = 0; i < 6; i++)
+	{
+		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, m_width, m_height, pixelFormat, GL_UNSIGNED_BYTE, info[i].dib);
+	}
+	setSampling();
+	generateMipmaps();
+	glBindTexture(m_target, 0);
+
+	cleanFunc();
+
+	if (CHECK_GL_ERROR)
+	{
+		destroy();
+		return false;
+	}
+
+	m_isLoaded = true;
+	initDestroyable();
+
 	return m_isLoaded;
 }
 
@@ -210,6 +369,10 @@ void Texture::setSampling()
 	{
 		glTexParameteri(m_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		if (m_target == GL_TEXTURE_CUBE_MAP)
+		{
+			glTexParameteri(m_target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		}
 		glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	}

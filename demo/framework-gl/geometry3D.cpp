@@ -36,8 +36,7 @@ Geometry3D::Geometry3D() :
     m_additionalUVsCount(0),
     m_isLoaded(false),
 	m_verticesCount(0),
-	m_indicesCount(0),
-	m_boundingBoxLine(0)
+	m_indicesCount(0)
 {
     
 }
@@ -67,13 +66,9 @@ void Geometry3D::destroy()
 		m_vertexArray = 0;
     }
 
-	m_isLoaded = false;
+	m_boundingBoxLine.reset();
 
-	if (m_boundingBoxLine)
-	{
-		delete m_boundingBoxLine;
-		m_boundingBoxLine = 0;
-	}
+	m_isLoaded = false;
 }
 bool Geometry3D::init(const std::string& fileName)
 {
@@ -172,11 +167,10 @@ void Geometry3D::renderBoundingBox(const matrix44& mvp)
 			points[i] = m_boundingBox.corner_point(indices[i]);
 		}
 		
-		m_boundingBoxLine = new framework::Line3D();
+		m_boundingBoxLine.reset(new framework::Line3D());
 		if (!m_boundingBoxLine->initWithArray(points))
 		{
-			delete m_boundingBoxLine;
-			m_boundingBoxLine = 0;
+			m_boundingBoxLine.reset();
 		}
 	}
 

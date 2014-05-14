@@ -40,7 +40,11 @@ public:
 	virtual ~Texture();
     
     bool initWithKtx(const std::string& fileName);
-	bool initWithData(GLint format, const std::vector<unsigned char>& buffer, size_t width, size_t height, bool mipmaps = false);
+	bool init(const std::string& fileName);
+	bool initWithData(GLint format, const unsigned char* buffer, size_t width, size_t height, bool mipmaps = false);
+	bool initAsCubemap(const std::string& frontFilename, const std::string& backFilename,
+					   const std::string& leftFilename, const std::string& rightFilename,
+					   const std::string& topFilename, const std::string& bottomFilename);
 
 	static void init();
 	static void cleanup();

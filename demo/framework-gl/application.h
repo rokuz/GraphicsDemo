@@ -51,6 +51,7 @@ public:
 	void exit();
 	void resize();
 	bool isDebugEnabled() const;
+	vector2 getScreenSize();
 
 protected:
 	struct AppInfo
@@ -81,13 +82,17 @@ protected:
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
 
+	void applyStandardParams(const std::map<std::string, int>& params);
+	void setLegend(const std::string& legend);
+
 private:
 	static Application* m_self;
 	OpenGLContext m_context;
 	utils::Timer m_timer;
 	bool m_isRunning;
 	double m_lastTime;
-	gui::WidgetPtr_T m_rootWindow;
+	gui::LabelPtr_T m_legendLabel;
+	std::string m_legend;
 	gui::LabelPtr_T m_fpsLabel;
 	utils::FpsCounter m_fpsCounter;
 	std::list<std::weak_ptr<Destroyable> > m_destroyableList;

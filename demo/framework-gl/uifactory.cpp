@@ -52,7 +52,7 @@ gui::OverlayPtr_T UIFactory::createOverlay(const gui::Coords& position, const gu
 bool FontResourceOGL::createResource(const gui::Font& font, const std::vector<unsigned char>& buffer, size_t width, size_t height)
 {
 	m_texture.reset(new Texture());
-	if (!m_texture->initWithData(GL_R8, buffer, width, height))
+	if (!m_texture->initWithData(GL_R8, buffer.data(), width, height))
 	{
 		return false;
 	}
