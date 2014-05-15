@@ -3,18 +3,17 @@
 // uniforms
 DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
 	MODELVIEWPROJECTION_MATRIX,
-	MODEL_MATRIX,
+	LIGHTS_DATA,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
-	VIEW_POSITION,
-	LIGHTS_DATA_BUFFER
+	SKYBOX_MAP
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<DSAppUniforms>::Uniform
 
 // constants
 const int MAX_LIGHTS_COUNT = 64;
-const std::string SHADERS_PATH = "data/shaders/gl/win32/template/";//deferredshading/";
+const std::string SHADERS_PATH = "data/shaders/gl/win32/deferredshading/";
 
 // application
 class DeferredShadingApp : public framework::Application
@@ -56,7 +55,7 @@ public:
 		// overlays
 		initOverlays(root);
 
-		m_program.reset(new framework::GpuProgram());
+		/*m_program.reset(new framework::GpuProgram());
 		m_program->addShader(SHADERS_PATH + "shader.vsh.glsl");
 		m_program->addShader(SHADERS_PATH + "shader.fsh.glsl");
 		if (!m_program->init()) exit();
@@ -66,7 +65,15 @@ public:
 		m_program->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalSampler");
 		m_program->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularSampler");
 		m_program->bindUniform<DSAppUniforms>(UF::VIEW_POSITION, "viewPosition");
-		m_program->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");
+		m_program->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");*/
+
+		m_skyboxRendering.reset(new framework::GpuProgram());
+		m_skyboxRendering->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
+		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.gsh.glsl");
+		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.fsh.glsl");
+		if (!m_skyboxRendering->init()) exit();
+		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
 
 		// entity
 		m_entity = initEntity("data/media/cube/cube.geom",
@@ -205,14 +212,17 @@ public:
 		GLfloat depth = 1.0f;
 		glClearBufferfv(GL_COLOR, 0, color);
 		glClearBufferfv(GL_DEPTH, 0, &depth);
+
+		//skybox
+		renderSkybox();
     
-		if (m_program->use())
-		{
-			for (size_t i = 0; i < m_entitiesData.size(); i++)
-			{
-				renderEntity(m_entity, m_entitiesData[i]);
-			}
-		}
+		//if (m_program->use())
+		//{
+		//	for (size_t i = 0; i < m_entitiesData.size(); i++)
+		//	{
+		//		renderEntity(m_entity, m_entitiesData[i]);
+		//	}
+		//}
 
 		// debug rendering
 		renderDebug();
@@ -231,7 +241,7 @@ public:
 		//m_entityDataBuffer->setData(entityDataRaw);
 		//m_entityDataBuffer->applyChanges();
 
-		m_program->setMatrix<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
+		/*m_program->setMatrix<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
 		m_program->setMatrix<DSAppUniforms>(UF::MODEL_MATRIX, entityData.model);
 		m_program->setVector<DSAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 		m_program->setUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, m_lightsBuffer, 0);
@@ -239,8 +249,29 @@ public:
 		m_program->setTexture<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
 		m_program->setTexture<DSAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
 
-		entity.geometry->renderAllMeshes();
+		entity.geometry->renderAllMeshes();*/
 	}
+
+	void renderSkybox()
+	{
+		if (m_skyboxRendering->use())
+		{
+			framework::PipelineState depthTestDisable(GL_DEPTH_TEST, false);
+			depthTestDisable.apply();
+
+			matrix44 model;
+			model.set_translation(m_camera.getPosition());
+			matrix44 mvp = model * m_camera.getView() * m_camera.getProjection();
+
+			m_skyboxRendering->setTexture<DSAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
+			m_skyboxRendering->setMatrix<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, mvp);
+
+			glDrawArrays(GL_POINTS, 0, 1);
+
+			depthTestDisable.cancel();
+		}
+	}
+
 
 	void renderDebug()
 	{
@@ -368,10 +399,6 @@ private:
 	Entity m_entity;
 	std::vector<EntityData> m_entitiesData;
 
-	// -----
-	std::shared_ptr<framework::GpuProgram> m_program;
-	// -----
-	
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 	
 	std::shared_ptr<framework::Texture> m_skyboxTexture;

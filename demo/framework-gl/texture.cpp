@@ -29,40 +29,6 @@
 namespace framework
 {
 
-class KtxLoader : public Texture::Loader
-{
-public:
-    virtual ~KtxLoader() {}
-    
-    virtual bool load(Texture* texture, const std::string& fileName)
-    {
-		if (!utils::Utils::exists(fileName))
-		{
-			utils::Logger::toLogWithFormat("Error: file '%s' has not been found.\n", fileName.c_str());
-			return false;
-		}
-
-        KTX_error_code result;
-        
-        GLuint tex = 0;
-        GLenum target = 0;
-        KTX_dimensions dim;
-        GLboolean hasMips = 0;
-        GLenum error = 0;
-        result = ktxLoadTextureN(fileName.c_str(), &tex, &target, &dim, &hasMips, &error, NULL, NULL);
-        if (result != KTX_SUCCESS)
-        {
-			utils::Logger::toLog(std::string("Error: failed to load a texture, ") + fileName);
-            return false;
-        }
-        
-        texture->m_texture = tex;
-        texture->m_target = target;
-
-        return true;
-    }
-};
-
 struct ImageInfo
 {
 	FIBITMAP* dib;
@@ -107,6 +73,8 @@ namespace
 			return false;
 		}
 
+		FreeImage_FlipVertical(info.dib);
+
 		info.data = FreeImage_GetBits(info.dib);
 		info.width = FreeImage_GetWidth(info.dib);
 		info.height = FreeImage_GetHeight(info.dib);
@@ -136,7 +104,7 @@ namespace
 		return (info1.width == info2.width) && (info1.height == info2.height) && (info1.bpp == info2.bpp);
 	}
 
-	int getPixelFormat(int textureFormat)
+	int findPixelFormat(int textureFormat)
 	{
 		switch (textureFormat)
 		{
@@ -205,16 +173,64 @@ namespace
 
 		return -1;
 	}
+
+	int findPixelFormatFreeImage(int textureFormat)
+	{
+		switch (textureFormat)
+		{
+		case GL_RGB8: return GL_BGR;
+		case GL_RGBA8: return GL_BGRA;
+		}
+
+		return -1;
+	}
 }
 
-int Texture::m_freeTextureSlot = 0;
+class KtxLoader : public Texture::Loader
+{
+public:
+    virtual ~KtxLoader() {}
+    
+    virtual bool load(Texture* texture, const std::string& fileName)
+    {
+		if (!utils::Utils::exists(fileName))
+		{
+			utils::Logger::toLogWithFormat("Error: file '%s' has not been found.\n", fileName.c_str());
+			return false;
+		}
+
+        KTX_error_code result;
+        
+        GLuint tex = 0;
+        GLenum target = 0;
+        KTX_dimensions dim;
+        GLboolean hasMips = 0;
+        GLenum error = 0;
+        result = ktxLoadTextureN(fileName.c_str(), &tex, &target, &dim, &hasMips, &error, NULL, NULL);
+        if (result != KTX_SUCCESS)
+        {
+			utils::Logger::toLog(std::string("Error: failed to load a texture, ") + fileName);
+            return false;
+        }
+
+		glGetTexLevelParameteriv(target, 0, GL_TEXTURE_INTERNAL_FORMAT, &texture->m_format);
+		texture->m_pixelFormat = findPixelFormat(texture->m_format);
+        
+        texture->m_texture = tex;
+        texture->m_target = target;
+
+        return true;
+    }
+};
 
 Texture::Texture():
     m_isLoaded(false),
 	m_texture(0),
 	m_target(0),
 	m_width(0),
-	m_height(0)
+	m_height(0),
+	m_format(-1),
+	m_pixelFormat(-1)
 {
 }
 
@@ -239,6 +255,13 @@ bool Texture::initWithKtx(const std::string& fileName)
 		generateMipmaps();
 		glBindTexture(m_target, 0);
 
+		if (CHECK_GL_ERROR)
+		{
+			m_isLoaded = false;
+			destroy();
+			return m_isLoaded;
+		}
+
 		initDestroyable();
 	}
 	return m_isLoaded;
@@ -256,17 +279,27 @@ bool Texture::init(const std::string& fileName)
 	ImageInfo info;
 	if (!gatherImageInfo(info, fileName))
 	{
+		utils::Logger::toLogWithFormat("Error: could not get image info from the file '%s'.\n", fileName.c_str());
+		if (info.dib != 0) FreeImage_Unload(info.dib);
 		return false;
 	}
 
-	GLint format;
-	if (!getFormatByImageInfo(info, format))
+	if (!getFormatByImageInfo(info, m_format))
 	{
-		utils::Logger::toLogWithFormat("Error: format of file '%s' is unsupported.\n", fileName.c_str());
+		utils::Logger::toLogWithFormat("Error: format of the file '%s' is unsupported.\n", fileName.c_str());
+		if (info.dib != 0) FreeImage_Unload(info.dib);
 		return false;
 	}
 
-	bool result = initWithData(format, info.data, info.width, info.height, true);
+	m_pixelFormat = findPixelFormatFreeImage(m_format);
+	if (m_pixelFormat < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: could not find appropriate pixel format for the file '%s'.\n", fileName.c_str());
+		if (info.dib != 0) FreeImage_Unload(info.dib);
+		return false;
+	}
+
+	bool result = initWithData(m_format, info.data, info.width, info.height, true, m_pixelFormat);
 
 	if (info.dib != 0) 
 	{
@@ -276,17 +309,20 @@ bool Texture::init(const std::string& fileName)
 	return result;
 }
 
-bool Texture::initWithData(GLint format, const unsigned char* buffer, size_t width, size_t height, bool mipmaps)
+bool Texture::initWithData(GLint format, const unsigned char* buffer, size_t width, size_t height, bool mipmaps, int pixelFormat)
 {
 	destroy();
 
 	m_target = GL_TEXTURE_2D;
+	m_format = format;
+	m_pixelFormat = pixelFormat < 0 ? findPixelFormat(format) : pixelFormat;
 	m_width = width;
 	m_height = height;
 	glGenTextures(1, &m_texture);
 	glBindTexture(m_target, m_texture);
-	glTexStorage2D(m_target, 1, format, width, height);
-	glTexSubImage2D(m_target, 0, 0, 0, width, height, getPixelFormat(format), GL_UNSIGNED_BYTE, buffer);
+	glTexStorage2D(m_target, 1, m_format, m_width, m_height);
+	glTexSubImage2D(m_target, 0, 0, 0, m_width, m_height, m_pixelFormat, GL_UNSIGNED_BYTE, buffer);
+
 	setSampling();
 	if (mipmaps) generateMipmaps();
 	glBindTexture(m_target, 0);
@@ -331,24 +367,29 @@ bool Texture::initAsCubemap( const std::string& frontFilename, const std::string
 		}
 	}
 
-	GLint format;
-	if (!getFormatByImageInfo(info[0], format))
+	if (!getFormatByImageInfo(info[0], m_format))
 	{
 		utils::Logger::toLogWithFormat("Error: format of a cubemap is unsupported.\n");
 		cleanFunc();
 		return false;
 	}
-	int pixelFormat = getPixelFormat(format);
+	m_pixelFormat = findPixelFormatFreeImage(m_format);
+	if (m_pixelFormat < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: could not create a cubemap, pixel format is unsupported.\n");
+		cleanFunc();
+		return false;
+	}
 
 	m_target = GL_TEXTURE_CUBE_MAP;
 	m_width = info[0].width;
 	m_height = info[0].height;
 	glGenTextures(1, &m_texture);
 	glBindTexture(m_target, m_texture);
-	glTexStorage2D(m_target, 1, format, m_width, m_height);
+	glTexStorage2D(m_target, 1, m_format, m_width, m_height);
 	for (size_t i = 0; i < 6; i++)
 	{
-		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, m_width, m_height, pixelFormat, GL_UNSIGNED_BYTE, info[i].data);
+		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, m_width, m_height, m_pixelFormat, GL_UNSIGNED_BYTE, info[i].data);
 	}
 	setSampling();
 	generateMipmaps();
@@ -415,7 +456,7 @@ void Texture::bind()
 	glBindTexture(m_target, m_texture);
 }
 
-void saveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture)
+void SaveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture)
 {
 	if (!texture) return;
 
@@ -436,13 +477,17 @@ void saveTextureToPng(const std::string& filename, std::shared_ptr<Texture> text
 	sz += componentSize;
 	sz /= 8;
 
-	GLint format = 0;
-	glGetTexLevelParameteriv(texture->m_target, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
-
 	size_t bufSize = texture->getWidth() * texture->getHeight() * sz;
 	pixels.reset(new unsigned char[bufSize]);
 
-	glGetTexImage(texture->m_target, 0, getPixelFormat(format), GL_UNSIGNED_BYTE, pixels.get());
+	int pixelFormat = texture->getPixelFormat();
+	if (pixelFormat < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: failed to save file '%s', pixel format is unsupported.\n", filename.c_str());
+		return;
+	}
+
+	glGetTexImage(texture->m_target, 0, pixelFormat, GL_UNSIGNED_BYTE, pixels.get());
 	if (CHECK_GL_ERROR) return;
 	
 	FIBITMAP *bitmap = FreeImage_AllocateT(FIT_BITMAP, texture->getWidth(), texture->getHeight(), sz * 8);
@@ -450,6 +495,7 @@ void saveTextureToPng(const std::string& filename, std::shared_ptr<Texture> text
 	{
 		auto dat = FreeImage_GetBits(bitmap);
 		memcpy(dat, pixels.get(), bufSize);
+		FreeImage_FlipVertical(bitmap);
 		BOOL r = FreeImage_Save(FIF_PNG, bitmap, filename.c_str());
 		FreeImage_Unload(bitmap);
 	}

@@ -31,7 +31,7 @@ class Texture : public Destroyable
 {
     friend class KtxLoader;
 	friend class Application;
-	friend void saveTextureToPng(const std::string&, std::shared_ptr<Texture>);
+	friend void SaveTextureToPng(const std::string&, std::shared_ptr<Texture>);
     
 public:
     Texture();
@@ -39,7 +39,7 @@ public:
     
     
 	bool init(const std::string& fileName);
-	bool initWithData(GLint format, const unsigned char* buffer, size_t width, size_t height, bool mipmaps = false);
+	bool initWithData(GLint format, const unsigned char* buffer, size_t width, size_t height, bool mipmaps = false, int pixelFormat = -1);
 	bool initAsCubemap(const std::string& frontFilename, const std::string& backFilename,
 					   const std::string& leftFilename, const std::string& rightFilename,
 					   const std::string& topFilename, const std::string& bottomFilename);
@@ -51,6 +51,8 @@ public:
     
 	size_t getWidth() const { return m_width; }
 	size_t getHeight() const { return m_height; }
+	int getFormat() const { return m_format; }
+	int getPixelFormat() const { return m_pixelFormat; }
     
     class Loader
     {
@@ -64,8 +66,9 @@ private:
 	GLenum m_target;
 	size_t m_width;
 	size_t m_height;
+	int m_format;
+	int m_pixelFormat;
 	bool m_isLoaded;
-	static int m_freeTextureSlot;
 
 	void setSampling();
 	void generateMipmaps();
@@ -75,7 +78,7 @@ private:
 	virtual void destroy();
 };
 
-void saveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture);
+void SaveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture);
 
 }
 

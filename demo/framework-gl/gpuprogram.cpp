@@ -185,7 +185,7 @@ bool GpuProgram::compileShader( GLuint* shader, GLenum type, const std::string& 
 		{
 			GLchar *log = new GLchar[logLength];
 			glGetShaderInfoLog(*shader, logLength, &logLength, log);
-			utils::Logger::toLogWithFormat("Shader compilation log:\n%s", log);
+			utils::Logger::toLogWithFormat("Shader '%s' compilation log:\n%s", fileName.c_str(), log);
 			delete[] log;
 		}
 	}
@@ -213,7 +213,7 @@ bool GpuProgram::linkProgram( GLuint prog )
 		{
 			GLchar *log = new GLchar[logLength];
 			glGetProgramInfoLog(prog, logLength, &logLength, log);
-			utils::Logger::toLogWithFormat("Gpu program linkage log:\n%s", log);
+			utils::Logger::toLogWithFormat("Gpu program '%s' linkage log:\n%s", getProgramName().c_str(), log);
 			delete[] log;
 		}
 	}

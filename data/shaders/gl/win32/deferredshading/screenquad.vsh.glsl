@@ -1,15 +1,6 @@
-struct VS_INPUT
-{
-    float3 position : POSITION;
-};
-struct VS_OUTPUT
-{
-    float4 position : SV_POSITION;
-};
+#version 430 core
 
-VS_OUTPUT main(VS_INPUT input)
+void main()
 {
-    VS_OUTPUT output;
-    output.position = float4(0,0,0,1);
-    return output;
+    gl_Position = vec4(0, 0, 0, 1);
 }

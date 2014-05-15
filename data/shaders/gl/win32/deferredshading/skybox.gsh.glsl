@@ -1,29 +1,24 @@
-#include <common.h.hlsl>
+#version 430 core
 
-struct GS_INPUT
+layout(points) in;
+layout(triangle_strip, max_vertices = 36) out;
+out vec3 uv0;
+
+uniform mat4 modelViewProjectionMatrix;
+
+const vec4 cubeVerts[8] = 
 {
-    float4 position : SV_POSITION;
+	vec4(-0.5, -0.5, -0.5, 1),// LB  0
+	vec4(-0.5, 0.5, -0.5, 1), // LT  1
+	vec4(0.5, -0.5, -0.5, 1), // RB  2
+	vec4(0.5, 0.5, -0.5, 1),  // RT  3
+	vec4(-0.5, -0.5, 0.5, 1), // LB  4
+	vec4(-0.5, 0.5, 0.5, 1),  // LT  5
+	vec4(0.5, -0.5, 0.5, 1),  // RB  6
+	vec4(0.5, 0.5, 0.5, 1)    // RT  7
 };
 
-struct VS_OUTPUT_SKYBOX
-{
-    float4 position : SV_POSITION;
-	float3 uv : TEXCOORD0;
-};
-
-static const float4 cubeVerts[8] = 
-{
-	float4(-0.5, -0.5, -0.5, 1),// LB  0
-	float4(-0.5, 0.5, -0.5, 1), // LT  1
-	float4(0.5, -0.5, -0.5, 1), // RB  2
-	float4(0.5, 0.5, -0.5, 1),  // RT  3
-	float4(-0.5, -0.5, 0.5, 1), // LB  4
-	float4(-0.5, 0.5, 0.5, 1),  // LT  5
-	float4(0.5, -0.5, 0.5, 1),  // RB  6
-	float4(0.5, 0.5, 0.5, 1)    // RT  7
-};
-
-static const int cubeIndices[24] =
+const int cubeIndices[24] =
 {
 	0, 1, 2, 3, // front
 	7, 6, 3, 2, // right
@@ -33,28 +28,47 @@ static const int cubeIndices[24] =
 	3, 1, 7, 5  // top
 };
 
-[maxvertexcount(36)]
-void main(point GS_INPUT pnt[1], inout TriangleStream<VS_OUTPUT_SKYBOX> triStream )
+void main()
 {
-	VS_OUTPUT_SKYBOX v[8];
-	[unroll]
+	vec4 v[8];
+	
 	for (int j = 0; j < 8; j++)
 	{
-		v[j].position = mul(cubeVerts[j], modelViewProjection);
-		v[j].uv = cubeVerts[j].xyz;
+		v[j] = modelViewProjectionMatrix * cubeVerts[j];
 	}
 	
-	[unroll]
 	for (int i = 0; i < 6; i++)
 	{
-		triStream.Append(v[cubeIndices[i * 4]]);
-		triStream.Append(v[cubeIndices[i * 4 + 2]]);
-		triStream.Append(v[cubeIndices[i * 4 + 1]]);
-		triStream.RestartStrip();
-		
-		triStream.Append(v[cubeIndices[i * 4 + 1]]);
-		triStream.Append(v[cubeIndices[i * 4 + 2]]);
-		triStream.Append(v[cubeIndices[i * 4 + 3]]);
-		triStream.RestartStrip();
+		int index = cubeIndices[i * 4];
+		gl_Position = v[index];
+		uv0 = cubeVerts[index].xyz;
+		EmitVertex();
+
+		index = cubeIndices[i * 4 + 2];
+		gl_Position = v[index];
+		uv0 = cubeVerts[index].xyz;
+		EmitVertex();
+
+		index = cubeIndices[i * 4 + 1];
+		gl_Position = v[index];
+		uv0 = cubeVerts[index].xyz;
+		EmitVertex();
+		EndPrimitive();
+
+		index = cubeIndices[i * 4 + 1];
+		gl_Position = v[index];
+		uv0 = cubeVerts[index].xyz;
+		EmitVertex();
+
+		index = cubeIndices[i * 4 + 2];
+		gl_Position = v[index];
+		uv0 = cubeVerts[index].xyz;
+		EmitVertex();
+
+		index = cubeIndices[i * 4 + 3];
+		gl_Position = v[index];
+		uv0 = cubeVerts[index].xyz;
+		EmitVertex();
+		EndPrimitive();
 	}
 }
