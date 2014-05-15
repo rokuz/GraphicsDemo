@@ -92,7 +92,6 @@ public:
 		// g-buffer
 		m_gbuffer.reset(new framework::RenderTarget());
 		std::vector<D3D11_TEXTURE2D_DESC> descs;
-		descs.reserve(3);
 		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_FLOAT));
 		descs.push_back(framework::RenderTarget::getDefaultDesc(m_info.windowWidth, m_info.windowHeight, DXGI_FORMAT_R32G32B32A32_UINT));
 		auto defDesc = defaultRenderTarget()->getDesc(0);

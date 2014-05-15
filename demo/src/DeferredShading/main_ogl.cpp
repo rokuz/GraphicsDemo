@@ -55,6 +55,13 @@ public:
 		// overlays
 		initOverlays(root);
 
+		// g-buffer
+		m_gbuffer.reset(new framework::RenderTarget());
+		std::vector<int> formats;
+		formats.push_back(GL_RGBA32F);
+		formats.push_back(GL_RGBA32I);
+		if (!m_gbuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_info.samples)) exit();
+
 		/*m_program.reset(new framework::GpuProgram());
 		m_program->addShader(SHADERS_PATH + "shader.vsh.glsl");
 		m_program->addShader(SHADERS_PATH + "shader.fsh.glsl");

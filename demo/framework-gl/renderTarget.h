@@ -35,8 +35,7 @@ public:
 	RenderTarget();
 	virtual ~RenderTarget();
 
-	bool initWithColorBuffers(int width, int heigth, const std::vector<GLint>& formats);
-	bool initWithColorBuffersAndDepth(int width, int heigth, const std::vector<GLint>& formats, GLint depthFormat);
+	bool init(int width, int height, const std::vector<GLint>& formats, int samples = 0, GLint depthFormat = -1);
 
 	int getColorBuffer(int index = 0);
 	int getDepthBuffer();
@@ -45,14 +44,16 @@ public:
 
 private:
 	virtual void destroy();
-	void initColorBuffers(int width, int heigth, const std::vector<GLint>& formats);
-	void initDepth(int width, int heigth, GLint depthFormat);
+	void initColorBuffers(int width, int height, const std::vector<GLint>& formats);
+	void initDepth(int width, int height, GLint depthFormat);
 	bool checkStatus();
 
 	GLuint m_framebufferObject;
 	std::vector<GLuint> m_colorBuffers;
 	GLuint m_depthBuffer;
 	bool m_isUsedDepth;
+	int m_samples;
+	int m_target;
 
 	bool m_isInitialized;
 };

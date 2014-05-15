@@ -31,7 +31,9 @@ RenderTarget::RenderTarget() :
 	m_framebufferObject(0),
 	m_depthBuffer(0),
 	m_isInitialized(false),
-	m_isUsedDepth(false)
+	m_isUsedDepth(false),
+	m_samples(0),
+	m_target(-1)
 {
 
 }
@@ -41,67 +43,61 @@ RenderTarget::~RenderTarget()
 	destroy();
 }
 
-bool RenderTarget::initWithColorBuffers(int width, int heigth, const std::vector<GLint>& formats)
+bool RenderTarget::init(int width, int height, const std::vector<GLint>& formats, int samples, GLint depthFormat)
 {
-	if (width <= 0 || heigth <= 0 || formats.empty() || formats.size() > 16)
+	if (width <= 0 || height <= 0 || formats.empty() || formats.size() > 16)
 	{
-		utils::Logger::toLog("RenderTarget: Cannot initialize, incorrect parameters.\n");
+		utils::Logger::toLog("Error: could not initialize a render target, incorrect parameters.\n");
 		return false;
 	}
 
 	destroy();
 
+	m_samples = samples;
+	m_target = GL_TEXTURE_2D;
+	if (m_samples > 0) m_target = GL_TEXTURE_2D_MULTISAMPLE;
+
 	glGenFramebuffers(1, &m_framebufferObject);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferObject);
-	initColorBuffers(width, heigth, formats);
+	initColorBuffers(width, height, formats);
+	if (depthFormat >= 0)
+	{
+		initDepth(width, height, depthFormat);
+	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	m_isInitialized = true;
-	if (!checkStatus()) destroy();
-
-	if (m_isInitialized) initDestroyable();
-	return m_isInitialized;
-}
-
-bool RenderTarget::initWithColorBuffersAndDepth(int width, int heigth, const std::vector<GLint>& formats, GLint depthFormat)
-{
-	if (width <= 0 || heigth <= 0 || formats.empty() || formats.size() > 16)
+	if (!checkStatus() || CHECK_GL_ERROR) 
 	{
-		utils::Logger::toLog("RenderTarget error: Cannot initialize, incorrect parameters.\n");
+		destroy();
 		return false;
 	}
 
-	destroy();
-
-	glGenFramebuffers(1, &m_framebufferObject);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferObject);
-	initColorBuffers(width, heigth, formats);
-	initDepth(width, heigth, depthFormat);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 	m_isInitialized = true;
-	if (!checkStatus()) destroy();
-
-	if (m_isInitialized) initDestroyable();
+	initDestroyable();
 	return m_isInitialized;
 }
 
-void RenderTarget::initColorBuffers(int width, int heigth, const std::vector<GLint>& formats)
+void RenderTarget::initColorBuffers(int width, int height, const std::vector<GLint>& formats)
 {
 	m_colorBuffers.resize(formats.size());
 	glGenTextures(formats.size(), m_colorBuffers.data());
 
-	destroy();
-
 	for (size_t i = 0; i < formats.size(); i++)
 	{
-		glBindTexture(GL_TEXTURE_2D, m_colorBuffers[i]);
-		glTexStorage2D(GL_TEXTURE_2D, 1, formats[i], width, heigth);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(m_target, m_colorBuffers[i]);
+		if (m_samples == 0)
+		{
+			glTexStorage2D(m_target, 1, formats[i], width, height);
+		}
+		else
+		{
+			glTexStorage2DMultisample(m_target, m_samples, formats[i], width, height, GL_TRUE);
+		}
+		glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(m_target, 0);
 
 	for (size_t i = 0; i < formats.size(); i++)
 	{
@@ -109,28 +105,44 @@ void RenderTarget::initColorBuffers(int width, int heigth, const std::vector<GLi
 	}
 }
 
-void RenderTarget::initDepth(int width, int heigth, GLint depthFormat)
+void RenderTarget::initDepth(int width, int height, GLint depthFormat)
 {
 	m_isUsedDepth = true;
 	glGenTextures(depthFormat, &m_depthBuffer);
-	glBindTexture(GL_TEXTURE_2D, m_depthBuffer);
-	glTexStorage2D(GL_TEXTURE_2D, 1, depthFormat, width, heigth);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(m_target, m_depthBuffer);
+	if (m_samples == 0)
+	{
+		glTexStorage2D(m_target, 1, depthFormat, width, height);
+	}
+	else
+	{
+		glTexStorage2DMultisample(m_target, m_samples, depthFormat, width, height, GL_TRUE);
+	}
+	glBindTexture(m_target, 0);
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_depthBuffer, 0);
 }
 
 void RenderTarget::destroy()
 {
-	if (m_isInitialized)
+	if (!m_colorBuffers.empty())
 	{
 		glDeleteTextures(m_colorBuffers.size(), m_colorBuffers.data());
-		glDeleteTextures(1, &m_depthBuffer);
-		glDeleteFramebuffers(1, &m_framebufferObject);
-		m_isUsedDepth = false;
-
-		m_isInitialized = false;
 	}
+	m_colorBuffers.clear();
+
+	if (m_depthBuffer != 0)
+	{
+		glDeleteTextures(1, &m_depthBuffer);
+	}
+
+	if (m_framebufferObject != 0)
+	{
+		glDeleteFramebuffers(1, &m_framebufferObject);
+	}
+	
+	m_isUsedDepth = false;
+	m_isInitialized = false;
 }
 
 int RenderTarget::getColorBuffer(int index)
