@@ -146,8 +146,12 @@ void Application::mainLoop()
 		double curTime = m_timer.getTime();
 		if (m_lastTime == 0) m_lastTime = curTime;
 		double delta = curTime - m_lastTime;
+		
+		useDefaultRenderTarget();
+		clearDefaultRenderTarget();
 		render(delta);
 		renderGui(delta);
+		
 		m_lastTime = curTime;
 
 		m_context.present();
@@ -370,6 +374,19 @@ void Application::setLegend(const std::string& legend)
 vector2 Application::getScreenSize()
 {
 	return vector2((float)m_info.windowWidth, (float)m_info.windowHeight);
+}
+
+void Application::useDefaultRenderTarget()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDrawBuffer(GL_BACK);
+}
+
+void Application::clearDefaultRenderTarget(const vector4& color, float depth)
+{
+	const GLfloat c[] = { color.x, color.y, color.z, color.w };
+	glClearBufferfv(GL_COLOR, 0, c);
+	glClearBufferfv(GL_DEPTH, 0, &depth);
 }
 
 void APIENTRY Application::debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,

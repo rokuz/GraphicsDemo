@@ -118,6 +118,22 @@ public:
 	}
 
 	template<typename UniformType>
+	void setFloat(typename UniformBase<UniformType>::Uniform uniform, float v)
+	{
+		GLint uf = getUniformBuffer<UniformType>(uniform);
+		if (uf < 0) return;
+		glUniform1fv(uf, 1, &v);
+	}
+
+	template<typename UniformType>
+	void setUint(typename UniformBase<UniformType>::Uniform uniform, unsigned int v)
+	{
+		GLint uf = getUniformBuffer<UniformType>(uniform);
+		if (uf < 0) return;
+		glUniform1uiv(uf, 1, &v);
+	}
+
+	template<typename UniformType>
 	void setVector(typename UniformBase<UniformType>::Uniform uniform, const vector2& vec)
 	{
 		GLint uf = getUniformBuffer<UniformType>(uniform);

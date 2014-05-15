@@ -117,11 +117,6 @@ public:
 
 		m_rotation += (float)elapsedTime * 70.0f;
 
-		const GLfloat color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		GLfloat depth = 1.0f;
-		glClearBufferfv(GL_COLOR, 0, color);
-		glClearBufferfv(GL_DEPTH, 0, &depth);
-    
 		if (m_program->use())
 		{
 			m_program->setMatrix<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);

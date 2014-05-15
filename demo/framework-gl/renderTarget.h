@@ -41,6 +41,9 @@ public:
 	int getDepthBuffer();
 
 	void set();
+	void clearColorAsUint(size_t index, const vector4& color = vector4(0, 0, 0, 0));
+	void clearColorAsFloat(size_t index, const vector4& color = vector4(0, 0, 0, 0));
+	void clearDepth(float depth = 1.0f);
 
 private:
 	virtual void destroy();

@@ -5,7 +5,9 @@ set(SHADERS_DIR_OGL ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/gl/win32/d
 set(SOURCE_OGL main_ogl.cpp)
 set(SHADERS_OGL ${SHADERS_DIR_OGL}/screenquad.vsh.glsl
 				${SHADERS_DIR_OGL}/skybox.gsh.glsl
-				${SHADERS_DIR_OGL}/skybox.fsh.glsl)
+				${SHADERS_DIR_OGL}/skybox.fsh.glsl
+				${SHADERS_DIR_OGL}/gbuffer.fsh.glsl
+				${SHADERS_DIR_OGL}/gbuffer.vsh.glsl)
 				 
 # Direct3D 11
 set(SHADERS_DIR_DX11 ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/dx11/deferredshading)				

@@ -3,7 +3,11 @@
 // uniforms
 DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
 	MODELVIEWPROJECTION_MATRIX,
+	MODELVIEW_MATRIX,
+	MODEL_MATRIX,
 	LIGHTS_DATA,
+	SPECULAR_POWER,
+	MATERIAL_ID,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
@@ -62,16 +66,21 @@ public:
 		formats.push_back(GL_RGBA32I);
 		if (!m_gbuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_info.samples)) exit();
 
-		/*m_program.reset(new framework::GpuProgram());
-		m_program->addShader(SHADERS_PATH + "shader.vsh.glsl");
-		m_program->addShader(SHADERS_PATH + "shader.fsh.glsl");
-		if (!m_program->init()) exit();
-		m_program->bindUniform<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
-		m_program->bindUniform<DSAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
-		m_program->bindUniform<DSAppUniforms>(UF::DIFFUSE_MAP, "diffuseSampler");
-		m_program->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalSampler");
-		m_program->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularSampler");
-		m_program->bindUniform<DSAppUniforms>(UF::VIEW_POSITION, "viewPosition");
+		// gpu programs
+		m_gbufferRendering.reset(new framework::GpuProgram());
+		m_gbufferRendering->addShader(SHADERS_PATH + "gbuffer.vsh.glsl");
+		m_gbufferRendering->addShader(SHADERS_PATH + "gbuffer.fsh.glsl");
+		if (!m_gbufferRendering->init()) exit();
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::MODELVIEW_MATRIX, "modelViewMatrix");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_POWER, "specularPower");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::MATERIAL_ID, "materialId");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+
+		/*
 		m_program->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");*/
 
 		m_skyboxRendering.reset(new framework::GpuProgram());
@@ -215,48 +224,45 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
-		const GLfloat color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		GLfloat depth = 1.0f;
-		glClearBufferfv(GL_COLOR, 0, color);
-		glClearBufferfv(GL_DEPTH, 0, &depth);
+		m_gbuffer->set();
+		m_gbuffer->clearColorAsFloat(0);
+		m_gbuffer->clearColorAsUint(1);
 
-		//skybox
+		// render to g-buffer
+		if (m_gbufferRendering->use())
+		{
+			TRACE_BLOCK("_GBuffer")
+			for (size_t i = 0; i < m_entitiesData.size(); i++)
+			{
+				renderEntity(m_entity, m_entitiesData[i]);
+			}
+		}
+
+		useDefaultRenderTarget();
+
+		// skybox
 		renderSkybox();
     
-		//if (m_program->use())
-		//{
-		//	for (size_t i = 0; i < m_entitiesData.size(); i++)
-		//	{
-		//		renderEntity(m_entity, m_entitiesData[i]);
-		//	}
-		//}
-
 		// debug rendering
 		renderDebug();
+
+		CHECK_GL_ERROR;
 	}
 
 	void renderEntity(const Entity& entity, const EntityData& entityData)
 	{
 		if (!entityData.isVisible) return;
 
-		//EntityDataRaw entityDataRaw;
-		//entityDataRaw.modelViewProjection = entityData.mvp;
-		//entityDataRaw.model = entityData.model;
-		//entityDataRaw.modelView = entityData.mv;
-		//entityDataRaw.specularPower = entityData.specularPower;
-		//entityDataRaw.materialId = entityData.materialId;
-		//m_entityDataBuffer->setData(entityDataRaw);
-		//m_entityDataBuffer->applyChanges();
+		m_gbufferRendering->setMatrix<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
+		m_gbufferRendering->setMatrix<DSAppUniforms>(UF::MODEL_MATRIX, entityData.model);
+		m_gbufferRendering->setMatrix<DSAppUniforms>(UF::MODELVIEW_MATRIX, entityData.mv);
+		m_gbufferRendering->setFloat<DSAppUniforms>(UF::SPECULAR_POWER, entityData.specularPower);
+		m_gbufferRendering->setUint<DSAppUniforms>(UF::MATERIAL_ID, entityData.materialId);
+		m_gbufferRendering->setTexture<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
+		m_gbufferRendering->setTexture<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
+		m_gbufferRendering->setTexture<DSAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
 
-		/*m_program->setMatrix<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
-		m_program->setMatrix<DSAppUniforms>(UF::MODEL_MATRIX, entityData.model);
-		m_program->setVector<DSAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
-		m_program->setUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, m_lightsBuffer, 0);
-		m_program->setTexture<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
-		m_program->setTexture<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
-		m_program->setTexture<DSAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
-
-		entity.geometry->renderAllMeshes();*/
+		entity.geometry->renderAllMeshes();
 	}
 
 	void renderSkybox()

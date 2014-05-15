@@ -27,6 +27,26 @@
 namespace framework
 {
 
+static GLenum COLOR_ATTACHMENTS[] = 
+{
+	GL_COLOR_ATTACHMENT0,
+	GL_COLOR_ATTACHMENT1,
+	GL_COLOR_ATTACHMENT2,
+	GL_COLOR_ATTACHMENT3,
+	GL_COLOR_ATTACHMENT4,
+	GL_COLOR_ATTACHMENT5,
+	GL_COLOR_ATTACHMENT6,
+	GL_COLOR_ATTACHMENT7,
+	GL_COLOR_ATTACHMENT8,
+	GL_COLOR_ATTACHMENT9,
+	GL_COLOR_ATTACHMENT10,
+	GL_COLOR_ATTACHMENT11,
+	GL_COLOR_ATTACHMENT12,
+	GL_COLOR_ATTACHMENT13,
+	GL_COLOR_ATTACHMENT14,
+	GL_COLOR_ATTACHMENT15
+};
+
 RenderTarget::RenderTarget() :
 	m_framebufferObject(0),
 	m_depthBuffer(0),
@@ -101,7 +121,7 @@ void RenderTarget::initColorBuffers(int width, int height, const std::vector<GLi
 
 	for (size_t i = 0; i < formats.size(); i++)
 	{
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, m_colorBuffers[i], 0);
+		glFramebufferTexture(GL_FRAMEBUFFER, COLOR_ATTACHMENTS[i], m_colorBuffers[i], 0);
 	}
 }
 
@@ -161,13 +181,35 @@ int RenderTarget::getDepthBuffer()
 
 void RenderTarget::set()
 {
-	if (!m_isInitialized)
-	{
-		utils::Logger::toLog("RenderTarget error: Render target is not initialized\n");
-		return;
-	}
+	if (!m_isInitialized) return;
 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferObject);
+	glDrawBuffers(m_colorBuffers.size(), COLOR_ATTACHMENTS);
+	CHECK_GL_ERROR;
+}
+
+void RenderTarget::clearColorAsUint(size_t index, const vector4& color)
+{
+	if (!m_isInitialized) return;
+
+	const GLuint c[] = { (GLuint)color.x, (GLuint)color.y, (GLuint)color.z, (GLuint)color.w };
+	glClearBufferuiv(GL_COLOR, index, c);
+}
+
+void RenderTarget::clearColorAsFloat(size_t index, const vector4& color)
+{
+	if (!m_isInitialized) return;
+
+	const GLfloat c[] = { color.x, color.y, color.z, color.w };
+	glClearBufferfv(GL_COLOR, index, c);
+}
+
+void RenderTarget::clearDepth(float depth)
+{
+	if (!m_isInitialized) return;
+	if (!m_isUsedDepth) return;
+
+	glClearBufferfv(GL_DEPTH, 0, &depth);
 }
 
 bool RenderTarget::checkStatus()

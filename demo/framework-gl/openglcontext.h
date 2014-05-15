@@ -55,6 +55,6 @@ private:
 };
 
 bool checkForOpenGLError(const char* file, const char* function, int line);
-#define CHECK_GL_ERROR checkForOpenGLError(__FILE__, __FUNCTION__, __LINE__)
+#define CHECK_GL_ERROR framework::checkForOpenGLError(__FILE__, __FUNCTION__, __LINE__)
 
 }
