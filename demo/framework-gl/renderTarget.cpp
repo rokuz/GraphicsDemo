@@ -279,14 +279,17 @@ void RenderTarget::copyDepthToCurrentDepthBuffer()
 		auto self = std::static_pointer_cast<RenderTarget>(shared_from_this());
 		prog->setDepth<StandardUniforms>(STD_UF::DEPTH_MAP, self);
 
-		//glGet with argument GL_COLOR_WRITEMASK
-		//glGet with argument GL_DEPTH_WRITEMASK
+		DepthState depthEnabled(true);
+		depthEnabled.setWriteEnable(true);
+		depthEnabled.apply();
 
-		//glDepthMask(GL_TRUE);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		//glEnable(GL_DEPTH_TEST);
+		ColorOutputState colorOutputDisable(false);
+		colorOutputDisable.apply();
+		
 		glDrawArrays(GL_POINTS, 0, 1);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		
+		depthEnabled.cancel();
+		colorOutputDisable.cancel();
 	}
 }
 

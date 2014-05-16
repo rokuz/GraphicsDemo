@@ -81,7 +81,8 @@ public:
 			m_lightsBuffer->setElement(i, m_lightManager.getRawLightData(i));
 		}
 
-		framework::PipelineState depthTestEnable(GL_DEPTH_TEST, true);
+		framework::DepthState depthTestEnable(true);
+		depthTestEnable.setWriteEnable(true);
 		depthTestEnable.apply();
 
 		framework::PipelineState cullingEnable(GL_CULL_FACE, true);

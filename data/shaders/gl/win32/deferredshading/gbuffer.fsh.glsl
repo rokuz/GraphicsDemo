@@ -25,7 +25,7 @@ uint packColor(vec4 color)
 
 vec2 packNormal(vec3 normal)
 {
-	return vec2(atan(normal.x, normal.y), normal.z);
+	return vec2(atan(normal.y, normal.x), normal.z);
 }
 
 void main()

@@ -138,8 +138,8 @@ void UIRendererOGL::renderLabel(gui::LabelPtr_T label)
 		// rendering
 		if (m_textRendering->use())
 		{
-			PipelineState depthTestDisable(GL_DEPTH_TEST, false);
-			PipelineState blendingEnable(GL_BLEND, true);
+			DepthState depthTestDisable(false);
+			BlendState blendingEnable(true);
 			blendingEnable.setBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 			depthTestDisable.apply();

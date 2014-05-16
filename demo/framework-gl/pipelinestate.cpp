@@ -30,11 +30,7 @@ namespace framework
 PipelineState::PipelineState(GLenum state, bool enabled) :
 	m_state(state),
 	m_isEnabled(enabled),
-	m_wasEnabled(false),
-	m_oldBlendSrc(-1),
-	m_oldBlendDst(-1),
-	m_blendSrc(-1),
-	m_blendDst(-1)
+	m_wasEnabled(false)
 {
 }
 
@@ -42,7 +38,37 @@ PipelineState::~PipelineState()
 {
 }
 
-void PipelineState::setBlending(GLint src, GLint dest)
+void PipelineState::apply()
+{
+	if (m_state < 0) return;
+
+	m_wasEnabled = (glIsEnabled(m_state) != 0);
+	if (m_wasEnabled != m_isEnabled)
+	{
+		if (m_isEnabled) glEnable(m_state); else glDisable(m_state);
+	}
+}
+
+void PipelineState::cancel()
+{
+	if (m_state < 0) return;
+
+	if (m_wasEnabled != m_isEnabled)
+	{
+		if (m_wasEnabled) glEnable(m_state); else glDisable(m_state);
+	}
+}
+
+BlendState::BlendState(bool enabled) :
+	m_pipelineState(GL_BLEND, enabled),
+	m_oldBlendSrc(-1),
+	m_oldBlendDst(-1),
+	m_blendSrc(-1),
+	m_blendDst(-1)
+{
+}
+
+void BlendState::setBlending(GLint src, GLint dest)
 {
 	glGetIntegerv(GL_BLEND_SRC_ALPHA, &m_oldBlendSrc);
 	glGetIntegerv(GL_BLEND_DST_ALPHA, &m_oldBlendDst);
@@ -51,13 +77,9 @@ void PipelineState::setBlending(GLint src, GLint dest)
 	m_blendDst = dest;
 }
 
-void PipelineState::apply()
+void BlendState::apply()
 {
-	m_wasEnabled = (glIsEnabled(m_state) != 0);
-	if (m_wasEnabled != m_isEnabled)
-	{
-		if (m_isEnabled) glEnable(m_state); else glDisable(m_state);
-	}
+	m_pipelineState.apply();
 
 	if (m_blendSrc != m_oldBlendSrc || m_blendDst != m_oldBlendDst)
 	{
@@ -65,16 +87,74 @@ void PipelineState::apply()
 	}
 }
 
-void PipelineState::cancel()
+void BlendState::cancel()
 {
-	if (m_wasEnabled != m_isEnabled)
-	{
-		if (m_wasEnabled) glEnable(m_state); else glDisable(m_state);
-	}
+	m_pipelineState.cancel();
 
 	if (m_blendSrc != m_oldBlendSrc || m_blendDst != m_oldBlendDst)
 	{
 		glBlendFunc(m_oldBlendSrc, m_oldBlendDst);
+	}
+}
+
+DepthState::DepthState(bool enabled) :
+	m_pipelineState(GL_DEPTH_TEST, enabled),
+	m_oldDepthWriteMask(-1),
+	m_depthWriteMask(-1)
+{
+}
+
+void DepthState::setWriteEnable(bool enable)
+{
+	GLboolean enabled;
+	glGetBooleanv(GL_DEPTH_WRITEMASK, &enabled);
+	m_oldDepthWriteMask = enabled;
+	m_depthWriteMask = enable ? GL_TRUE : GL_FALSE;
+}
+
+void DepthState::apply()
+{
+	m_pipelineState.apply();
+
+	if (m_oldDepthWriteMask != m_depthWriteMask)
+	{
+		glDepthMask((GLboolean)m_depthWriteMask);
+	}
+}
+
+void DepthState::cancel()
+{
+	m_pipelineState.cancel();
+
+	if (m_oldDepthWriteMask != m_depthWriteMask)
+	{
+		glDepthMask((GLboolean)m_oldDepthWriteMask);
+	}
+}
+
+ColorOutputState::ColorOutputState(bool enabled) :
+	m_isEnabled(enabled)
+{
+}
+
+void ColorOutputState::apply()
+{
+	glGetBooleanv(GL_COLOR_WRITEMASK, m_oldColorMask);
+	GLboolean enabled = m_isEnabled ? GL_TRUE : GL_FALSE;
+	if (m_oldColorMask[0] != enabled || m_oldColorMask[1] != enabled ||
+		m_oldColorMask[2] != enabled || m_oldColorMask[3] != enabled)
+	{
+		glColorMask(enabled, enabled, enabled, enabled);
+	}
+}
+
+void ColorOutputState::cancel()
+{
+	GLboolean enabled = m_isEnabled ? GL_TRUE : GL_FALSE;
+	if (m_oldColorMask[0] != enabled || m_oldColorMask[1] != enabled ||
+		m_oldColorMask[2] != enabled || m_oldColorMask[3] != enabled)
+	{
+		glColorMask(m_oldColorMask[0], m_oldColorMask[1], m_oldColorMask[2], m_oldColorMask[3]);
 	}
 }
 

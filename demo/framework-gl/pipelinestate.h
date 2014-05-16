@@ -33,8 +33,6 @@ public:
 	PipelineState(GLenum state, bool enabled);
 	~PipelineState();
 
-	void setBlending(GLint src, GLint dest);
-
 	void apply();
 	void cancel();
 
@@ -42,14 +40,53 @@ private:
 	GLenum m_state;
 	bool m_isEnabled;
 	bool m_wasEnabled;
+};
 
+class BlendState
+{
+public:
+	BlendState(bool enabled);
+	
+	void setBlending(GLint src, GLint dest);
+
+	void apply();
+	void cancel();
+
+private:
+	PipelineState m_pipelineState;
 	GLint m_oldBlendSrc;
 	GLint m_oldBlendDst;
 	GLint m_blendSrc;
 	GLint m_blendDst;
+};
 
-	//GLint m_oldColorMask[4];
-	//GLint m_colorMask[4];
+class DepthState
+{
+public:
+	DepthState(bool enabled);
+
+	void setWriteEnable(bool enable);
+
+	void apply();
+	void cancel();
+
+private:
+	PipelineState m_pipelineState;
+	GLint m_oldDepthWriteMask;
+	GLint m_depthWriteMask;
+};
+
+class ColorOutputState
+{
+public:
+	ColorOutputState(bool enabled);
+
+	void apply();
+	void cancel();
+
+private:
+	bool m_isEnabled;
+	GLboolean m_oldColorMask[4];
 };
 
 }

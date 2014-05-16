@@ -143,7 +143,8 @@ public:
 		// lights
 		initLights();
 
-		framework::PipelineState depthTestEnable(GL_DEPTH_TEST, true);
+		framework::DepthState depthTestEnable(true);
+		depthTestEnable.setWriteEnable(true);
 		depthTestEnable.apply();
 
 		framework::PipelineState cullingEnable(GL_CULL_FACE, true);
@@ -295,8 +296,8 @@ public:
 			m_deferredShading->setTexture<DSAppUniforms>(UF::DATABLOCK_MAP1, m_gbuffer, 0);
 			m_deferredShading->setTexture<DSAppUniforms>(UF::DATABLOCK_MAP2, m_gbuffer, 1);
 
-			framework::PipelineState depthTestDisable(GL_DEPTH_TEST, false);
-			framework::PipelineState blendingEnable(GL_BLEND, true);
+			framework::DepthState depthTestDisable(false);
+			framework::BlendState blendingEnable(true);
 			blendingEnable.setBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 			depthTestDisable.apply();
@@ -332,7 +333,7 @@ public:
 	{
 		if (m_skyboxRendering->use())
 		{
-			framework::PipelineState depthTestDisable(GL_DEPTH_TEST, false);
+			framework::DepthState depthTestDisable(false);
 			depthTestDisable.apply();
 
 			matrix44 model;
