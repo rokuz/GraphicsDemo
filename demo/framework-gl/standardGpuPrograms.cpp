@@ -31,6 +31,7 @@ const std::string STANDARD_SHADERS_PATH = "data/shaders/gl/win32/standard/";
 
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_lineRenderer;
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_arrowRenderer;
+std::shared_ptr<GpuProgram> StandardGpuPrograms::m_copyDepthBuffer;
 
 bool StandardGpuPrograms::init()
 {
@@ -55,6 +56,14 @@ bool StandardGpuPrograms::init()
 	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::ORIENTATION, "orientation");
 	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::COLOR, "color");
 
+	m_copyDepthBuffer.reset(new GpuProgram());
+	m_copyDepthBuffer->addShader(STANDARD_SHADERS_PATH + "copydepth.vsh.glsl");
+	m_copyDepthBuffer->addShader(STANDARD_SHADERS_PATH + "copydepth.gsh.glsl");
+	m_copyDepthBuffer->addShader(STANDARD_SHADERS_PATH + "copydepth.fsh.glsl");
+	result &= m_copyDepthBuffer->init();
+	if (!result) return false;
+	m_copyDepthBuffer->bindUniform<StandardUniforms>(STD_UF::DEPTH_MAP, "depthMap");
+
 	return result;
 }
 
@@ -66,6 +75,11 @@ std::shared_ptr<GpuProgram> StandardGpuPrograms::getLineRenderer()
 std::shared_ptr<GpuProgram> StandardGpuPrograms::getArrowRenderer()
 {
 	return m_arrowRenderer;
+}
+
+std::shared_ptr<GpuProgram> StandardGpuPrograms::getDepthBufferCopying()
+{
+	return m_copyDepthBuffer;
 }
 
 }

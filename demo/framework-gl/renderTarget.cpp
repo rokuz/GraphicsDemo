@@ -23,6 +23,7 @@
 
 #include "stdafx.h"
 #include "renderTarget.h"
+#include "gpuprogram.h"
 
 namespace framework
 {
@@ -52,6 +53,8 @@ RenderTarget::RenderTarget() :
 	m_depthBuffer(0),
 	m_isInitialized(false),
 	m_isUsedDepth(false),
+	m_width(0),
+	m_height(0),
 	m_samples(0),
 	m_target(-1)
 {
@@ -73,6 +76,8 @@ bool RenderTarget::init(int width, int height, const std::vector<GLint>& formats
 
 	destroy();
 
+	m_width = width;
+	m_height = height;
 	m_samples = samples;
 	m_target = GL_TEXTURE_2D;
 	if (m_samples > 0) m_target = GL_TEXTURE_2D_MULTISAMPLE;
@@ -128,7 +133,7 @@ void RenderTarget::initColorBuffers(int width, int height, const std::vector<GLi
 void RenderTarget::initDepth(int width, int height, GLint depthFormat)
 {
 	m_isUsedDepth = true;
-	glGenTextures(depthFormat, &m_depthBuffer);
+	glGenTextures(1, &m_depthBuffer);
 	glBindTexture(m_target, m_depthBuffer);
 	if (m_samples == 0)
 	{
@@ -249,6 +254,40 @@ bool RenderTarget::checkStatus()
 		}
 	}
 	return true;
+}
+
+void RenderTarget::bind( int index )
+{
+	if (!m_isInitialized) return;
+	if (index < 0 || index >= (int)m_colorBuffers.size()) return;
+
+	glBindTexture(m_target, m_colorBuffers[index]);
+}
+
+void RenderTarget::bindDepth()
+{
+	if (!m_isInitialized || !m_isUsedDepth) return;
+
+	glBindTexture(m_target, m_depthBuffer);
+}
+
+void RenderTarget::copyDepthToCurrentDepthBuffer()
+{
+	auto prog = StandardGpuPrograms::getDepthBufferCopying();
+	if (prog->use())
+	{
+		auto self = std::static_pointer_cast<RenderTarget>(shared_from_this());
+		prog->setDepth<StandardUniforms>(STD_UF::DEPTH_MAP, self);
+
+		//glGet with argument GL_COLOR_WRITEMASK
+		//glGet with argument GL_DEPTH_WRITEMASK
+
+		//glDepthMask(GL_TRUE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		//glEnable(GL_DEPTH_TEST);
+		glDrawArrays(GL_POINTS, 0, 1);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	}
 }
 
 }

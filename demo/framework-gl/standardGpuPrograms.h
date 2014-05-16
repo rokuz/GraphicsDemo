@@ -31,7 +31,8 @@ DECLARE_UNIFORMS_BEGIN(StandardUniforms)
 	MODELVIEWPROJECTION_MATRIX,
 	COLOR,
 	ORIENTATION,
-	POSITION
+	POSITION,
+	DEPTH_MAP
 DECLARE_UNIFORMS_END()
 
 class StandardGpuPrograms
@@ -42,10 +43,12 @@ public:
 
 	static std::shared_ptr<GpuProgram> getLineRenderer();
 	static std::shared_ptr<GpuProgram> getArrowRenderer();
+	static std::shared_ptr<GpuProgram> getDepthBufferCopying();
 
 private:
 	static std::shared_ptr<GpuProgram> m_lineRenderer;
 	static std::shared_ptr<GpuProgram> m_arrowRenderer;
+	static std::shared_ptr<GpuProgram> m_copyDepthBuffer;
 };
 
 }

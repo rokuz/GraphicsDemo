@@ -189,6 +189,38 @@ public:
 		m_freeTextureSlot++;
 	}
 
+	template<typename UniformType>
+	void setTexture(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int index)
+	{
+		if (!renderTarget) return;
+
+		GLint uf = getUniformBuffer<UniformType>(uniform);
+		if (uf < 0) return;
+		if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
+
+		glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
+		renderTarget->bind(index);
+		glUniform1i(uf, m_freeTextureSlot);
+
+		m_freeTextureSlot++;
+	}
+
+	template<typename UniformType>
+	void setDepth(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget)
+	{
+		if (!renderTarget) return;
+
+		GLint uf = getUniformBuffer<UniformType>(uniform);
+		if (uf < 0) return;
+		if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
+
+		glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
+		renderTarget->bindDepth();
+		glUniform1i(uf, m_freeTextureSlot);
+
+		m_freeTextureSlot++;
+	}
+
 	bool use();
 
 private:

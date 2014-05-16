@@ -41,6 +41,9 @@ set(SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arr
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arrow.vsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/line.fsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/line.vsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/copydepth.gsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/copydepth.fsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/copydepth.vsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/gl/win32/text.gsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/gl/win32/text.fsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/gl/win32/text.vsh.glsl

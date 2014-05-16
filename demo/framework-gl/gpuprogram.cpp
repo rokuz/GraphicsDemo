@@ -24,6 +24,8 @@
 #include "stdafx.h"
 #include "gpuprogram.h"
 
+#define ENABLE_VALIDATION 0
+
 namespace framework
 {
 
@@ -124,6 +126,7 @@ bool GpuProgram::init()
 		return false;
 	}
 
+	#if (ENABLE_VALIDATION)
 	if (!validateProgram(m_program))
 	{
 		utils::Logger::toLog("Error: failed to validate program.\n");
@@ -135,6 +138,7 @@ bool GpuProgram::init()
 		destroy();
 		return false;
 	}
+	#endif
 
 	for (auto it = compiledShaders.begin(); it != compiledShaders.end(); ++it)
 	{

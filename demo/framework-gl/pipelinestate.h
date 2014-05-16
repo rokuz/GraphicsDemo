@@ -47,6 +47,9 @@ private:
 	GLint m_oldBlendDst;
 	GLint m_blendSrc;
 	GLint m_blendDst;
+
+	//GLint m_oldColorMask[4];
+	//GLint m_colorMask[4];
 };
 
 }

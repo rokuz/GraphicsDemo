@@ -5,13 +5,20 @@ DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
 	MODELVIEWPROJECTION_MATRIX,
 	MODELVIEW_MATRIX,
 	MODEL_MATRIX,
+	PROJECTIONINVERSE_MATRIX,
+	VIEWINVERSE_MATRIX,
 	LIGHTS_DATA,
+	LIGHTS_COUNT,
 	SPECULAR_POWER,
 	MATERIAL_ID,
+	VIEW_POSITION,
+	SAMPLES_COUNT,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
-	SKYBOX_MAP
+	SKYBOX_MAP,
+	DATABLOCK_MAP1,
+	DATABLOCK_MAP2
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<DSAppUniforms>::Uniform
 
@@ -63,8 +70,8 @@ public:
 		m_gbuffer.reset(new framework::RenderTarget());
 		std::vector<int> formats;
 		formats.push_back(GL_RGBA32F);
-		formats.push_back(GL_RGBA32I);
-		if (!m_gbuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_info.samples)) exit();
+		formats.push_back(GL_RGBA32UI);
+		if (!m_gbuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_info.samples, GL_DEPTH_COMPONENT32F)) exit();
 
 		// gpu programs
 		m_gbufferRendering.reset(new framework::GpuProgram());
@@ -80,9 +87,30 @@ public:
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 
-		/*
-		m_program->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");*/
-
+		m_deferredShading.reset(new framework::GpuProgram());
+		m_deferredShading->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
+		m_deferredShading->addShader(SHADERS_PATH + "deferredshading.gsh.glsl");
+		if (m_info.samples == 0)
+		{
+			m_deferredShading->addShader(SHADERS_PATH + "deferredshading.fsh.glsl");
+		}
+		else
+		{
+			m_deferredShading->addShader(SHADERS_PATH + "deferredshading_msaa.fsh.glsl");
+		}
+		if (!m_deferredShading->init()) exit();
+		m_deferredShading->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::PROJECTIONINVERSE_MATRIX, "projectionInverseMatrix");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::VIEWINVERSE_MATRIX, "viewInverseMatrix");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::VIEW_POSITION, "viewPosition");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP1, "dataBlockMap1");
+		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP2, "dataBlockMap2");
+		if (m_info.samples > 0)
+		{
+			m_deferredShading->bindUniform<DSAppUniforms>(UF::SAMPLES_COUNT, "samplesCount");
+		}
+		
 		m_skyboxRendering.reset(new framework::GpuProgram());
 		m_skyboxRendering->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
 		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.gsh.glsl");
@@ -224,9 +252,15 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
+		matrix44 invview = m_camera.getView();
+		invview.invert();
+		matrix44 invproj = m_camera.getProjection();
+		invproj.invert();
+
 		m_gbuffer->set();
 		m_gbuffer->clearColorAsFloat(0);
 		m_gbuffer->clearColorAsUint(1);
+		m_gbuffer->clearDepth();
 
 		// render to g-buffer
 		if (m_gbufferRendering->use())
@@ -240,8 +274,37 @@ public:
 
 		useDefaultRenderTarget();
 
+		m_gbuffer->copyDepthToCurrentDepthBuffer();
+		
 		// skybox
 		renderSkybox();
+
+		// deferred shading pass
+		if (m_deferredShading->use())
+		{
+			TRACE_BLOCK("_DeferredShading")
+			m_deferredShading->setUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_deferredShading->setUint<DSAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
+			m_deferredShading->setVector<DSAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
+			m_deferredShading->setMatrix<DSAppUniforms>(UF::VIEWINVERSE_MATRIX, invview);
+			m_deferredShading->setMatrix<DSAppUniforms>(UF::PROJECTIONINVERSE_MATRIX, invproj);
+			if (m_info.samples > 0)
+			{
+				m_deferredShading->setUint<DSAppUniforms>(UF::SAMPLES_COUNT, m_info.samples);
+			}
+			m_deferredShading->setTexture<DSAppUniforms>(UF::DATABLOCK_MAP1, m_gbuffer, 0);
+			m_deferredShading->setTexture<DSAppUniforms>(UF::DATABLOCK_MAP2, m_gbuffer, 1);
+
+			framework::PipelineState depthTestDisable(GL_DEPTH_TEST, false);
+			framework::PipelineState blendingEnable(GL_BLEND, true);
+			blendingEnable.setBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			depthTestDisable.apply();
+			blendingEnable.apply();
+			glDrawArrays(GL_POINTS, 0, 1);
+			depthTestDisable.cancel();
+			blendingEnable.cancel();
+		}
     
 		// debug rendering
 		renderDebug();

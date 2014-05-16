@@ -40,10 +40,14 @@ public:
 	int getColorBuffer(int index = 0);
 	int getDepthBuffer();
 
+	void bind(int index);
+	void bindDepth();
+
 	void set();
 	void clearColorAsUint(size_t index, const vector4& color = vector4(0, 0, 0, 0));
 	void clearColorAsFloat(size_t index, const vector4& color = vector4(0, 0, 0, 0));
 	void clearDepth(float depth = 1.0f);
+	void copyDepthToCurrentDepthBuffer();
 
 private:
 	virtual void destroy();
@@ -57,6 +61,8 @@ private:
 	bool m_isUsedDepth;
 	int m_samples;
 	int m_target;
+	size_t m_width;
+	size_t m_height;
 
 	bool m_isInitialized;
 };
