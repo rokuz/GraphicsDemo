@@ -32,6 +32,8 @@ const std::string STANDARD_SHADERS_PATH = "data/shaders/gl/win32/standard/";
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_lineRenderer;
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_arrowRenderer;
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_copyDepthBuffer;
+std::shared_ptr<GpuProgram> StandardGpuPrograms::m_copyDepthBufferMSAA;
+std::shared_ptr<GpuProgram> StandardGpuPrograms::m_skyboxRenderer;
 
 bool StandardGpuPrograms::init()
 {
@@ -64,6 +66,23 @@ bool StandardGpuPrograms::init()
 	if (!result) return false;
 	m_copyDepthBuffer->bindUniform<StandardUniforms>(STD_UF::DEPTH_MAP, "depthMap");
 
+	m_copyDepthBufferMSAA.reset(new GpuProgram());
+	m_copyDepthBufferMSAA->addShader(STANDARD_SHADERS_PATH + "copydepth.vsh.glsl");
+	m_copyDepthBufferMSAA->addShader(STANDARD_SHADERS_PATH + "copydepth.gsh.glsl");
+	m_copyDepthBufferMSAA->addShader(STANDARD_SHADERS_PATH + "copydepth_msaa.fsh.glsl");
+	result &= m_copyDepthBufferMSAA->init();
+	if (!result) return false;
+	m_copyDepthBufferMSAA->bindUniform<StandardUniforms>(STD_UF::DEPTH_MAP, "depthMap");
+	m_copyDepthBufferMSAA->bindUniform<StandardUniforms>(STD_UF::SAMPLES_COUNT, "samplesCount");
+
+	m_skyboxRenderer.reset(new framework::GpuProgram());
+	m_skyboxRenderer->addShader(STANDARD_SHADERS_PATH + "skybox.vsh.glsl");
+	m_skyboxRenderer->addShader(STANDARD_SHADERS_PATH + "skybox.gsh.glsl");
+	m_skyboxRenderer->addShader(STANDARD_SHADERS_PATH + "skybox.fsh.glsl");
+	result &= m_skyboxRenderer->init();
+	m_skyboxRenderer->bindUniform<StandardUniforms>(STD_UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+	m_skyboxRenderer->bindUniform<StandardUniforms>(STD_UF::SKYBOX_MAP, "skyboxMap");
+
 	return result;
 }
 
@@ -77,9 +96,14 @@ std::shared_ptr<GpuProgram> StandardGpuPrograms::getArrowRenderer()
 	return m_arrowRenderer;
 }
 
-std::shared_ptr<GpuProgram> StandardGpuPrograms::getDepthBufferCopying()
+std::shared_ptr<GpuProgram> StandardGpuPrograms::getDepthBufferCopying(bool msaa)
 {
-	return m_copyDepthBuffer;
+	return msaa ? m_copyDepthBufferMSAA : m_copyDepthBuffer;
+}
+
+std::shared_ptr<GpuProgram> StandardGpuPrograms::getSkyboxRenderer()
+{
+	return m_skyboxRenderer;
 }
 
 }

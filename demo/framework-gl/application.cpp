@@ -201,6 +201,29 @@ void Application::renderAxes(const matrix44& viewProjection)
 	m_axisZ->renderWithStandardGpuProgram(viewProjection, vector4(0, 0, 1, 1), false);
 }
 
+void Application::renderSkybox(Camera& camera, std::shared_ptr<Texture> texture)
+{
+	if (!texture) return;
+
+	auto prog = framework::StandardGpuPrograms::getSkyboxRenderer();
+	if (prog->use())
+	{
+		framework::DepthState depthTestDisable(false);
+		depthTestDisable.apply();
+
+		matrix44 model;
+		model.set_translation(camera.getPosition());
+		matrix44 mvp = model * camera.getView() * camera.getProjection();
+
+		prog->setTexture<StandardUniforms>(STD_UF::SKYBOX_MAP, std::move(texture));
+		prog->setMatrix<StandardUniforms>(STD_UF::MODELVIEWPROJECTION_MATRIX, mvp);
+
+		glDrawArrays(GL_POINTS, 0, 1);
+
+		depthTestDisable.cancel();
+	}
+}
+
 void Application::registerDestroyable(std::weak_ptr<Destroyable> ptr)
 {
 	if (!ptr.expired())

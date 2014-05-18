@@ -47,7 +47,7 @@ public:
 	void clearColorAsUint(size_t index, const vector4& color = vector4(0, 0, 0, 0));
 	void clearColorAsFloat(size_t index, const vector4& color = vector4(0, 0, 0, 0));
 	void clearDepth(float depth = 1.0f);
-	void copyDepthToCurrentDepthBuffer();
+	void copyDepthToCurrentDepthBuffer(int samplesCount = 0);
 
 private:
 	virtual void destroy();

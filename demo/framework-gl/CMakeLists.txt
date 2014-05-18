@@ -43,7 +43,11 @@ set(SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arr
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/line.vsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/copydepth.gsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/copydepth.fsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/copydepth_msaa.fsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/copydepth.vsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/skybox.gsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/skybox.fsh.glsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/skybox.vsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/gl/win32/text.gsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/gl/win32/text.fsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/gl/win32/text.vsh.glsl

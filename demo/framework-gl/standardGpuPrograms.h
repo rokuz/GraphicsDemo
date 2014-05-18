@@ -32,7 +32,9 @@ DECLARE_UNIFORMS_BEGIN(StandardUniforms)
 	COLOR,
 	ORIENTATION,
 	POSITION,
-	DEPTH_MAP
+	DEPTH_MAP,
+	SKYBOX_MAP,
+	SAMPLES_COUNT
 DECLARE_UNIFORMS_END()
 
 class StandardGpuPrograms
@@ -43,12 +45,15 @@ public:
 
 	static std::shared_ptr<GpuProgram> getLineRenderer();
 	static std::shared_ptr<GpuProgram> getArrowRenderer();
-	static std::shared_ptr<GpuProgram> getDepthBufferCopying();
+	static std::shared_ptr<GpuProgram> getDepthBufferCopying(bool msaa);
+	static std::shared_ptr<GpuProgram> getSkyboxRenderer();
 
 private:
 	static std::shared_ptr<GpuProgram> m_lineRenderer;
 	static std::shared_ptr<GpuProgram> m_arrowRenderer;
 	static std::shared_ptr<GpuProgram> m_copyDepthBuffer;
+	static std::shared_ptr<GpuProgram> m_copyDepthBufferMSAA;
+	static std::shared_ptr<GpuProgram> m_skyboxRenderer;
 };
 
 }

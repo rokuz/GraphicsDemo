@@ -1,58 +1,47 @@
 #include "framework.h"
 
 // uniforms
-DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
+DECLARE_UNIFORMS_BEGIN(PPAppUniforms)
 	MODELVIEWPROJECTION_MATRIX,
-	MODELVIEW_MATRIX,
 	MODEL_MATRIX,
-	PROJECTIONINVERSE_MATRIX,
-	VIEWINVERSE_MATRIX,
 	LIGHTS_DATA,
 	LIGHTS_COUNT,
 	SPECULAR_POWER,
-	MATERIAL_ID,
 	VIEW_POSITION,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
-	DATABLOCK_MAP1,
-	DATABLOCK_MAP2,
+	SCREENQUAD_MAP,
 	SAMPLES_COUNT
 DECLARE_UNIFORMS_END()
-#define UF framework::UniformBase<DSAppUniforms>::Uniform
+#define UF framework::UniformBase<PPAppUniforms>::Uniform
 
 // constants
-const int MAX_LIGHTS_COUNT = 64;
-const std::string SHADERS_PATH = "data/shaders/gl/win32/deferredshading/";
+const int MAX_LIGHTS_COUNT = 8;
+const std::string SHADERS_PATH = "data/shaders/gl/win32/postprocessing/";
 
 // application
-class DeferredShadingApp : public framework::Application
+class PostProcessingApp : public framework::Application
 {
 	struct Entity;
 	struct EntityData;
 
 public:
-	DeferredShadingApp()
+	PostProcessingApp()
 	{
-		m_lightsCount = 0;
 		m_pause = false;
 		m_renderDebug = false;
-		m_additionalLights = 50;
 		m_visibleObjects = 0;
+		m_lightsCount = 0;
+		m_samples = 0;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
 	{
-		m_info.title = "Deferred shading (OpenGL 4)";
+		m_info.title = "Post processing (OpenGL 4)";
 		applyStandardParams(params);
-
-		auto lights = params.find("lights");
-		if (lights != params.end())
-		{
-			m_additionalLights = lights->second;
-			if (m_additionalLights < 0) m_additionalLights = 0;
-			if (m_additionalLights > MAX_LIGHTS_COUNT - 1) m_additionalLights = MAX_LIGHTS_COUNT - 1;
-		}
+		m_samples = (int)m_info.samples;
+		m_info.samples = 0;
 
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 	}
@@ -65,49 +54,43 @@ public:
 		// overlays
 		initOverlays(root);
 
-		// g-buffer
-		m_gbuffer.reset(new framework::RenderTarget());
+		// scene buffer
+		m_sceneBuffer.reset(new framework::RenderTarget());
 		std::vector<int> formats;
-		formats.push_back(GL_RGBA32F);
-		formats.push_back(GL_RGBA32UI);
-		if (!m_gbuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_info.samples, GL_DEPTH_COMPONENT32F)) exit();
+		formats.push_back(GL_RGBA8);
+		if (!m_sceneBuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_samples, GL_DEPTH_COMPONENT32F)) exit();
 
 		// gpu programs
-		m_gbufferRendering.reset(new framework::GpuProgram());
-		m_gbufferRendering->addShader(SHADERS_PATH + "gbuffer.vsh.glsl");
-		m_gbufferRendering->addShader(SHADERS_PATH + "gbuffer.fsh.glsl");
-		if (!m_gbufferRendering->init()) exit();
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::MODELVIEW_MATRIX, "modelViewMatrix");
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_POWER, "specularPower");
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::MATERIAL_ID, "materialId");
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::NORMAL_MAP, "normalMap");
-		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_sceneRendering.reset(new framework::GpuProgram());
+		m_sceneRendering->addShader(SHADERS_PATH + "scene.vsh.glsl");
+		m_sceneRendering->addShader(SHADERS_PATH + "scene.fsh.glsl");
+		if (!m_sceneRendering->init()) exit();
+		m_sceneRendering->bindUniform<PPAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_sceneRendering->bindUniform<PPAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
+		m_sceneRendering->bindUniform<PPAppUniforms>(UF::SPECULAR_POWER, "specularPower");
+		m_sceneRendering->bindUniform<PPAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_sceneRendering->bindUniform<PPAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_sceneRendering->bindUniform<PPAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_sceneRendering->bindUniformBuffer<PPAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_sceneRendering->bindUniform<PPAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
+		m_sceneRendering->bindUniform<PPAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 
-		m_deferredShading.reset(new framework::GpuProgram());
-		m_deferredShading->addShader(SHADERS_PATH + "deferredshading.vsh.glsl");
-		m_deferredShading->addShader(SHADERS_PATH + "deferredshading.gsh.glsl");
-		if (m_info.samples == 0)
+		m_quadRendering.reset(new framework::GpuProgram());
+		m_quadRendering->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
+		m_quadRendering->addShader(SHADERS_PATH + "screenquad.gsh.glsl");
+		if (m_samples == 0)
 		{
-			m_deferredShading->addShader(SHADERS_PATH + "deferredshading.fsh.glsl");
+			m_quadRendering->addShader(SHADERS_PATH + "screenquad.fsh.glsl");
 		}
 		else
 		{
-			m_deferredShading->addShader(SHADERS_PATH + "deferredshading_msaa.fsh.glsl");
+			m_quadRendering->addShader(SHADERS_PATH + "screenquad_msaa.fsh.glsl");
 		}
-		if (!m_deferredShading->init()) exit();
-		m_deferredShading->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
-		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
-		m_deferredShading->bindUniform<DSAppUniforms>(UF::PROJECTIONINVERSE_MATRIX, "projectionInverseMatrix");
-		m_deferredShading->bindUniform<DSAppUniforms>(UF::VIEWINVERSE_MATRIX, "viewInverseMatrix");
-		m_deferredShading->bindUniform<DSAppUniforms>(UF::VIEW_POSITION, "viewPosition");
-		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP1, "dataBlockMap1");
-		m_deferredShading->bindUniform<DSAppUniforms>(UF::DATABLOCK_MAP2, "dataBlockMap2");
-		if (m_info.samples > 0)
+		if (!m_quadRendering->init()) exit();
+		m_quadRendering->bindUniform<PPAppUniforms>(UF::SCREENQUAD_MAP, "screenquadMap");
+		if (m_samples > 0)
 		{
-			m_deferredShading->bindUniform<DSAppUniforms>(UF::SAMPLES_COUNT, "samplesCount");
+			m_quadRendering->bindUniform<PPAppUniforms>(UF::SAMPLES_COUNT, "samplesCount");
 		}
 
 		// entity
@@ -140,6 +123,9 @@ public:
 
 		framework::PipelineState cullingEnable(GL_CULL_FACE, true);
 		cullingEnable.apply();
+
+		framework::PipelineState msaaEnable(GL_MULTISAMPLE, m_samples > 0);
+		msaaEnable.apply();
 
 		glViewport(0, 0, m_info.windowWidth, m_info.windowHeight);
 	}
@@ -202,7 +188,7 @@ public:
 		m_lightManager.addLightSource(source);
 
 		// omni light
-		framework::LightSource source2;
+		/*framework::LightSource source2;
 		source2.type = framework::LightType::OmniLight;
 		source2.position = vector3(15, 15, 0);
 		source2.diffuseColor = vector3(0.96f, 0.81f, 0.59f);
@@ -216,7 +202,7 @@ public:
 			framework::LightSource sourceN = source2;
 			sourceN.position = utils::Utils::random(-70.0f, 70.0f);
 			m_lightManager.addLightSource(sourceN);
-		}
+		}*/
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
@@ -244,20 +230,20 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
-		matrix44 invview = m_camera.getView();
-		invview.invert();
-		matrix44 invproj = m_camera.getProjection();
-		invproj.invert();
+		// clear only depth (skybox will clear color)
+		m_sceneBuffer->set();
+		m_sceneBuffer->clearDepth();
 
-		m_gbuffer->set();
-		m_gbuffer->clearColorAsFloat(0);
-		m_gbuffer->clearColorAsUint(1);
-		m_gbuffer->clearDepth();
+		// render skybox
+		renderSkybox(m_camera, m_skyboxTexture);
 
-		// render to g-buffer
-		if (m_gbufferRendering->use())
+		// render scene
+		if (m_sceneRendering->use())
 		{
-			TRACE_BLOCK("_GBuffer")
+			m_sceneRendering->setUniformBuffer<PPAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_sceneRendering->setUint<PPAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
+			m_sceneRendering->setVector<PPAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
+
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				renderEntity(m_entity, m_entitiesData[i]);
@@ -265,39 +251,23 @@ public:
 		}
 
 		useDefaultRenderTarget();
+		m_sceneBuffer->copyDepthToCurrentDepthBuffer(m_samples);
 
-		m_gbuffer->copyDepthToCurrentDepthBuffer(m_info.samples);
-		
-		// skybox
-		renderSkybox(m_camera, m_skyboxTexture);
-
-		// deferred shading pass
-		if (m_deferredShading->use())
+		// render quad
+		if (m_quadRendering->use())
 		{
-			TRACE_BLOCK("_DeferredShading")
-			m_deferredShading->setUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
-			m_deferredShading->setUint<DSAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
-			m_deferredShading->setVector<DSAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
-			m_deferredShading->setMatrix<DSAppUniforms>(UF::VIEWINVERSE_MATRIX, invview);
-			m_deferredShading->setMatrix<DSAppUniforms>(UF::PROJECTIONINVERSE_MATRIX, invproj);
-			m_deferredShading->setTexture<DSAppUniforms>(UF::DATABLOCK_MAP1, m_gbuffer, 0);
-			m_deferredShading->setTexture<DSAppUniforms>(UF::DATABLOCK_MAP2, m_gbuffer, 1);
-			if (m_info.samples > 0)
+			m_quadRendering->setTexture<PPAppUniforms>(UF::SCREENQUAD_MAP, m_sceneBuffer, 0);
+			if (m_samples > 0)
 			{
-				m_deferredShading->setInt<DSAppUniforms>(UF::SAMPLES_COUNT, m_info.samples);
+				m_quadRendering->setInt<PPAppUniforms>(UF::SAMPLES_COUNT, m_samples);
 			}
 
 			framework::DepthState depthTestDisable(false);
-			framework::BlendState blendingEnable(true);
-			blendingEnable.setBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 			depthTestDisable.apply();
-			blendingEnable.apply();
 			glDrawArrays(GL_POINTS, 0, 1);
 			depthTestDisable.cancel();
-			blendingEnable.cancel();
 		}
-    
+
 		// debug rendering
 		renderDebug();
 
@@ -308,14 +278,12 @@ public:
 	{
 		if (!entityData.isVisible) return;
 
-		m_gbufferRendering->setMatrix<DSAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
-		m_gbufferRendering->setMatrix<DSAppUniforms>(UF::MODEL_MATRIX, entityData.model);
-		m_gbufferRendering->setMatrix<DSAppUniforms>(UF::MODELVIEW_MATRIX, entityData.mv);
-		m_gbufferRendering->setFloat<DSAppUniforms>(UF::SPECULAR_POWER, entityData.specularPower);
-		m_gbufferRendering->setUint<DSAppUniforms>(UF::MATERIAL_ID, entityData.materialId);
-		m_gbufferRendering->setTexture<DSAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
-		m_gbufferRendering->setTexture<DSAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
-		m_gbufferRendering->setTexture<DSAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
+		m_sceneRendering->setMatrix<PPAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
+		m_sceneRendering->setMatrix<PPAppUniforms>(UF::MODEL_MATRIX, entityData.model);
+		m_sceneRendering->setFloat<PPAppUniforms>(UF::SPECULAR_POWER, entityData.specularPower);
+		m_sceneRendering->setTexture<PPAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
+		m_sceneRendering->setTexture<PPAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
+		m_sceneRendering->setTexture<PPAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
 
 		entity.geometry->renderAllMeshes();
 	}
@@ -325,7 +293,7 @@ public:
 		if (!m_renderDebug) return;
 
 		static wchar_t buf[100];
-		swprintf(buf, L"MSAA = %dx\nVisible lights = %d\nVisible objects = %d", m_info.samples, m_lightsCount, m_visibleObjects);
+		swprintf(buf, L"MSAA = %dx", m_samples);
 		m_debugLabel->setText(buf);
 
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
@@ -412,12 +380,12 @@ public:
 	}
 
 private:
-	std::shared_ptr<framework::RenderTarget> m_gbuffer;
+	std::shared_ptr<framework::RenderTarget> m_sceneBuffer;
 
-	// gpu program to render in g-buffer
-	std::shared_ptr<framework::GpuProgram> m_gbufferRendering;
-	// gpu program to deferred shading
-	std::shared_ptr<framework::GpuProgram> m_deferredShading;
+	// gpu program to render scene
+	std::shared_ptr<framework::GpuProgram> m_sceneRendering;
+	// gpu program to render screen quad
+	std::shared_ptr<framework::GpuProgram> m_quadRendering;
 
 	// entity
 	struct Entity
@@ -434,27 +402,27 @@ private:
 		matrix44 mvp;
 		matrix44 mv;
 		float specularPower;
-		unsigned int materialId;
 		bool isVisible;
 
-		EntityData() : specularPower(30.0f), materialId(1), isVisible(true){}
+		EntityData() : specularPower(30.0f), isVisible(true){}
 	};
 
 	// opaque entity
 	Entity m_entity;
 	std::vector<EntityData> m_entitiesData;
 
-	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;	
+	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 	std::shared_ptr<framework::Texture> m_skyboxTexture;
 	framework::FreeCamera m_camera;
 
 	unsigned int m_lightsCount;
 	bool m_pause;
 	bool m_renderDebug;
-	int m_additionalLights;
 	int m_visibleObjects;
+
+	int m_samples;
 
 	gui::LabelPtr_T m_debugLabel;
 };
 
-DECLARE_MAIN(DeferredShadingApp);
+DECLARE_MAIN(PostProcessingApp);

@@ -112,14 +112,16 @@ void RenderTarget::initColorBuffers(int width, int height, const std::vector<GLi
 		glBindTexture(m_target, m_colorBuffers[i]);
 		if (m_samples == 0)
 		{
+			glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexStorage2D(m_target, 1, formats[i], width, height);
 		}
 		else
 		{
-			glTexStorage2DMultisample(m_target, m_samples, formats[i], width, height, GL_TRUE);
+			glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, 0);
+			glTexImage2DMultisample(m_target, m_samples, formats[i], width, height, GL_TRUE);
 		}
-		glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
 	glBindTexture(m_target, 0);
@@ -137,11 +139,15 @@ void RenderTarget::initDepth(int width, int height, GLint depthFormat)
 	glBindTexture(m_target, m_depthBuffer);
 	if (m_samples == 0)
 	{
+		glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, 0);
 		glTexStorage2D(m_target, 1, depthFormat, width, height);
 	}
 	else
 	{
-		glTexStorage2DMultisample(m_target, m_samples, depthFormat, width, height, GL_TRUE);
+		glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexImage2DMultisample(m_target, m_samples, depthFormat, width, height, GL_TRUE);
 	}
 	glBindTexture(m_target, 0);
 
@@ -271,13 +277,17 @@ void RenderTarget::bindDepth()
 	glBindTexture(m_target, m_depthBuffer);
 }
 
-void RenderTarget::copyDepthToCurrentDepthBuffer()
+void RenderTarget::copyDepthToCurrentDepthBuffer(int samplesCount)
 {
-	auto prog = StandardGpuPrograms::getDepthBufferCopying();
+	auto prog = StandardGpuPrograms::getDepthBufferCopying(samplesCount > 0);
 	if (prog->use())
 	{
 		auto self = std::static_pointer_cast<RenderTarget>(shared_from_this());
 		prog->setDepth<StandardUniforms>(STD_UF::DEPTH_MAP, self);
+		if (samplesCount > 0)
+		{
+			prog->setInt<StandardUniforms>(STD_UF::SAMPLES_COUNT, samplesCount);
+		}
 
 		DepthState depthEnabled(true);
 		depthEnabled.setWriteEnable(true);

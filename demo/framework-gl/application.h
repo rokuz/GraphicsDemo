@@ -81,6 +81,7 @@ protected:
 
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
+	void renderSkybox(Camera& camera, std::shared_ptr<Texture> texture);
 
 	void useDefaultRenderTarget();
 	void clearDefaultRenderTarget(const vector4& color = vector4(0, 0, 0, 0), float depth = 1.0f);
