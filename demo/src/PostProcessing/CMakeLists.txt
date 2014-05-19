@@ -1,4 +1,4 @@
-set(DEMO_NAME PostProcessing)
+set(DEMO_NAME Demo_PostProcessing)
 
 # OpenGL
 set(SHADERS_DIR_OGL ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/gl/win32/postprocessing)

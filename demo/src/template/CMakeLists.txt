@@ -1,4 +1,4 @@
-set(DEMO_NAME Template)
+set(DEMO_NAME Demo_Template)
 
 # OpenGL
 set(SHADERS_DIR_OGL ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/gl/win32/template)

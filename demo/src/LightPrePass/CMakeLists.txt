@@ -1,4 +1,4 @@
-set(DEMO_NAME LightPrePass)
+set(DEMO_NAME Demo_LightPrePass)
 
 # OpenGL
 set(SOURCE_OGL "skipped")

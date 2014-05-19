@@ -1,4 +1,4 @@
-set(DEMO_NAME DeferredShading)
+set(DEMO_NAME Demo_DeferredShading)
 
 # OpenGL
 set(SHADERS_DIR_OGL ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/gl/win32/deferredshading)

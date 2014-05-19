@@ -66,7 +66,7 @@ public:
 
 	virtual void init(const std::map<std::string, int>& params)
 	{
-		m_info.title = "Light-Prepass Deferred shading (DX11)";
+		m_info.title = "Light Pre-pass Deferred shading (DX11)";
 
 		applyStandardParams(params);
 

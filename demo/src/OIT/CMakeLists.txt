@@ -1,4 +1,4 @@
-set(DEMO_NAME OIT)
+set(DEMO_NAME Demo_OIT)
 
 # OpenGL
 set(SOURCE_OGL "skipped")
