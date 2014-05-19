@@ -61,6 +61,9 @@ set(SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/dx11/text.vsh.hls
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/arrow.vsh.hlsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/line.psh.hlsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/line.vsh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/skybox.gsh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/skybox.psh.hlsl
+			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/dx11/standard/skybox.vsh.hlsl
 )
 source_group(shaders FILES ${SHADERS})
 source_group(core FILES ${SOURCE_CORE})

@@ -8,7 +8,6 @@ DECLARE_UNIFORMS_BEGIN(DSAppUniforms)
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
-	SKYBOX_MAP,
 	DEFAULT_SAMPLER,
 	DATABLOCK_MAP1,
 	DATABLOCK_MAP2
@@ -115,17 +114,8 @@ public:
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 		m_gbufferRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
-		m_skyboxRendering.reset(new framework::GpuProgram());
-		m_skyboxRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
-		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.gsh.hlsl");
-		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.psh.hlsl");
-		if (!m_skyboxRendering->init(true)) exit();
-		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::ENTITY_DATA, "entityData");
-		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
-		m_skyboxRendering->bindUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
-
 		m_deferredShading.reset(new framework::GpuProgram());
-		m_deferredShading->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
+		m_deferredShading->addShader(SHADERS_PATH + "deferredshading.vsh.hlsl");
 		m_deferredShading->addShader(SHADERS_PATH + "deferredshading.gsh.hlsl");
 		if (m_info.samples == 0)
 		{
@@ -301,7 +291,7 @@ public:
 		useDefaultRenderTarget();
 
 		// render skybox
-		renderSkybox();
+		renderSkybox(m_camera, m_skyboxTexture);
 
 		// deferred shading pass
 		if (m_deferredShading->use())
@@ -321,29 +311,6 @@ public:
 
 		// debug rendering
 		renderDebug();
-	}
-
-	void renderSkybox()
-	{
-		if (m_skyboxRendering->use())
-		{
-			disableDepthTest()->apply();
-
-			EntityDataRaw entityDataRaw;
-			matrix44 model;
-			model.set_translation(m_camera.getPosition());
-			entityDataRaw.modelViewProjection = model * m_camera.getView() * m_camera.getProjection();
-			m_entityDataBuffer->setData(entityDataRaw);
-			m_entityDataBuffer->applyChanges();
-
-			m_skyboxRendering->setUniform<DSAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
-			m_skyboxRendering->setUniform<DSAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
-			m_skyboxRendering->setUniform<DSAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-
-			getPipeline().drawPoints(1);
-
-			disableDepthTest()->cancel();
-		}
 	}
 
 	void renderEntity(const Entity& entity, const EntityData& entityData)
@@ -462,12 +429,11 @@ public:
 	}
 
 private:
+	// g-buffer
 	std::shared_ptr<framework::RenderTarget> m_gbuffer;
 
 	// gpu program to render in g-buffer
 	std::shared_ptr<framework::GpuProgram> m_gbufferRendering;
-	// gpu program to render skybox
-	std::shared_ptr<framework::GpuProgram> m_skyboxRendering;
 	// gpu program to deferred shading
 	std::shared_ptr<framework::GpuProgram> m_deferredShading;
 
@@ -492,7 +458,6 @@ private:
 		EntityData() : specularPower(30.0f), materialId(1), isVisible(true){}
 	};
 
-	// opaque entity
 	Entity m_entity;
 	std::vector<EntityData> m_entitiesData;
 
@@ -502,7 +467,6 @@ private:
 	unsigned int m_lightsCount;
 
 	std::shared_ptr<framework::Texture> m_skyboxTexture;
-
 	framework::FreeCamera m_camera;
 
 	bool m_pause;

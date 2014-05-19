@@ -29,6 +29,9 @@ namespace framework
 
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_lineRenderer;
 std::shared_ptr<GpuProgram> StandardGpuPrograms::m_arrowRenderer;
+std::shared_ptr<GpuProgram> StandardGpuPrograms::m_skyboxRenderer;
+
+std::shared_ptr<UniformBuffer> StandardGpuPrograms::m_skyboxDataBuffer;
 
 bool StandardGpuPrograms::init()
 {
@@ -49,6 +52,20 @@ bool StandardGpuPrograms::init()
 	if (!result) return false;
 	m_arrowRenderer->bindUniform<StandardUniforms>(STD_UF::ARROW_RENDERER_DATA, "arrowData");
 
+	m_skyboxRenderer.reset(new GpuProgram());
+	m_skyboxRenderer->addShader(STANDARD_SHADERS_PATH + "skybox.vsh.hlsl");
+	m_skyboxRenderer->addShader(STANDARD_SHADERS_PATH + "skybox.psh.hlsl");
+	m_skyboxRenderer->addShader(STANDARD_SHADERS_PATH + "skybox.gsh.hlsl");
+	result &= m_skyboxRenderer->init(true);
+	if (!result) return false;
+	m_skyboxRenderer->bindUniform<StandardUniforms>(STD_UF::SKYBOX_RENDERER_DATA, "skyboxData");
+	m_skyboxRenderer->bindUniform<StandardUniforms>(STD_UF::SKYBOX_MAP, "skyboxMap");
+	m_skyboxRenderer->bindUniform<StandardUniforms>(STD_UF::DEFAULT_SAMPLER, "defaultSampler");
+
+	m_skyboxDataBuffer.reset(new framework::UniformBuffer());
+	result &= m_skyboxDataBuffer->initDefaultConstant<SkyboxRendererData>();
+	if (!result) return false;
+
 	return result;
 }
 
@@ -60,6 +77,16 @@ std::shared_ptr<GpuProgram> StandardGpuPrograms::getLineRenderer()
 std::shared_ptr<GpuProgram> StandardGpuPrograms::getArrowRenderer()
 {
 	return m_arrowRenderer;
+}
+
+std::shared_ptr<GpuProgram> StandardGpuPrograms::getSkyboxRenderer()
+{
+	return m_skyboxRenderer;
+}
+
+std::shared_ptr<UniformBuffer> StandardGpuPrograms::getSkyboxDataBuffer()
+{
+	return m_skyboxDataBuffer;
 }
 
 }

@@ -1,5 +1,3 @@
-#include <common.h.hlsl>
-
 struct VS_OUTPUT_SKYBOX
 {
     float4 position : SV_POSITION;

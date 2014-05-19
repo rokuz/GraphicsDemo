@@ -8,7 +8,6 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
-	SKYBOX_MAP,
 	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
@@ -106,15 +105,6 @@ public:
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.hlsl");
 		m_transparentRendering->addShader(SHADERS_PATH + "transparent.psh.hlsl");
 		if (!m_transparentRendering->init(true)) exit();
-
-		m_skyboxRendering.reset(new framework::GpuProgram());
-		m_skyboxRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
-		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.gsh.hlsl");
-		m_skyboxRendering->addShader(SHADERS_PATH + "skybox.psh.hlsl");
-		if (!m_skyboxRendering->init(true)) exit();
-		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
-		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::SKYBOX_MAP, "skyboxMap");
-		m_skyboxRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		// opaque entity
 		m_opaqueEntity = initEntity("data/media/spaceship/spaceship.geom",
@@ -282,26 +272,7 @@ public:
 		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
 
 		// render skybox
-		if (m_skyboxRendering->use())
-		{
-			disableDepthTest()->apply();
-
-			SpatialData spatialData;
-			matrix44 model;
-			model.set_translation(m_camera.getPosition());
-			spatialData.modelViewProjection = model * m_camera.getView() * m_camera.getProjection();
-			spatialData.viewPosition = m_camera.getPosition();
-			m_spatialBuffer->setData(spatialData);
-			m_spatialBuffer->applyChanges();
-
-			m_skyboxRendering->setUniform<OITAppUniforms>(UF::SKYBOX_MAP, m_skyboxTexture);
-			m_skyboxRendering->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
-			m_skyboxRendering->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
-
-			getPipeline().drawPoints(1);
-
-			disableDepthTest()->cancel();
-		}
+		renderSkybox(m_camera, m_skyboxTexture);
 		
 		// render opaque objects
 		if (m_opaqueRendering->use())
@@ -441,8 +412,6 @@ private:
 	std::shared_ptr<framework::GpuProgram> m_fragmentsListCreation;
 	// gpu program to render transparent geometry by fragments list
 	std::shared_ptr<framework::GpuProgram> m_transparentRendering;
-	// gpu program to render skybox
-	std::shared_ptr<framework::GpuProgram> m_skyboxRendering;
 
 	// pipeline stages
 	std::shared_ptr<framework::BlendStage> m_disableColorWriting;

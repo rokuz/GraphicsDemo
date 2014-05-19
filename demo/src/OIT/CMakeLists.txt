@@ -13,8 +13,6 @@ set(SHADERS_DX11 ${SHADERS_DIR_DX11}/common.h.hlsl
 				 ${SHADERS_DIR_DX11}/pscommon.h.hlsl
 				 ${SHADERS_DIR_DX11}/screenquad.gsh.hlsl
 				 ${SHADERS_DIR_DX11}/screenquad.vsh.hlsl
-				 ${SHADERS_DIR_DX11}/skybox.gsh.hlsl
-				 ${SHADERS_DIR_DX11}/skybox.psh.hlsl
 				 ${SHADERS_DIR_DX11}/transparent.psh.hlsl)
 
 source_group(shaders FILES ${SHADERS_DX11})

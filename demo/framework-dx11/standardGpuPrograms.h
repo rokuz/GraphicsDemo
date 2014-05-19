@@ -29,6 +29,9 @@ namespace framework
 DECLARE_UNIFORMS_BEGIN(StandardUniforms)
 	LINE_RENDERER_DATA,
 	ARROW_RENDERER_DATA,
+	SKYBOX_RENDERER_DATA,
+	SKYBOX_MAP,
+	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
 
 #pragma pack (push, 1)
@@ -50,6 +53,13 @@ struct ArrowRendererData
 };
 #pragma pack (pop)
 
+#pragma pack (push, 1)
+struct SkyboxRendererData
+{
+	matrix44 modelViewProjection;
+};
+#pragma pack (pop)
+
 const std::string STANDARD_SHADERS_PATH = "data/shaders/dx11/standard/";
 
 class StandardGpuPrograms
@@ -60,10 +70,16 @@ public:
 
 	static std::shared_ptr<GpuProgram> getLineRenderer();
 	static std::shared_ptr<GpuProgram> getArrowRenderer();
+	static std::shared_ptr<GpuProgram> getSkyboxRenderer();
+
+	static std::shared_ptr<UniformBuffer> getSkyboxDataBuffer();
 
 private:
 	static std::shared_ptr<GpuProgram> m_lineRenderer;
 	static std::shared_ptr<GpuProgram> m_arrowRenderer;
+	static std::shared_ptr<GpuProgram> m_skyboxRenderer;
+
+	static std::shared_ptr<UniformBuffer> m_skyboxDataBuffer;
 };
 
 }

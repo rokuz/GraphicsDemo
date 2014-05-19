@@ -14,15 +14,13 @@ set(SHADERS_OGL ${SHADERS_DIR_OGL}/gbuffer.fsh.glsl
 set(SHADERS_DIR_DX11 ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/dx11/deferredshading)				
 set(SOURCE_DX11 main_dx11.cpp)
 set(SHADERS_DX11 ${SHADERS_DIR_DX11}/common.h.hlsl
+				 ${SHADERS_DIR_DX11}/deferredshading.vsh.hlsl
 				 ${SHADERS_DIR_DX11}/deferredshading.gsh.hlsl
 				 ${SHADERS_DIR_DX11}/deferredshading.psh.hlsl
 				 ${SHADERS_DIR_DX11}/deferredshading_msaa.psh.hlsl
 				 ${SHADERS_DIR_DX11}/dscommon.h.hlsl
 				 ${SHADERS_DIR_DX11}/gbuffer.psh.hlsl
-				 ${SHADERS_DIR_DX11}/gbuffer.vsh.hlsl
-				 ${SHADERS_DIR_DX11}/screenquad.vsh.hlsl
-				 ${SHADERS_DIR_DX11}/skybox.gsh.hlsl
-				 ${SHADERS_DIR_DX11}/skybox.psh.hlsl)
+				 ${SHADERS_DIR_DX11}/gbuffer.vsh.hlsl)
 
 source_group(shaders FILES ${SHADERS_DX11})
 source_group(shaders FILES ${SHADERS_OGL})

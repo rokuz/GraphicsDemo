@@ -1,5 +1,3 @@
-#include <common.h.hlsl>
-
 struct GS_INPUT
 {
     float4 position : SV_POSITION;
@@ -31,6 +29,11 @@ static const int cubeIndices[24] =
 	4, 0, 6, 2, // bottom
 	1, 0, 5, 4, // left
 	3, 1, 7, 5  // top
+};
+
+cbuffer skyboxData
+{
+	matrix modelViewProjection;
 };
 
 [maxvertexcount(36)]

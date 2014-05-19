@@ -96,6 +96,7 @@ protected:
 
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
+	void renderSkybox(Camera& camera, std::shared_ptr<Texture> texture);
 
 private:
 	static Application* m_self;
@@ -120,6 +121,7 @@ private:
 	unsigned int m_multisamplingQuality;
 	
 	std::list<std::weak_ptr<Destroyable> > m_destroyableList;
+	
 	std::shared_ptr<Line3D> m_axisX;
 	std::shared_ptr<Line3D> m_axisY;
 	std::shared_ptr<Line3D> m_axisZ;
