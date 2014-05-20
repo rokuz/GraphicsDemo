@@ -8,6 +8,7 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
+	ENVIRONMENT_MAP,
 	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
@@ -87,6 +88,7 @@ public:
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_fragmentsListCreation.reset(new framework::GpuProgram());
@@ -95,9 +97,10 @@ public:
 		if (!m_fragmentsListCreation->init()) exit();
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
@@ -107,30 +110,31 @@ public:
 		if (!m_transparentRendering->init(true)) exit();
 
 		// opaque entity
-		m_opaqueEntity = initEntity("data/media/spaceship/spaceship.geom",
-									"data/media/spaceship/spaceship_diff.dds",
-									"data/media/spaceship/spaceship_normal.dds",
-									"data/media/spaceship/spaceship_specular.dds");
+		m_opaqueEntity = initEntity("data/media/sphere.FBX",
+									"",
+									"data/media/textures/no_bump.dds",
+									"data/media/textures/full_bump.dds");
 		m_opaqueEntity.geometry->bindToGpuProgram(m_opaqueRendering);
 
 		// transparent entity
-		m_transparentEntity = initEntity("data/media/cube/cube.geom",
+		m_transparentEntity = initEntity("data/media/teapot.FBX", //
 										 "",//"data/media/cube/cube_diff.dds",
-										 "data/media/cube/cube_normal.dds", //"data/media/textures/no_bump.dds",
-										 "data/media/textures/no_specular.dds");
+										 "data/media/textures/no_bump.dds",//"data/media/cube/cube_normal.dds", //
+										 "data/media/textures/full_specular.dds");
 		m_transparentEntity.geometry->bindToGpuProgram(m_fragmentsListCreation);
 
 		m_transparentEntitiesData.resize(10);
 		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
 		{
 			m_transparentEntitiesData[i].color = utils::Utils::random();
-			m_transparentEntitiesData[i].color.w = utils::Utils::random(0.1f, 0.7f).x;
-			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-15.0f, 15.0f));
+			m_transparentEntitiesData[i].color.w = utils::Utils::random(0.3f, 0.7f).x;
+			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-25.0f, 25.0f));
+			m_transparentEntitiesData[i].model.pos_component().y = 0;
 		}
 
 		// skybox texture
 		m_skyboxTexture.reset(new framework::Texture());
-		if (!m_skyboxTexture->initWithDDS("data/media/textures/nightsky2.dds")) exit();
+		if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
 
 		// a blend state to disable color writing
 		m_disableColorWriting.reset(new framework::BlendStage());
@@ -253,6 +257,10 @@ public:
 														 L"Fragments buffer usage = 0 %\nLost fragments = 0");
 		m_debugLabel->setVisible(m_renderDebug);
 		root->addChild(m_debugLabel);
+
+		m_fpsLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
+		m_legendLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
+		m_debugLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
 	}
 
 	virtual void render(double elapsedTime)
@@ -277,7 +285,7 @@ public:
 		// render opaque objects
 		if (m_opaqueRendering->use())
 		{
-			renderEntity(m_opaqueEntity, m_opaqueEntityData);
+			renderEntity(m_opaqueRendering, m_opaqueEntity, m_opaqueEntityData);
 		}
 
 		// build lists of fragments for transparent objects
@@ -288,7 +296,7 @@ public:
 			m_disableDepthWriting->apply();
 			for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
 			{
-				renderEntity(m_transparentEntity, m_transparentEntitiesData[i]);
+				renderEntity(m_fragmentsListCreation, m_transparentEntity, m_transparentEntitiesData[i]);
 			}
 			m_disableDepthWriting->cancel();
 			m_disableColorWriting->cancel();
@@ -309,7 +317,7 @@ public:
 		renderDebug();
 	}
 
-	void renderEntity(const Entity& entity, const EntityData& entityData)
+	void renderEntity(const std::shared_ptr<framework::GpuProgram>& program, const Entity& entity, const EntityData& entityData)
 	{
 		SpatialData spatialData;
 		spatialData.modelViewProjection = entityData.mvp;
@@ -320,12 +328,13 @@ public:
 		m_spatialBuffer->setData(spatialData);
 		m_spatialBuffer->applyChanges();
 
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
-		m_opaqueRendering->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+		program->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
+		program->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+		program->setUniform<OITAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
+		program->setUniform<OITAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
+		program->setUniform<OITAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
+		program->setUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
+		program->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
 
 		entity.geometry->renderAllMeshes();
 	}
@@ -433,6 +442,7 @@ private:
 		matrix44 model;
 		matrix44 mvp;
 		vector4 color;
+		EntityData() : color(vector4(1, 1, 1, 1)) {}
 	};
 
 	// opaque entity

@@ -93,6 +93,8 @@ protected:
 
 	AppInfo m_info;
 	LightManager m_lightManager;
+	gui::LabelPtr_T m_fpsLabel;
+	gui::LabelPtr_T m_legendLabel;
 
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
@@ -104,8 +106,6 @@ private:
 	Window m_window;
 	bool m_isRunning;
 	double m_lastTime;
-	gui::LabelPtr_T m_fpsLabel;
-	gui::LabelPtr_T m_legendLabel;
 	utils::FpsCounter m_fpsCounter;
 	std::string m_legend;
 	Pipeline m_pipeline;

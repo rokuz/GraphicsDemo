@@ -16,9 +16,9 @@ uint packColor(float4 color)
 }
 
 [earlydepthstencil]
-float4 main(VS_OUTPUT input, uint coverage : SV_COVERAGE) : SV_TARGET
+float4 main(VS_OUTPUT input, uint coverage : SV_COVERAGE, bool frontFace : SV_IsFrontFace) : SV_TARGET
 {
-	float3 color = computeColor(input, false);
+	float4 color = computeColorTransparent(input, frontFace, false);
 	uint newHeadBufferValue = fragmentsList.IncrementCounter();
 	if (newHeadBufferValue == 0xffffffff) { return float4(0, 0, 0, 0); }
 	
@@ -28,7 +28,7 @@ float4 main(VS_OUTPUT input, uint coverage : SV_COVERAGE) : SV_TARGET
 	
 	uint currentDepth = f32tof16(input.worldPos.w);
 	ListNode node;
-	node.packedColor = packColor(float4(color, objectColor.a));
+	node.packedColor = packColor(float4(color.rgb, color.a));
 	node.depthAndCoverage = currentDepth | (coverage << 16);
 	node.next = previosHeadBufferValue;
 	fragmentsList[newHeadBufferValue] = node;

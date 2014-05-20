@@ -3,6 +3,6 @@
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
-	float3 color = computeColor(input, true);
+	float3 color = computeColorOpaque(input, false);
     return float4(color, 1);
 }
