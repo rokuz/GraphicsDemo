@@ -79,6 +79,7 @@ bool RenderTarget::init(int width, int height, const std::vector<GLint>& formats
 	m_width = width;
 	m_height = height;
 	m_samples = samples;
+	m_formats = formats;
 	m_target = GL_TEXTURE_2D;
 	if (m_samples > 0) m_target = GL_TEXTURE_2D_MULTISAMPLE;
 
@@ -161,6 +162,7 @@ void RenderTarget::destroy()
 		glDeleteTextures(m_colorBuffers.size(), m_colorBuffers.data());
 	}
 	m_colorBuffers.clear();
+	m_formats.clear();
 
 	if (m_depthBuffer != 0)
 	{
@@ -275,6 +277,21 @@ void RenderTarget::bindDepth()
 	if (!m_isInitialized || !m_isUsedDepth) return;
 
 	glBindTexture(m_target, m_depthBuffer);
+}
+
+void RenderTarget::bindAsImage(int targetIndex, int imageSlot, bool readFlag, bool writeFlag)
+{
+	if (!m_isInitialized) return;
+	if (!readFlag && !writeFlag) return;
+	if (targetIndex < 0 || targetIndex >= (int)m_colorBuffers.size()) return;
+
+	GLenum access = GL_READ_ONLY;
+	if (readFlag && writeFlag)
+		access = GL_READ_WRITE;
+	else if (writeFlag)
+		access = GL_WRITE_ONLY;
+
+	glBindImageTexture(imageSlot, m_colorBuffers[targetIndex], 0, GL_FALSE, 0, access, m_formats[targetIndex]);
 }
 
 void RenderTarget::copyDepthToCurrentDepthBuffer(int samplesCount)

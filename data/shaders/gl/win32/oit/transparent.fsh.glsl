@@ -2,7 +2,7 @@
 
 out vec4 outputColor;
 
-uniform atomic_uint fragmentsListCounter;
+layout(binding = 0, offset = 0) uniform atomic_uint fragmentsListCounter;
 layout(r32ui) coherent uniform uimage2D headBuffer;
 
 struct ListNode
@@ -11,7 +11,7 @@ struct ListNode
 	uint depthAndCoverage;
 	uint next;
 };
-layout(std430) buffer fragmentsList
+layout(binding = 1) layout(std430) buffer fragmentsList
 {
 	ListNode fragments[];
 };

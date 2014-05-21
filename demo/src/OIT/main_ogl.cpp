@@ -7,7 +7,8 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	LIGHTS_DATA,
 	LIGHTS_COUNT,
 	VIEW_POSITION,
-	ENVIRONMENT_MAP
+	ENVIRONMENT_MAP,
+	HEAD_BUFFER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
 
@@ -62,14 +63,17 @@ public:
 		m_headBuffer.reset(new framework::RenderTarget());
 		std::vector<int> formats;
 		formats.push_back(GL_R32UI);
-		if (!m_headBuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_info.samples, GL_DEPTH_COMPONENT32F)) exit();
+		if (!m_headBuffer->init(m_info.windowWidth, m_info.windowHeight, formats)) exit();
+
+		// fragments counter
+		m_fragmentsCounter.reset(new framework::AtomicCounter());
+		if (!m_fragmentsCounter->init()) exit();
 
 		// fragments buffer (we use buffer 8 time more than screen size)
-		//m_fragmentsBufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight * 8;
-		//unsigned int fragmentSize = 4 + 4 + 4; // color + depth + next
-		//unsigned int fragmentsBufferFlags = D3D11_BUFFER_UAV_FLAG::D3D11_BUFFER_UAV_FLAG_COUNTER;
-		//m_fragmentsBuffer.reset(new framework::UnorderedAccessBuffer());
-		//if (!m_fragmentsBuffer->initDefaultUnorderedAccess(m_fragmentsBufferSize, fragmentSize, fragmentsBufferFlags)) exit();
+		m_fragmentsBufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight * 8;
+		unsigned int fragmentSize = 4 + 4 + 4; // color + depth + next
+		m_fragmentsBuffer.reset(new framework::StorageBuffer());
+		if (!m_fragmentsBuffer->init(fragmentSize, m_fragmentsBufferSize)) exit();
 
 		// gpu programs
 		m_opaqueRendering.reset(new framework::GpuProgram());
@@ -93,12 +97,14 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.glsl");
 		m_transparentRendering->addShader(SHADERS_PATH + "transparent.fsh.glsl");
 		if (!m_transparentRendering->init()) exit();
+		m_transparentRendering->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
 
 		// entity
 		m_entity = initEntity("data/media/models/teapot.geom");
@@ -128,43 +134,6 @@ public:
 											"data/media/textures/meadow_right.jpg",
 											"data/media/textures/meadow_top.jpg",
 											"data/media/textures/meadow_bottom.jpg")) exit();
-
-		// a blend state to disable color writing
-		/*m_disableColorWriting.reset(new framework::BlendStage());
-		D3D11_BLEND_DESC blendDesc = framework::BlendStage::getDisableColorWriting();
-		m_disableColorWriting->initWithDescription(blendDesc);
-		if (!m_disableColorWriting->isValid()) exit();
-
-		// a depth-stencil state to disable depth writing
-		m_disableDepthWriting.reset(new framework::DepthStencilStage());
-		D3D11_DEPTH_STENCIL_DESC depthDesc = framework::DepthStencilStage::getDisableDepthWriting();
-		m_disableDepthWriting->initWithDescription(depthDesc);
-		if (!m_disableDepthWriting->isValid()) exit();
-
-		// a rasterizer to render without culling
-		m_cullingOff.reset(new framework::RasterizerStage());
-		D3D11_RASTERIZER_DESC rasterizerDesc = defaultRasterizer()->getDesc();
-		rasterizerDesc.CullMode = D3D11_CULL_NONE;
-		m_cullingOff->initWithDescription(rasterizerDesc);
-		if (!m_cullingOff->isValid()) exit();
-		auto viewports = defaultRasterizer()->getViewports();
-		m_cullingOff->getViewports().reserve(viewports.size());
-		m_cullingOff->getViewports() = viewports;
-
-		// a blend state to enable alpha-blending
-		m_alphaBlending.reset(new framework::BlendStage());
-		blendDesc = framework::BlendStage::getAlphaBlending();
-		for (int i = 0; i < 8; i++)
-		{
-			blendDesc.RenderTarget[i].SrcBlend = D3D11_BLEND_ONE;
-			blendDesc.RenderTarget[i].DestBlend = D3D11_BLEND_SRC_ALPHA;
-		}
-		m_alphaBlending->initWithDescription(blendDesc);
-		if (!m_alphaBlending->isValid()) exit();*/
-
-		// spatial info buffer
-		//m_spatialBuffer.reset(new framework::UniformBuffer());
-		//if (!m_spatialBuffer->initDefaultConstant<SpatialData>()) exit();
 
 		// lights
 		initLights();
@@ -246,16 +215,9 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
-		// clear only head buffer
-		//framework::UnorderedAccessibleBatch clearbatch;
-		//clearbatch.add(m_headBuffer);
-		//getPipeline().clearUnorderedAccessBatch(clearbatch);
-		
-		// set render target and head/fragments buffers
-		//framework::UnorderedAccessibleBatch batch;
-		//batch.add(m_headBuffer);
-		//batch.add(m_fragmentsBuffer, 0);
-		//getPipeline().setRenderTarget(defaultRenderTarget(), batch);
+		// clear head buffer and fragments counter
+		m_fragmentsCounter->clear();
+		m_headBuffer->clearColorAsUint(0);
 
 		// render skybox
 		renderSkybox(m_camera, m_skyboxTexture);
@@ -275,36 +237,51 @@ public:
 		}
 
 		// build lists of fragments for transparent objects
-		/*if (m_fragmentsListCreation->use())
+		if (m_fragmentsListCreation->use())
 		{
-			m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-			m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
-			m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+			m_fragmentsListCreation->setUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_fragmentsListCreation->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
+			m_fragmentsListCreation->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
+			m_fragmentsListCreation->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
+			m_fragmentsListCreation->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
+			
+			m_fragmentsCounter->bind(0);
+			m_fragmentsBuffer->bind(1);
 
-			m_cullingOff->apply();
-			m_disableColorWriting->apply();
-			m_disableDepthWriting->apply();
+			framework::PipelineState cullingDisable(GL_CULL_FACE, false);
+			cullingDisable.apply();
+			framework::DepthState disableDepthWriting(true);
+			disableDepthWriting.setWriteEnable(false);
+			disableDepthWriting.apply();
+
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				if (m_entitiesData[i].transparent) renderEntity(m_fragmentsListCreation, m_entity, m_entitiesData[i]);
 			}
-			m_disableDepthWriting->cancel();
-			m_disableColorWriting->cancel();
-			m_cullingOff->cancel();
-		}*/
+
+			disableDepthWriting.cancel();
+			cullingDisable.cancel();
+		}
 
 		// render transparent objects
-		/*if (m_transparentRendering->use())
+		if (m_transparentRendering->use())
 		{
-			disableDepthTest()->apply();
-			m_alphaBlending->apply();
-			getPipeline().drawPoints(1);
-			disableDepthTest()->cancel();
-			m_alphaBlending->cancel();
-		}*/
+			framework::DepthState disableDepth(false);
+			disableDepth.apply();
+			framework::BlendState blendingEnable(true);
+			blendingEnable.setBlending(GL_ONE, GL_SRC_ALPHA);
+			blendingEnable.apply();
+
+			glDrawArrays(GL_POINTS, 0, 1);
+			
+			disableDepth.cancel();
+			blendingEnable.cancel();
+		}
 
 		// debug rendering
 		renderDebug();
+
+		CHECK_GL_ERROR;
 	}
 
 	void renderEntity(const std::shared_ptr<framework::GpuProgram>& program, const Entity& entity, const EntityData& entityData)
@@ -365,8 +342,10 @@ public:
 private:
 	// texture to store heads of dynamic lists
 	std::shared_ptr<framework::RenderTarget> m_headBuffer;
+	// atomic counter for fragments buffer
+	std::shared_ptr<framework::AtomicCounter> m_fragmentsCounter;
 	// buffer to store dynamic lists
-	//std::shared_ptr<framework::UnorderedAccessBuffer> m_fragmentsBuffer;
+	std::shared_ptr<framework::StorageBuffer> m_fragmentsBuffer;
 	
 	// gpu program to render opaque geometry
 	std::shared_ptr<framework::GpuProgram> m_opaqueRendering;

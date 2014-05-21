@@ -35,6 +35,10 @@ set(SOURCE_LIB  framework.h
 				uirenderer.cpp
 				pipelinestate.h
 				pipelinestate.cpp
+				atomicCounter.h
+				atomicCounter.cpp
+				storageBuffer.h
+				storageBuffer.cpp
 )
 set(SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arrow.gsh.glsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/shaders/gl/win32/standard/arrow.fsh.glsl

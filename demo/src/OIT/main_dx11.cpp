@@ -230,6 +230,15 @@ public:
 		m_debugLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
 	}
 
+	virtual void shutdown()
+	{
+		if (utils::Profiler::instance().isRun())
+		{
+			utils::Profiler::instance().stop();
+		}
+		utils::Profiler::instance().saveToFile();
+	}
+
 	virtual void render(double elapsedTime)
 	{
 		m_camera.update(elapsedTime);
@@ -334,6 +343,14 @@ public:
 		{
 			m_renderDebug = !m_renderDebug;
 			m_debugLabel->setVisible(m_renderDebug);
+			return;
+		}
+		if (key == InputKeys::P && pressed)
+		{
+			if (!utils::Profiler::instance().isRun())
+				utils::Profiler::instance().run();
+			else
+				utils::Profiler::instance().stop();
 			return;
 		}
 		m_camera.onKeyButton(key, scancode, pressed);

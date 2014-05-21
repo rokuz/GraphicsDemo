@@ -229,6 +229,22 @@ public:
 		m_freeTextureSlot++;
 	}
 
+	template<typename UniformType>
+	void setImage(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int index, bool readFlag = true, bool writeFlag = true)
+	{
+		if (!renderTarget) return;
+
+		GLint uf = getUniformBuffer<UniformType>(uniform);
+		if (uf < 0) return;
+		if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
+
+		glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
+		renderTarget->bindAsImage(index, m_freeTextureSlot, readFlag, writeFlag);
+		glUniform1i(uf, m_freeTextureSlot);
+
+		m_freeTextureSlot++;
+	}
+
 	bool use();
 
 private:

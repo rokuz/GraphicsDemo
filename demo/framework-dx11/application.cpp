@@ -144,7 +144,7 @@ void Application::mainLoop()
 
 	do
 	{
-		//TRACE_BLOCK("_Frame");
+		TRACE_BLOCK("_Frame");
 		m_fpsCounter.beginFrame();
 
 		// process events from the window

@@ -42,6 +42,7 @@ public:
 
 	void bind(int index);
 	void bindDepth();
+	void bindAsImage(int targetIndex, int imageSlot, bool readFlag = true, bool writeFlag = true);
 
 	void set();
 	void clearColorAsUint(size_t index, const vector4& color = vector4(0, 0, 0, 0));
@@ -57,6 +58,7 @@ private:
 
 	GLuint m_framebufferObject;
 	std::vector<GLuint> m_colorBuffers;
+	std::vector<GLint> m_formats;
 	GLuint m_depthBuffer;
 	bool m_isUsedDepth;
 	int m_samples;

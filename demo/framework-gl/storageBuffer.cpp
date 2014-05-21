@@ -21,59 +21,60 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma warning(disable:4996)
-
-#include <string>
-#include <list>
-#include <map>
-#include <vector>
-#include <algorithm>
-#include <memory>
-#include <mutex>
-#include <functional>
-
-#include "matrix.h"
-#include "vector.h"
-#include "quaternion.h"
-#include "ncamera2.h"
-#include "bbox.h"
-
-#include <windows.h>
-#include "GL/gl3w.h"
-#include "GL/wglext.h"
-
-#include "window.h"
-
-#include "openglcontext.h"
-
-#include "logger.h"
-#include "utils.h"
-#include "timer.h"
-#include "profiler.h"
-#include "inputkeys.h"
-#include "fpscounter.h"
-#include "profiler.h"
-
-#include "destroyable.h"
-#include "geometry3D.h"
-#include "line3D.h"
-#include "texture.h"
-#include "uniformBuffer.h"
+#include "stdafx.h"
 #include "storageBuffer.h"
-#include "atomicCounter.h"
-#include "renderTarget.h"
-#include "gpuprogram.h"
-#include "standardGpuPrograms.h"
 
-#include "freeCamera.h"
-#include "lightManager.h"
+namespace framework
+{
 
-#include "uimanager.h"
-#include "uifactory.h"
+StorageBuffer::StorageBuffer() :
+	m_buffer(0)
+{
+}
 
-#include "pipelinestate.h"
+StorageBuffer::~StorageBuffer()
+{
+}
 
-#include "application.h"
+bool StorageBuffer::init(size_t elementSize, size_t count)
+{
+	destroy();
+	
+	glGenBuffers(1, &m_buffer);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, elementSize * count, NULL, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-#undef min
-#undef max
+	if (CHECK_GL_ERROR)
+	{
+		destroy();
+		utils::Logger::toLog("Error: could not create a storage buffer.\n");
+		return false;
+	}
+
+	initDestroyable();
+	return true;
+}
+
+bool StorageBuffer::isValid() const
+{
+	return m_buffer != 0;
+}
+
+void StorageBuffer::destroy()
+{
+	if (m_buffer != 0)
+	{
+		glDeleteBuffers(1, &m_buffer);
+		m_buffer = 0;
+	}
+}
+
+void StorageBuffer::bind(int bindingIndex)
+{
+	if (!isValid()) return;
+
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingIndex, m_buffer);
+}
+
+}

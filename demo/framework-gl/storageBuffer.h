@@ -21,59 +21,31 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma warning(disable:4996)
+#ifndef __STORAGE_BUFFER_H__
+#define __STORAGE_BUFFER_H__
 
-#include <string>
-#include <list>
-#include <map>
-#include <vector>
-#include <algorithm>
-#include <memory>
-#include <mutex>
-#include <functional>
+namespace framework
+{
 
-#include "matrix.h"
-#include "vector.h"
-#include "quaternion.h"
-#include "ncamera2.h"
-#include "bbox.h"
+class StorageBuffer : public Destroyable
+{
+	friend class Application;
 
-#include <windows.h>
-#include "GL/gl3w.h"
-#include "GL/wglext.h"
+public:
+	StorageBuffer();
+	virtual ~StorageBuffer();
 
-#include "window.h"
+	bool init(size_t elementSize, size_t count);
+	bool isValid() const;
+	void bind(int bindingIndex);
 
-#include "openglcontext.h"
+private:
+	virtual void destroy();
 
-#include "logger.h"
-#include "utils.h"
-#include "timer.h"
-#include "profiler.h"
-#include "inputkeys.h"
-#include "fpscounter.h"
-#include "profiler.h"
+	GLuint m_buffer;
+};
 
-#include "destroyable.h"
-#include "geometry3D.h"
-#include "line3D.h"
-#include "texture.h"
-#include "uniformBuffer.h"
-#include "storageBuffer.h"
-#include "atomicCounter.h"
-#include "renderTarget.h"
-#include "gpuprogram.h"
-#include "standardGpuPrograms.h"
 
-#include "freeCamera.h"
-#include "lightManager.h"
+}
 
-#include "uimanager.h"
-#include "uifactory.h"
-
-#include "pipelinestate.h"
-
-#include "application.h"
-
-#undef min
-#undef max
+#endif
