@@ -1,11 +1,20 @@
+#version 430 core
+
+out vec4 outputColor;
+
+uniform atomic_uint fragmentsListCounter;
+layout(r32ui) coherent uniform uimage2D headBuffer;
+
 struct ListNode
 {
 	uint packedColor;
 	uint depthAndCoverage;
 	uint next;
 };
-RWTexture2D<uint> headBuffer;
-RWStructuredBuffer<ListNode> fragmentsList;
+layout(std430) buffer fragmentsList
+{
+	ListNode fragments[];
+};
 
 struct NodeData
 {
@@ -13,31 +22,26 @@ struct NodeData
 	float depth;
 };
 
-struct VS_OUTPUT
-{
-    float4 position : SV_POSITION;
-};
-
-static const int MAX_FRAGMENTS = 16;
-static const NodeData INITIAL_SORTED_FRAGMENTS[MAX_FRAGMENTS] = 
+const int MAX_FRAGMENTS = 16;
+const NodeData INITIAL_SORTED_FRAGMENTS[MAX_FRAGMENTS] = 
 { 
-	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
-	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
-	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
-	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0
+	NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f),
+	NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f),
+	NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f),
+	NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f)
 };
 
-float4 unpackColor(uint color)
+vec4 unpackColor(uint color)
 {
-	float4 output;
-	output.r = float((color >> 24) & 0x000000ff) / 255.0f;
-	output.g = float((color >> 16) & 0x000000ff) / 255.0f;
-	output.b = float((color >> 8) & 0x000000ff) / 255.0f;
-	output.a = float(color & 0x000000ff) / 255.0f;
-	return saturate(output);
+	vec4 c;
+	c.r = float((color >> 24) & 0x000000ff) / 255.0f;
+	c.g = float((color >> 16) & 0x000000ff) / 255.0f;
+	c.b = float((color >> 8) & 0x000000ff) / 255.0f;
+	c.a = float(color & 0x000000ff) / 255.0f;
+	return clamp(c, 0.0f, 1.0f);
 }
 
-void insertionSort(uint startIndex, uint sampleIndex, inout NodeData sortedFragments[MAX_FRAGMENTS], out int counter)
+void insertionSort(uint startIndex, int sampleIndex, inout NodeData sortedFragments[MAX_FRAGMENTS], out int counter)
 {
 	counter = 0;
 	uint index = startIndex;
@@ -45,14 +49,14 @@ void insertionSort(uint startIndex, uint sampleIndex, inout NodeData sortedFragm
 	{
 		if (index != 0xffffffff)
 		{
-			uint coverage = (fragmentsList[index].depthAndCoverage >> 16);
+			uint coverage = (fragments[index].depthAndCoverage >> 16);
 			if (coverage & (1 << sampleIndex))
 			{
-				sortedFragments[counter].packedColor = fragmentsList[index].packedColor;
-				sortedFragments[counter].depth = f16tof32(fragmentsList[index].depthAndCoverage);
+				sortedFragments[counter].packedColor = fragments[index].packedColor;
+				sortedFragments[counter].depth = unpackHalf2x16(fragments[index].depthAndCoverage).x;
 				counter++;
 			}
-			index = fragmentsList[index].next;			
+			index = fragments[index].next;			
 		}
 	}
 	
@@ -72,23 +76,23 @@ void insertionSort(uint startIndex, uint sampleIndex, inout NodeData sortedFragm
     }
 }
 
-float4 main(VS_OUTPUT input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
+void main()
 {
-	uint2 upos = uint2(input.position.xy);
-	uint index = headBuffer[upos];
+	ivec2 upos = ivec2(gl_FragCoord.xy);
+	uint index = imageLoad(headBuffer, upos).x;
 	
-	float3 color = float3(0, 0, 0);
-	float alpha = 1;
+	vec3 color = vec3(0);
+	float alpha = 1.0f;
 	
 	NodeData sortedFragments[MAX_FRAGMENTS] = INITIAL_SORTED_FRAGMENTS;
 	int counter;
-	insertionSort(index, sampleIndex, sortedFragments, counter);
+	insertionSort(index, gl_SampleID, sortedFragments, counter);
 	for (int i = 0; i < counter; i++)
 	{
-		float4 c = unpackColor(sortedFragments[i].packedColor);
+		vec4 c = unpackColor(sortedFragments[i].packedColor);
 		alpha *= (1.0 - c.a);
-		color = lerp(color, c.rgb, c.a);
+		color = mix(color, c.rgb, c.a);
 	}
 
-    return float4(color, alpha);
+    outputColor = vec4(color, alpha);
 }

@@ -83,20 +83,22 @@ public:
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
 	
-		//m_fragmentsListCreation.reset(new framework::GpuProgram());
-		//m_fragmentsListCreation->addShader(SHADERS_PATH + "opaque.vsh.hlsl");
-		//m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.psh.hlsl");
-		//if (!m_fragmentsListCreation->init()) exit();
-		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
-		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
-		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+		m_fragmentsListCreation.reset(new framework::GpuProgram());
+		m_fragmentsListCreation->addShader(SHADERS_PATH + "opaque.vsh.glsl");
+		m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.fsh.glsl");
+		if (!m_fragmentsListCreation->init()) exit();
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
+		m_fragmentsListCreation->bindUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
 		
-		//m_transparentRendering.reset(new framework::GpuProgram());
-		//m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
-		//m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.hlsl");
-		//m_transparentRendering->addShader(SHADERS_PATH + "transparent.psh.hlsl");
-		//if (!m_transparentRendering->init(true)) exit();
+		m_transparentRendering.reset(new framework::GpuProgram());
+		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
+		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.glsl");
+		m_transparentRendering->addShader(SHADERS_PATH + "transparent.fsh.glsl");
+		if (!m_transparentRendering->init()) exit();
 
 		// entity
 		m_entity = initEntity("data/media/models/teapot.geom");
