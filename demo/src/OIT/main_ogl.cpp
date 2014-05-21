@@ -2,11 +2,12 @@
 
 // uniforms
 DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
-	SPATIAL_DATA,
+	MODELVIEWPROJECTION_MATRIX,
+	MODEL_MATRIX,
 	LIGHTS_DATA,
 	LIGHTS_COUNT,
-	ENVIRONMENT_MAP,
-	DEFAULT_SAMPLER
+	VIEW_POSITION,
+	ENVIRONMENT_MAP
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
 
@@ -24,7 +25,7 @@ struct SpatialData
 
 // constants
 const int MAX_LIGHTS_COUNT = 16;
-const std::string SHADERS_PATH = "data/shaders/dx11/oit/";
+const std::string SHADERS_PATH = "data/shaders/gl/win32/oit/";
 
 // application
 class OITApp : public framework::Application
@@ -42,7 +43,7 @@ public:
 
 	virtual void init(const std::map<std::string, int>& params)
 	{
-		m_info.title = "Order Independent Transparency (DX11)";
+		m_info.title = "Order Independent Transparency (OpenGL 4)";
 		
 		applyStandardParams(params);
 		
@@ -59,49 +60,46 @@ public:
 
 		// head buffer
 		m_headBuffer.reset(new framework::RenderTarget());
-		auto headBufferDesc = framework::RenderTarget::getDefaultDesc(m_info.windowWidth, 
-																	  m_info.windowHeight, 
-																	  DXGI_FORMAT_R32_UINT);
-		headBufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-		m_headBuffer->initWithDescription(headBufferDesc, false);
-		if (!m_headBuffer->isValid()) exit();
+		std::vector<int> formats;
+		formats.push_back(GL_R32UI);
+		if (!m_headBuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_info.samples, GL_DEPTH_COMPONENT32F)) exit();
 
 		// fragments buffer (we use buffer 8 time more than screen size)
-		m_fragmentsBufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight * 8;
-		unsigned int fragmentSize = 4 + 4 + 4; // color + depth + next
-		unsigned int fragmentsBufferFlags = D3D11_BUFFER_UAV_FLAG::D3D11_BUFFER_UAV_FLAG_COUNTER;
-		m_fragmentsBuffer.reset(new framework::UnorderedAccessBuffer());
-		if (!m_fragmentsBuffer->initDefaultUnorderedAccess(m_fragmentsBufferSize, fragmentSize, fragmentsBufferFlags)) exit();
+		//m_fragmentsBufferSize = (unsigned int)m_info.windowWidth * m_info.windowHeight * 8;
+		//unsigned int fragmentSize = 4 + 4 + 4; // color + depth + next
+		//unsigned int fragmentsBufferFlags = D3D11_BUFFER_UAV_FLAG::D3D11_BUFFER_UAV_FLAG_COUNTER;
+		//m_fragmentsBuffer.reset(new framework::UnorderedAccessBuffer());
+		//if (!m_fragmentsBuffer->initDefaultUnorderedAccess(m_fragmentsBufferSize, fragmentSize, fragmentsBufferFlags)) exit();
 
 		// gpu programs
 		m_opaqueRendering.reset(new framework::GpuProgram());
-		m_opaqueRendering->addShader(SHADERS_PATH + "opaque.vsh.hlsl");
-		m_opaqueRendering->addShader(SHADERS_PATH + "opaque.psh.hlsl");
+		m_opaqueRendering->addShader(SHADERS_PATH + "opaque.vsh.glsl");
+		m_opaqueRendering->addShader(SHADERS_PATH + "opaque.fsh.glsl");
 		if (!m_opaqueRendering->init()) exit();
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
+		m_opaqueRendering->bindUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
-
-		m_fragmentsListCreation.reset(new framework::GpuProgram());
-		m_fragmentsListCreation->addShader(SHADERS_PATH + "opaque.vsh.hlsl");
-		m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.psh.hlsl");
-		if (!m_fragmentsListCreation->init()) exit();
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+	
+		//m_fragmentsListCreation.reset(new framework::GpuProgram());
+		//m_fragmentsListCreation->addShader(SHADERS_PATH + "opaque.vsh.hlsl");
+		//m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.psh.hlsl");
+		//if (!m_fragmentsListCreation->init()) exit();
+		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
+		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
+		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 		
-		m_transparentRendering.reset(new framework::GpuProgram());
-		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
-		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.hlsl");
-		m_transparentRendering->addShader(SHADERS_PATH + "transparent.psh.hlsl");
-		if (!m_transparentRendering->init(true)) exit();
+		//m_transparentRendering.reset(new framework::GpuProgram());
+		//m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
+		//m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.hlsl");
+		//m_transparentRendering->addShader(SHADERS_PATH + "transparent.psh.hlsl");
+		//if (!m_transparentRendering->init(true)) exit();
 
 		// entity
 		m_entity = initEntity("data/media/models/teapot.geom");
-		m_entity.geometry->bindToGpuProgram(m_opaqueRendering);
-		m_entity.geometry->bindToGpuProgram(m_fragmentsListCreation);
 
 		const int ENTITIES_IN_ROW = 6;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
@@ -116,18 +114,21 @@ public:
 				float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
 
 				m_entitiesData[index].transparent = !(i % 2 == 0 && j % 2 == 0);
-				m_entitiesData[index].color = utils::Utils::random();
-				m_entitiesData[index].color.w = utils::Utils::random(0.3f, 0.7f).x;
 				m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 0.0f, z * AREA_HALFLENGTH));
 			}
 		}
 
 		// skybox texture
 		m_skyboxTexture.reset(new framework::Texture());
-		if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
+		if (!m_skyboxTexture->initAsCubemap("data/media/textures/meadow_front.jpg",
+											"data/media/textures/meadow_back.jpg",
+											"data/media/textures/meadow_left.jpg",
+											"data/media/textures/meadow_right.jpg",
+											"data/media/textures/meadow_top.jpg",
+											"data/media/textures/meadow_bottom.jpg")) exit();
 
 		// a blend state to disable color writing
-		m_disableColorWriting.reset(new framework::BlendStage());
+		/*m_disableColorWriting.reset(new framework::BlendStage());
 		D3D11_BLEND_DESC blendDesc = framework::BlendStage::getDisableColorWriting();
 		m_disableColorWriting->initWithDescription(blendDesc);
 		if (!m_disableColorWriting->isValid()) exit();
@@ -157,14 +158,23 @@ public:
 			blendDesc.RenderTarget[i].DestBlend = D3D11_BLEND_SRC_ALPHA;
 		}
 		m_alphaBlending->initWithDescription(blendDesc);
-		if (!m_alphaBlending->isValid()) exit();
+		if (!m_alphaBlending->isValid()) exit();*/
 
 		// spatial info buffer
-		m_spatialBuffer.reset(new framework::UniformBuffer());
-		if (!m_spatialBuffer->initDefaultConstant<SpatialData>()) exit();
+		//m_spatialBuffer.reset(new framework::UniformBuffer());
+		//if (!m_spatialBuffer->initDefaultConstant<SpatialData>()) exit();
 
 		// lights
 		initLights();
+
+		framework::DepthState depthTestEnable(true);
+		depthTestEnable.setWriteEnable(true);
+		depthTestEnable.apply();
+
+		framework::PipelineState cullingEnable(GL_CULL_FACE, true);
+		cullingEnable.apply();
+
+		glViewport(0, 0, m_info.windowWidth, m_info.windowHeight);
 	}
 
 	Entity initEntity(const std::string& geometry)
@@ -206,14 +216,13 @@ public:
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->initDefaultStructured<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
+		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
 
-		m_lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
-		for (unsigned int i = 0; i < m_lightsCount; i++)
+		m_lightsCount = std::min(m_lightManager.getLightSourcesCount(), (size_t)MAX_LIGHTS_COUNT);
+		for (size_t i = 0; i < m_lightsCount; i++)
 		{
-			m_lightsBuffer->setElement((int)i, m_lightManager.getRawLightData(i));
+			m_lightsBuffer->setElement(i, m_lightManager.getRawLightData(i));
 		}
-		m_lightsBuffer->applyChanges();
 	}
 
 	void initOverlays(gui::WidgetPtr_T root)
@@ -221,7 +230,7 @@ public:
 		m_debugLabel = framework::UIFactory::createLabel(gui::Coords(1.0f, -300.0f, 1.0f, -150.0f),
 														 gui::Coords::Absolute(300.0f, 150.0f),
 														 gui::RightAligned, gui::BottomAligned,
-														 L"Fragments buffer usage = 0 %\nLost fragments = 0");
+														 L"Fragments buffer usage = 0%\nLost fragments = 0");
 		m_debugLabel->setVisible(m_renderDebug);
 		root->addChild(m_debugLabel);
 
@@ -236,15 +245,15 @@ public:
 		update(elapsedTime);
 
 		// clear only head buffer
-		framework::UnorderedAccessibleBatch clearbatch;
-		clearbatch.add(m_headBuffer);
-		getPipeline().clearUnorderedAccessBatch(clearbatch);
+		//framework::UnorderedAccessibleBatch clearbatch;
+		//clearbatch.add(m_headBuffer);
+		//getPipeline().clearUnorderedAccessBatch(clearbatch);
 		
 		// set render target and head/fragments buffers
-		framework::UnorderedAccessibleBatch batch;
-		batch.add(m_headBuffer);
-		batch.add(m_fragmentsBuffer, 0);
-		getPipeline().setRenderTarget(defaultRenderTarget(), batch);
+		//framework::UnorderedAccessibleBatch batch;
+		//batch.add(m_headBuffer);
+		//batch.add(m_fragmentsBuffer, 0);
+		//getPipeline().setRenderTarget(defaultRenderTarget(), batch);
 
 		// render skybox
 		renderSkybox(m_camera, m_skyboxTexture);
@@ -252,9 +261,10 @@ public:
 		// render opaque objects
 		if (m_opaqueRendering->use())
 		{
-			m_opaqueRendering->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-			m_opaqueRendering->setUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
-			m_opaqueRendering->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+			m_opaqueRendering->setUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_opaqueRendering->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
+			m_opaqueRendering->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
+			m_opaqueRendering->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
@@ -263,7 +273,7 @@ public:
 		}
 
 		// build lists of fragments for transparent objects
-		if (m_fragmentsListCreation->use())
+		/*if (m_fragmentsListCreation->use())
 		{
 			m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
 			m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
@@ -279,17 +289,17 @@ public:
 			m_disableDepthWriting->cancel();
 			m_disableColorWriting->cancel();
 			m_cullingOff->cancel();
-		}
+		}*/
 
 		// render transparent objects
-		if (m_transparentRendering->use())
+		/*if (m_transparentRendering->use())
 		{
 			disableDepthTest()->apply();
 			m_alphaBlending->apply();
 			getPipeline().drawPoints(1);
 			disableDepthTest()->cancel();
 			m_alphaBlending->cancel();
-		}
+		}*/
 
 		// debug rendering
 		renderDebug();
@@ -297,16 +307,8 @@ public:
 
 	void renderEntity(const std::shared_ptr<framework::GpuProgram>& program, const Entity& entity, const EntityData& entityData)
 	{
-		SpatialData spatialData;
-		spatialData.modelViewProjection = entityData.mvp;
-		spatialData.model = entityData.model;
-		spatialData.viewPosition = m_camera.getPosition();
-		spatialData.lightsCount = m_lightsCount;
-		spatialData.color = entityData.color;
-		m_spatialBuffer->setData(spatialData);
-		m_spatialBuffer->applyChanges();
-
-		program->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
+		program->setMatrix<OITAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
+		program->setMatrix<OITAppUniforms>(UF::MODEL_MATRIX, entityData.model);
 
 		entity.geometry->renderAllMeshes();
 	}
@@ -315,7 +317,7 @@ public:
 	{
 		if (!m_renderDebug) return;
 
-		unsigned int bufferUsage = m_fragmentsBuffer->getActualSize();
+		unsigned int bufferUsage = 0;//m_fragmentsBuffer->getActualSize();
 		unsigned int lostFragments = 0;
 		double usage = ((double)bufferUsage / (double)m_fragmentsBufferSize) * 100.0;
 		if (usage > 100.0)
@@ -362,7 +364,7 @@ private:
 	// texture to store heads of dynamic lists
 	std::shared_ptr<framework::RenderTarget> m_headBuffer;
 	// buffer to store dynamic lists
-	std::shared_ptr<framework::UnorderedAccessBuffer> m_fragmentsBuffer;
+	//std::shared_ptr<framework::UnorderedAccessBuffer> m_fragmentsBuffer;
 	
 	// gpu program to render opaque geometry
 	std::shared_ptr<framework::GpuProgram> m_opaqueRendering;
@@ -372,10 +374,10 @@ private:
 	std::shared_ptr<framework::GpuProgram> m_transparentRendering;
 
 	// pipeline stages
-	std::shared_ptr<framework::BlendStage> m_disableColorWriting;
-	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
-	std::shared_ptr<framework::RasterizerStage> m_cullingOff;
-	std::shared_ptr<framework::BlendStage> m_alphaBlending;
+	//std::shared_ptr<framework::BlendStage> m_disableColorWriting;
+	//std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
+	//std::shared_ptr<framework::RasterizerStage> m_cullingOff;
+	//std::shared_ptr<framework::BlendStage> m_alphaBlending;
 
 	// entity
 	struct Entity
@@ -388,9 +390,8 @@ private:
 	{
 		matrix44 model;
 		matrix44 mvp;
-		vector4 color;
 		bool transparent;
-		EntityData() : color(vector4(1, 1, 1, 1)), transparent(true) {}
+		EntityData() : transparent(true) {}
 	};
 	std::vector<EntityData> m_entitiesData;
 

@@ -78,6 +78,8 @@ protected:
 
 	AppInfo m_info;
 	LightManager m_lightManager;
+	gui::LabelPtr_T m_fpsLabel;
+	gui::LabelPtr_T m_legendLabel;
 
 	void renderGui(double elapsedTime);
 	void renderAxes(const matrix44& viewProjection);
@@ -94,11 +96,10 @@ private:
 	OpenGLContext m_context;
 	utils::Timer m_timer;
 	bool m_isRunning;
-	double m_lastTime;
-	gui::LabelPtr_T m_legendLabel;
+	double m_lastTime;	
 	std::string m_legend;
-	gui::LabelPtr_T m_fpsLabel;
 	utils::FpsCounter m_fpsCounter;
+
 	std::list<std::weak_ptr<Destroyable> > m_destroyableList;
 	std::shared_ptr<Line3D> m_axisX;
 	std::shared_ptr<Line3D> m_axisY;
