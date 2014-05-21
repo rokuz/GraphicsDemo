@@ -129,6 +129,7 @@ bool Geometry3D::init(const std::string& fileName)
 	if (!data.isCorrect())
 	{
 		m_isLoaded = false;
+		utils::Logger::toLogWithFormat("Error: could not load geometry from '%s'.\n", fileName.c_str());
 		return m_isLoaded;
 	}
 

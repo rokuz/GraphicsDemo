@@ -5,9 +5,6 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	SPATIAL_DATA,
 	LIGHTS_DATA,
 	LIGHTS_COUNT,
-	DIFFUSE_MAP,
-	NORMAL_MAP,
-	SPECULAR_MAP,
 	ENVIRONMENT_MAP,
 	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
@@ -39,8 +36,6 @@ public:
 	OITApp()
 	{
 		m_lightsCount = 0;
-		m_rotation = 0.0f;
-		m_pause = false;
 		m_renderDebug = false;
 		m_fragmentsBufferSize = 0;
 	}
@@ -57,7 +52,7 @@ public:
 	virtual void startup(gui::WidgetPtr_T root)
 	{
 		// camera
-		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
+		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(-30, 30, -90), vector3());
 
 		// overlays
 		initOverlays(root);
@@ -85,9 +80,6 @@ public:
 		if (!m_opaqueRendering->init()) exit();
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
@@ -97,9 +89,6 @@ public:
 		if (!m_fragmentsListCreation->init()) exit();
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPATIAL_DATA, "spatialData");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::NORMAL_MAP, "normalMap");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 		
@@ -109,27 +98,28 @@ public:
 		m_transparentRendering->addShader(SHADERS_PATH + "transparent.psh.hlsl");
 		if (!m_transparentRendering->init(true)) exit();
 
-		// opaque entity
-		m_opaqueEntity = initEntity("data/media/sphere.FBX",
-									"",
-									"data/media/textures/no_bump.dds",
-									"data/media/textures/full_bump.dds");
-		m_opaqueEntity.geometry->bindToGpuProgram(m_opaqueRendering);
+		// entity
+		m_entity = initEntity("data/media/models/teapot.geom");
+		m_entity.geometry->bindToGpuProgram(m_opaqueRendering);
+		m_entity.geometry->bindToGpuProgram(m_fragmentsListCreation);
 
-		// transparent entity
-		m_transparentEntity = initEntity("data/media/teapot.FBX", //
-										 "",//"data/media/cube/cube_diff.dds",
-										 "data/media/textures/no_bump.dds",//"data/media/cube/cube_normal.dds", //
-										 "data/media/textures/full_specular.dds");
-		m_transparentEntity.geometry->bindToGpuProgram(m_fragmentsListCreation);
-
-		m_transparentEntitiesData.resize(10);
-		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+		const int ENTITIES_IN_ROW = 6;
+		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
+		const float AREA_HALFLENGTH = 45.0f;
+		m_entitiesData.resize(ENTITIES_IN_ROW * ENTITIES_IN_ROW);
+		for (int i = 0; i < ENTITIES_IN_ROW; i++)
 		{
-			m_transparentEntitiesData[i].color = utils::Utils::random();
-			m_transparentEntitiesData[i].color.w = utils::Utils::random(0.3f, 0.7f).x;
-			m_transparentEntitiesData[i].model.set_translation(utils::Utils::random(-25.0f, 25.0f));
-			m_transparentEntitiesData[i].model.pos_component().y = 0;
+			for (int j = 0; j < ENTITIES_IN_ROW; j++)
+			{
+				int index = i * ENTITIES_IN_ROW + j;
+				float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+				float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+
+				m_entitiesData[index].transparent = !(i % 2 == 0 && j % 2 == 0);
+				m_entitiesData[index].color = utils::Utils::random();
+				m_entitiesData[index].color.w = utils::Utils::random(0.3f, 0.7f).x;
+				m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 0.0f, z * AREA_HALFLENGTH));
+			}
 		}
 
 		// skybox texture
@@ -177,10 +167,7 @@ public:
 		initLights();
 	}
 
-	Entity initEntity(const std::string& geometry, 
-					  const std::string& texture, 
-					  const std::string& normalTexture, 
-					  const std::string& specularTexture)
+	Entity initEntity(const std::string& geometry)
 	{
 		Entity ent;
 
@@ -188,25 +175,6 @@ public:
 		ent.geometry.reset(new framework::Geometry3D());
 		if (!ent.geometry->init(geometry)) exit();
 		ent.geometry->bindToGpuProgram(m_opaqueRendering);
-
-		// textures
-		if (!texture.empty())
-		{
-			ent.texture.reset(new framework::Texture());
-			ent.texture->initWithDDS(texture);
-		}
-
-		if (!normalTexture.empty())
-		{
-			ent.normalTexture.reset(new framework::Texture());
-			ent.normalTexture->initWithDDS(normalTexture);
-		}
-
-		if (!specularTexture.empty())
-		{
-			ent.specularTexture.reset(new framework::Texture());
-			ent.specularTexture->initWithDDS(specularTexture);
-		}
 
 		return std::move(ent);
 	}
@@ -285,18 +253,29 @@ public:
 		// render opaque objects
 		if (m_opaqueRendering->use())
 		{
-			renderEntity(m_opaqueRendering, m_opaqueEntity, m_opaqueEntityData);
+			m_opaqueRendering->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+			m_opaqueRendering->setUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
+			m_opaqueRendering->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+
+			for (size_t i = 0; i < m_entitiesData.size(); i++)
+			{
+				if (!m_entitiesData[i].transparent) renderEntity(m_opaqueRendering, m_entity, m_entitiesData[i]);
+			}
 		}
 
 		// build lists of fragments for transparent objects
 		if (m_fragmentsListCreation->use())
 		{
+			m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+			m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
+			m_fragmentsListCreation->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+
 			m_cullingOff->apply();
 			m_disableColorWriting->apply();
 			m_disableDepthWriting->apply();
-			for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
-				renderEntity(m_fragmentsListCreation, m_transparentEntity, m_transparentEntitiesData[i]);
+				if (m_entitiesData[i].transparent) renderEntity(m_fragmentsListCreation, m_entity, m_entitiesData[i]);
 			}
 			m_disableDepthWriting->cancel();
 			m_disableColorWriting->cancel();
@@ -329,12 +308,6 @@ public:
 		m_spatialBuffer->applyChanges();
 
 		program->setUniform<OITAppUniforms>(UF::SPATIAL_DATA, m_spatialBuffer);
-		program->setUniform<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-		program->setUniform<OITAppUniforms>(UF::DIFFUSE_MAP, entity.texture);
-		program->setUniform<OITAppUniforms>(UF::NORMAL_MAP, entity.normalTexture);
-		program->setUniform<OITAppUniforms>(UF::SPECULAR_MAP, entity.specularTexture);
-		program->setUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
-		program->setUniform<OITAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
 
 		entity.geometry->renderAllMeshes();
 	}
@@ -354,20 +327,10 @@ public:
 		static wchar_t buf[100];
 		swprintf(buf, L"Fragments buffer usage = %d%%\nLost fragments = %d", (int)usage, lostFragments);
 		m_debugLabel->setText(buf);
-
-		//m_opaqueEntity.geometry->renderBoundingBox(m_mvp);
-		//matrix44 vp = m_camera.getView() * m_camera.getProjection();
-		//renderAxes(vp);
-		//m_lightManager.renderDebugVisualization(vp);
 	}
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)
 	{
-		if (key == InputKeys::Space && pressed)
-		{
-			m_pause = !m_pause;
-			return;
-		}
 		if (key == InputKeys::F1 && pressed)
 		{
 			m_renderDebug = !m_renderDebug;
@@ -390,23 +353,10 @@ public:
 	void update(double elapsedTime)
 	{
 		matrix44 vp = m_camera.getView() * m_camera.getProjection();
-
-		quaternion quat;
-		quat.set_rotate_x(n_deg2rad(-90.0f));
-		quaternion quat2;
-		quat2.set_rotate_z(-n_deg2rad(m_rotation));
-		m_opaqueEntityData.model = matrix44(quat * quat2);
-		quaternion quat3;
-		quat3.set_rotate_y(-n_deg2rad(m_rotation));
-		m_opaqueEntityData.model.set_translation(quat3.z_direction() * 30.0f);
-		m_opaqueEntityData.mvp = m_opaqueEntityData.model * vp;
-
-		for (size_t i = 0; i < m_transparentEntitiesData.size(); i++)
+		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
-			m_transparentEntitiesData[i].mvp = m_transparentEntitiesData[i].model * vp;
+			m_entitiesData[i].mvp = m_entitiesData[i].model * vp;
 		}
-
-		m_rotation += (m_pause ? 0 : (float)elapsedTime * 70.0f);
 	}
 
 private:
@@ -432,39 +382,27 @@ private:
 	struct Entity
 	{
 		std::shared_ptr<framework::Geometry3D> geometry;
-		std::shared_ptr<framework::Texture> texture;
-		std::shared_ptr<framework::Texture> normalTexture;
-		std::shared_ptr<framework::Texture> specularTexture;
 	};
+	Entity m_entity;
 
 	struct EntityData
 	{
 		matrix44 model;
 		matrix44 mvp;
 		vector4 color;
-		EntityData() : color(vector4(1, 1, 1, 1)) {}
+		bool transparent;
+		EntityData() : color(vector4(1, 1, 1, 1)), transparent(true) {}
 	};
+	std::vector<EntityData> m_entitiesData;
 
-	// opaque entity
-	Entity m_opaqueEntity;
-	EntityData m_opaqueEntityData;
-	// transparent entity
-	Entity m_transparentEntity;
-	std::vector<EntityData> m_transparentEntitiesData;
-
+	std::shared_ptr<framework::Texture> m_skyboxTexture;
 	std::shared_ptr<framework::UniformBuffer> m_spatialBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 	unsigned int m_lightsCount;
-
-	std::shared_ptr<framework::Texture> m_skyboxTexture;
-
 	framework::FreeCamera m_camera;
 
-	float m_rotation;
-	bool m_pause;
 	bool m_renderDebug;
 	unsigned int m_fragmentsBufferSize;
-
 	gui::LabelPtr_T m_debugLabel;
 };
 

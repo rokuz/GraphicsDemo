@@ -18,7 +18,7 @@ uint packColor(float4 color)
 [earlydepthstencil]
 float4 main(VS_OUTPUT input, uint coverage : SV_COVERAGE, bool frontFace : SV_IsFrontFace) : SV_TARGET
 {
-	float4 color = computeColorTransparent(input, frontFace, false);
+	float4 color = computeColorTransparent(input, frontFace);
 	uint newHeadBufferValue = fragmentsList.IncrementCounter();
 	if (newHeadBufferValue == 0xffffffff) { return float4(0, 0, 0, 0); }
 	
