@@ -5,7 +5,6 @@ in vec3 viewRay;
 out vec4 outputColor;
 
 // lights
-const int MAX_LIGHTS_COUNT = 64;
 struct LightData
 {
 	vec3 position;
@@ -19,9 +18,9 @@ struct LightData
 	vec3 specularColor;
 	uint dummy2;
 };
-layout(std140) uniform lightsDataBuffer
+layout(std140) buffer lightsDataBuffer
 {
-    LightData lightsData[MAX_LIGHTS_COUNT];
+    LightData lightsData[];
 };
 
 uniform sampler2D dataBlockMap1;

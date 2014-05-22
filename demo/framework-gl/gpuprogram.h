@@ -81,12 +81,12 @@ public:
 	}
 
 	template<typename UniformType>
-	void bindUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
+	void bindUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name, bool isStorage)
 	{
 		if (!isValid()) return;
 		if (uniform >= MAX_UNIFORMS) return;
 
-		m_uniforms[uniform] = glGetUniformBlockIndex(m_program, name.c_str());
+		m_uniforms[uniform] = isStorage ? glGetProgramResourceIndex(m_program, GL_SHADER_STORAGE_BLOCK, name.c_str()) : glGetUniformBlockIndex(m_program, name.c_str());
 		if (m_uniforms[uniform] < 0)
 		{
 			utils::Logger::toLogWithFormat("Error: Uniform buffer '%s' has not been found to bind.\n", name.c_str());
@@ -114,7 +114,26 @@ public:
 		if (uf < 0) return;
 
 		buffer->bind(index);
-		glUniformBlockBinding(m_program, uf, index);
+		if (buffer->isStorage())
+		{
+			glShaderStorageBlockBinding(m_program, uf, index);
+		}
+		else
+		{
+			glUniformBlockBinding(m_program, uf, index);
+		}
+	}
+
+	template<typename UniformType>
+	void setStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<StorageBuffer> buffer, int index)
+	{
+		if (!buffer) return;
+
+		GLint uf = getUniformBuffer<UniformType>(uniform);
+		if (uf < 0) return;
+
+		buffer->bind(index);
+		glShaderStorageBlockBinding(m_program, uf, index);
 	}
 
 	template<typename UniformType>

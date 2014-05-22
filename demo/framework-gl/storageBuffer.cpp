@@ -42,7 +42,7 @@ bool StorageBuffer::init(size_t elementSize, size_t count)
 	
 	glGenBuffers(1, &m_buffer);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, elementSize * count, NULL, GL_DYNAMIC_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, elementSize * count, NULL, GL_STATIC_DRAW);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	if (CHECK_GL_ERROR)

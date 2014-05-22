@@ -28,9 +28,9 @@ struct LightData
 	uint dummy2;
 };
 
-layout(std140) uniform lightsDataBuffer
+layout(std140) buffer lightsDataBuffer
 {
-    LightData light[16];
+    LightData light[];
 };
 
 void main()

@@ -71,7 +71,7 @@ public:
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::SPECULAR_MAP, "specularMap");
-		m_sceneRendering->bindUniformBuffer<PPAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_sceneRendering->bindUniformBuffer<PPAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer", true);
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 
@@ -206,7 +206,7 @@ public:
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
+		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT, true)) exit();
 
 		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
 		for (int i = 0; i < lightsCount; i++)
@@ -249,7 +249,7 @@ public:
 				renderEntity(m_entity, m_entitiesData[i]);
 			}
 		}
-
+		
 		useDefaultRenderTarget();
 		m_sceneBuffer->copyDepthToCurrentDepthBuffer(m_samples);
 

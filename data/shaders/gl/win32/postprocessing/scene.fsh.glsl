@@ -16,7 +16,6 @@ uniform sampler2D specularMap;
 uniform float specularPower;
 
 // lights
-const int MAX_LIGHTS_COUNT = 8;
 struct LightData
 {
 	vec3 position;
@@ -30,9 +29,9 @@ struct LightData
 	vec3 specularColor;
 	uint dummy2;
 };
-layout(std140) uniform lightsDataBuffer
+layout(std140) buffer lightsDataBuffer
 {
-    LightData lightsData[MAX_LIGHTS_COUNT];
+    LightData lightsData[];
 };
 
 uniform uint lightsCount;

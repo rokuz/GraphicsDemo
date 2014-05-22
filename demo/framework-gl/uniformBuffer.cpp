@@ -29,8 +29,8 @@ namespace framework
 
 UniformBuffer::UniformBuffer() :
 	m_buffer(0),
-	m_isInitialized(false),
-	m_isChanged(false)
+	m_isChanged(false),
+	m_isStorage(false)
 {
 }
 
@@ -41,8 +41,8 @@ UniformBuffer::~UniformBuffer()
 void UniformBuffer::initBuffer(size_t sz)
 {
 	glGenBuffers(1, &m_buffer);
-	glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
-	glBufferData(GL_UNIFORM_BUFFER, sz, NULL, GL_DYNAMIC_DRAW);
+	glBindBuffer(m_isStorage ? GL_SHADER_STORAGE_BUFFER : GL_UNIFORM_BUFFER, m_buffer);
+	glBufferData(m_isStorage ? GL_SHADER_STORAGE_BUFFER : GL_UNIFORM_BUFFER, sz, NULL, GL_DYNAMIC_DRAW);
 
 	m_bufferInMemory.resize(sz);
 	memset(m_bufferInMemory.data(), 0, m_bufferInMemory.size());
@@ -50,25 +50,38 @@ void UniformBuffer::initBuffer(size_t sz)
 
 void UniformBuffer::destroy()
 {
-	if (m_isInitialized)
+	if (m_buffer != 0)
 	{
 		glDeleteBuffers(1, &m_buffer);
-		m_isInitialized = false;
-		m_isChanged = false;
+		m_buffer = 0;
 	}
+
+	m_isChanged = false;
 }
 
 void UniformBuffer::bind(int bindingIndex)
 {
-	if (!m_isInitialized) return;
+	if (!isValid()) return;
+
 	if (m_isChanged)
 	{
-		glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
-		glBufferData(GL_UNIFORM_BUFFER, m_bufferInMemory.size(), m_bufferInMemory.data(), GL_DYNAMIC_DRAW);
+		glBindBuffer(m_isStorage ? GL_SHADER_STORAGE_BUFFER : GL_UNIFORM_BUFFER, m_buffer);
+		glBufferData(m_isStorage ? GL_SHADER_STORAGE_BUFFER : GL_UNIFORM_BUFFER, m_bufferInMemory.size(), m_bufferInMemory.data(), GL_DYNAMIC_DRAW);
+		glBindBuffer(m_isStorage ? GL_SHADER_STORAGE_BUFFER : GL_UNIFORM_BUFFER, 0);
 		m_isChanged = false;
 	}
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, bindingIndex, m_buffer);
+	glBindBufferBase(m_isStorage ? GL_SHADER_STORAGE_BUFFER : GL_UNIFORM_BUFFER, bindingIndex, m_buffer);
+}
+
+bool UniformBuffer::isValid() const
+{
+	return m_buffer != 0;
+}
+
+bool UniformBuffer::isStorage() const
+{
+	return m_isStorage;
 }
 
 }

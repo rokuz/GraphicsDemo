@@ -2,7 +2,6 @@
 
 out vec4 outputColor;
 
-layout(binding = 0, offset = 0) uniform atomic_uint fragmentsListCounter;
 layout(r32ui) coherent uniform uimage2D headBuffer;
 
 struct ListNode
@@ -11,7 +10,7 @@ struct ListNode
 	uint depthAndCoverage;
 	uint next;
 };
-layout(binding = 1) layout(std430) buffer fragmentsList
+layout(std430) buffer fragmentsList
 {
 	ListNode fragments[];
 };
@@ -22,7 +21,7 @@ struct NodeData
 	float depth;
 };
 
-const int MAX_FRAGMENTS = 16;
+const int MAX_FRAGMENTS = 4;
 
 vec4 unpackColor(uint color)
 {
@@ -73,11 +72,17 @@ void main()
 {
 	ivec2 upos = ivec2(gl_FragCoord.xy);
 	uint index = imageLoad(headBuffer, upos).x;
-	
+	if (index == 0xffffffff) discard;
+
 	vec3 color = vec3(0);
 	float alpha = 1.0f;
+
+	/*uint c = fragments[index].packedColor;
+	vec4 c2 = unpackColor(c);
+	alpha *= (1.0 - c2.a);
+	color = c2.rgb;*/
 	
-	NodeData sortedFragments[MAX_FRAGMENTS];
+	/*NodeData sortedFragments[MAX_FRAGMENTS];
 	for (int i = 0; i < MAX_FRAGMENTS; i++)
 	{
 		sortedFragments[i] = NodeData(0, 0.0f);
@@ -90,7 +95,7 @@ void main()
 		vec4 c = unpackColor(sortedFragments[i].packedColor);
 		alpha *= (1.0 - c.a);
 		color = mix(color, c.rgb, c.a);
-	}
+	}*/
 
     outputColor = vec4(color, alpha);
 }

@@ -35,14 +35,22 @@ public:
 	UniformBuffer();
 	virtual ~UniformBuffer();
 
-	template<typename DataType> bool init(size_t count)
+	template<typename DataType> bool init(size_t count, bool isStorage = false)
 	{
 		destroy();
-		initBuffer(sizeof(DataType) * count);
-		m_isInitialized = true;
 
-		if (m_isInitialized) initDestroyable();
-		return m_isInitialized;
+		m_isStorage = isStorage;
+		initBuffer(sizeof(DataType) * count);
+		
+		if (CHECK_GL_ERROR)
+		{
+			destroy();
+			utils::Logger::toLog("Error: could not create an uniform buffer.\n");
+			return false;
+		}
+
+		initDestroyable();
+		return true;
 	}
 
 	template<typename DataType> const DataType& getElement(int index) const
@@ -67,6 +75,8 @@ public:
 		return m_bufferInMemory.size() / sizeof(DataType);
 	}
 
+	bool isValid() const;
+	bool isStorage() const;
 	void bind(int bindingIndex);
 
 private:
@@ -75,8 +85,8 @@ private:
 
 	GLuint m_buffer;
 	std::vector<unsigned char> m_bufferInMemory;
-	bool m_isInitialized;
 	bool m_isChanged;
+	bool m_isStorage;
 };
 
 

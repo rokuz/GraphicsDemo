@@ -184,6 +184,12 @@ namespace
 
 		return -1;
 	}
+
+	int getMipLevelsCount(size_t width, size_t height)
+	{
+		size_t sz = std::min(width, height);
+		return (int)n_log2((float)sz) + 1;
+	}
 }
 
 class KtxLoader : public Texture::Loader
@@ -320,7 +326,8 @@ bool Texture::initWithData(GLint format, const unsigned char* buffer, size_t wid
 	m_height = height;
 	glGenTextures(1, &m_texture);
 	glBindTexture(m_target, m_texture);
-	glTexStorage2D(m_target, 1, m_format, m_width, m_height);
+	int mipLevels = mipmaps ? getMipLevelsCount(m_width, m_height) : 1;
+	glTexStorage2D(m_target, mipLevels, m_format, m_width, m_height);
 	glTexSubImage2D(m_target, 0, 0, 0, m_width, m_height, m_pixelFormat, GL_UNSIGNED_BYTE, buffer);
 
 	setSampling();
@@ -340,7 +347,8 @@ bool Texture::initWithData(GLint format, const unsigned char* buffer, size_t wid
 
 bool Texture::initAsCubemap( const std::string& frontFilename, const std::string& backFilename, 
 							 const std::string& leftFilename, const std::string& rightFilename, 
-							 const std::string& topFilename, const std::string& bottomFilename )
+							 const std::string& topFilename, const std::string& bottomFilename,
+							 bool mipmaps)
 {
 	destroy();
 
@@ -386,13 +394,14 @@ bool Texture::initAsCubemap( const std::string& frontFilename, const std::string
 	m_height = info[0].height;
 	glGenTextures(1, &m_texture);
 	glBindTexture(m_target, m_texture);
-	glTexStorage2D(m_target, 1, m_format, m_width, m_height);
+	int mipLevels = mipmaps ? getMipLevelsCount(m_width, m_height) : 1;
+	glTexStorage2D(m_target, mipLevels, m_format, m_width, m_height);
 	for (size_t i = 0; i < 6; i++)
 	{
 		glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, m_width, m_height, m_pixelFormat, GL_UNSIGNED_BYTE, info[i].data);
 	}
 	setSampling();
-	generateMipmaps();
+	if (mipmaps) generateMipmaps();
 	glBindTexture(m_target, 0);
 
 	cleanFunc();
@@ -428,6 +437,7 @@ void Texture::generateMipmaps()
 	if (m_target != 0)
 	{
 		glGenerateMipmap(m_target);
+		CHECK_GL_ERROR;
 	}
 }
 

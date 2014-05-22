@@ -58,7 +58,16 @@ public:
 		m_program->bindUniform<TestAppUniforms>(UF::NORMAL_MAP, "normalSampler");
 		m_program->bindUniform<TestAppUniforms>(UF::SPECULAR_MAP, "specularSampler");
 		m_program->bindUniform<TestAppUniforms>(UF::VIEW_POSITION, "viewPosition");
-		m_program->bindUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");
+		m_program->bindUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer", true);
+
+		// skybox texture
+		m_skyboxTexture.reset(new framework::Texture());
+		if (!m_skyboxTexture->initAsCubemap("data/media/textures/nightsky_front.jpg",
+											"data/media/textures/nightsky_back.jpg",
+											"data/media/textures/nightsky_left.jpg",
+											"data/media/textures/nightsky_right.jpg",
+											"data/media/textures/nightsky_top.jpg",
+											"data/media/textures/nightsky_bottom.jpg")) exit();
 
 		// lights
 		framework::LightSource source;
@@ -73,7 +82,7 @@ public:
 		m_lightManager.addLightSource(source);
 
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
+		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT, true)) exit();
 
 		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
 		for (int i = 0; i < lightsCount; i++)
@@ -118,15 +127,18 @@ public:
 
 		m_rotation += (float)elapsedTime * 70.0f;
 
+		// render skybox
+		renderSkybox(m_camera, m_skyboxTexture);
+
 		if (m_program->use())
 		{
 			m_program->setMatrix<TestAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, m_mvp);
 			m_program->setMatrix<TestAppUniforms>(UF::MODEL_MATRIX, model);
 			m_program->setVector<TestAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
-			m_program->setUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, m_lightsBuffer, 0);
 			m_program->setTexture<TestAppUniforms>(UF::DIFFUSE_MAP, m_texture);
 			m_program->setTexture<TestAppUniforms>(UF::NORMAL_MAP, m_normalTexture);
 			m_program->setTexture<TestAppUniforms>(UF::SPECULAR_MAP, m_specularTexture);
+			m_program->setUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, m_lightsBuffer, 0);
 
 			m_geometry->renderAllMeshes();
 		}
@@ -160,6 +172,7 @@ private:
 	std::shared_ptr<framework::Texture> m_normalTexture;
 	std::shared_ptr<framework::Texture> m_specularTexture;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
+	std::shared_ptr<framework::Texture> m_skyboxTexture;
 
 	framework::FreeCamera m_camera;
 	matrix44 m_mvp;

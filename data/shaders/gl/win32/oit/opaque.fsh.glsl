@@ -10,8 +10,11 @@ in VS_OUTPUT
 
 out vec4 outputColor;
 
+uniform samplerCube environmentMap;
+uniform vec3 viewPosition;
+uniform uint lightsCount;
+
 // lights
-const int MAX_LIGHTS_COUNT = 16;
 struct LightData
 {
 	vec3 position;
@@ -25,14 +28,10 @@ struct LightData
 	vec3 specularColor;
 	uint dummy2;
 };
-layout(std140) uniform lightsDataBuffer
+layout(std140) buffer lightsDataBuffer
 {
-    LightData lightsData[MAX_LIGHTS_COUNT];
+    LightData lightsData[];
 };
-
-uniform samplerCube environmentMap;
-uniform vec3 viewPosition;
-uniform uint lightsCount;
 
 void blinn(vec3 normal, vec3 viewDir, out vec3 diffColor, out vec3 specColor, out vec3 ambColor)
 {

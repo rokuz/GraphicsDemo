@@ -8,7 +8,9 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	LIGHTS_COUNT,
 	VIEW_POSITION,
 	ENVIRONMENT_MAP,
-	HEAD_BUFFER
+	HEAD_BUFFER,
+	FRAGMENTS_LIST_COUNTER,
+	FRAGMENTS_LIST
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
 
@@ -81,23 +83,25 @@ public:
 		m_opaqueRendering->addShader(SHADERS_PATH + "opaque.fsh.glsl");
 		if (!m_opaqueRendering->init()) exit();
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
-		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
-		m_opaqueRendering->bindUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");		
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
+		m_opaqueRendering->bindUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer", true);
 	
 		m_fragmentsListCreation.reset(new framework::GpuProgram());
 		m_fragmentsListCreation->addShader(SHADERS_PATH + "opaque.vsh.glsl");
 		m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.fsh.glsl");
 		if (!m_fragmentsListCreation->init()) exit();
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
-		m_fragmentsListCreation->bindUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");	
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
+		m_fragmentsListCreation->bindUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer", true);
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
+		m_fragmentsListCreation->bindUniformBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList", true);
+		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::FRAGMENTS_LIST_COUNTER, "fragmentsListCounter");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
@@ -105,6 +109,7 @@ public:
 		m_transparentRendering->addShader(SHADERS_PATH + "transparent.fsh.glsl");
 		if (!m_transparentRendering->init()) exit();
 		m_transparentRendering->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
+		m_transparentRendering->bindUniformBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList", true);
 
 		// entity
 		m_entity = initEntity("data/media/models/teapot.geom");
@@ -133,7 +138,7 @@ public:
 											"data/media/textures/meadow_left.jpg",
 											"data/media/textures/meadow_right.jpg",
 											"data/media/textures/meadow_top.jpg",
-											"data/media/textures/meadow_bottom.jpg")) exit();
+											"data/media/textures/meadow_bottom.jpg", true)) exit();
 
 		// lights
 		initLights();
@@ -174,7 +179,7 @@ public:
 		m_lightManager.addLightSource(source);
 
 		// directional light 2
-		framework::LightSource source2;
+		/*framework::LightSource source2;
 		source2.type = framework::LightType::DirectLight;
 		source2.position = vector3(15, 15, 0);
 		dir = vector3(0, -1, 1);
@@ -183,11 +188,11 @@ public:
 		source2.specularColor = vector3(0.1f, 0.1f, 0.1f);
 		source2.ambientColor = vector3(0.0f, 0.0f, 0.0f);
 		source2.orientation.set_from_axes(vector3(0, 0, 1), dir);
-		m_lightManager.addLightSource(source2);
+		m_lightManager.addLightSource(source2);*/
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
+		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT, true)) exit();
 
 		m_lightsCount = std::min(m_lightManager.getLightSourcesCount(), (size_t)MAX_LIGHTS_COUNT);
 		for (size_t i = 0; i < m_lightsCount; i++)
@@ -217,7 +222,9 @@ public:
 
 		// clear head buffer and fragments counter
 		m_fragmentsCounter->clear();
-		m_headBuffer->clearColorAsUint(0);
+		m_headBuffer->set();
+		m_headBuffer->clearColorAsUint(0, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff);
+		useDefaultRenderTarget();
 
 		// render skybox
 		renderSkybox(m_camera, m_skyboxTexture);
@@ -225,11 +232,11 @@ public:
 		// render opaque objects
 		if (m_opaqueRendering->use())
 		{
-			m_opaqueRendering->setUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
-			m_opaqueRendering->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
-			m_opaqueRendering->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 			m_opaqueRendering->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
-
+			m_opaqueRendering->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());	
+			m_opaqueRendering->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
+			m_opaqueRendering->setUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				if (!m_entitiesData[i].transparent) renderEntity(m_opaqueRendering, m_entity, m_entitiesData[i]);
@@ -239,14 +246,13 @@ public:
 		// build lists of fragments for transparent objects
 		if (m_fragmentsListCreation->use())
 		{
-			m_fragmentsListCreation->setUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 			m_fragmentsListCreation->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
 			m_fragmentsListCreation->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 			m_fragmentsListCreation->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
 			m_fragmentsListCreation->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
-			
-			m_fragmentsCounter->bind(0);
-			m_fragmentsBuffer->bind(1);
+			m_fragmentsListCreation->setUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 1);
+			m_fragmentsCounter->bind(2);
 
 			framework::PipelineState cullingDisable(GL_CULL_FACE, false);
 			cullingDisable.apply();
@@ -267,7 +273,7 @@ public:
 		if (m_transparentRendering->use())
 		{
 			m_transparentRendering->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
-			m_fragmentsBuffer->bind(0);
+			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 0);
 
 			framework::DepthState disableDepth(false);
 			disableDepth.apply();

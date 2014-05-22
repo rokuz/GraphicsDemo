@@ -201,11 +201,11 @@ void RenderTarget::set()
 	CHECK_GL_ERROR;
 }
 
-void RenderTarget::clearColorAsUint(size_t index, const vector4& color)
+void RenderTarget::clearColorAsUint(size_t index, unsigned int r, unsigned int g, unsigned int b, unsigned int a)
 {
 	if (!m_isInitialized) return;
 
-	const GLuint c[] = { (GLuint)color.x, (GLuint)color.y, (GLuint)color.z, (GLuint)color.w };
+	const GLuint c[] = { r, g, b, a };
 	glClearBufferuiv(GL_COLOR, index, c);
 }
 

@@ -98,7 +98,7 @@ public:
 			m_deferredShading->addShader(SHADERS_PATH + "deferredshading_msaa.fsh.glsl");
 		}
 		if (!m_deferredShading->init()) exit();
-		m_deferredShading->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_deferredShading->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer", true);
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::PROJECTIONINVERSE_MATRIX, "projectionInverseMatrix");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::VIEWINVERSE_MATRIX, "viewInverseMatrix");
@@ -220,7 +220,7 @@ public:
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
+		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT, true)) exit();
 
 		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
 		for (int i = 0; i < lightsCount; i++)
