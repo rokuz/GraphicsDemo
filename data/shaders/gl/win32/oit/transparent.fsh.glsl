@@ -23,13 +23,6 @@ struct NodeData
 };
 
 const int MAX_FRAGMENTS = 16;
-const NodeData INITIAL_SORTED_FRAGMENTS[MAX_FRAGMENTS] = 
-{ 
-	NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f),
-	NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f),
-	NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f),
-	NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f), NodeData(0, 0.0f)
-};
 
 vec4 unpackColor(uint color)
 {
@@ -84,7 +77,12 @@ void main()
 	vec3 color = vec3(0);
 	float alpha = 1.0f;
 	
-	NodeData sortedFragments[MAX_FRAGMENTS] = INITIAL_SORTED_FRAGMENTS;
+	NodeData sortedFragments[MAX_FRAGMENTS];
+	for (int i = 0; i < MAX_FRAGMENTS; i++)
+	{
+		sortedFragments[i] = NodeData(0, 0.0f);
+	}
+
 	int counter;
 	insertionSort(index, gl_SampleID, sortedFragments, counter);
 	for (int i = 0; i < counter; i++)

@@ -266,6 +266,9 @@ public:
 		// render transparent objects
 		if (m_transparentRendering->use())
 		{
+			m_transparentRendering->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
+			m_fragmentsBuffer->bind(0);
+
 			framework::DepthState disableDepth(false);
 			disableDepth.apply();
 			framework::BlendState blendingEnable(true);

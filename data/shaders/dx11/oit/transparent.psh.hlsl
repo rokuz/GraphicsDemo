@@ -19,13 +19,6 @@ struct VS_OUTPUT
 };
 
 static const int MAX_FRAGMENTS = 16;
-static const NodeData INITIAL_SORTED_FRAGMENTS[MAX_FRAGMENTS] = 
-{ 
-	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
-	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
-	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0,
-	(NodeData)0, (NodeData)0, (NodeData)0, (NodeData)0
-};
 
 float4 unpackColor(uint color)
 {
@@ -80,7 +73,13 @@ float4 main(VS_OUTPUT input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
 	float3 color = float3(0, 0, 0);
 	float alpha = 1;
 	
-	NodeData sortedFragments[MAX_FRAGMENTS] = INITIAL_SORTED_FRAGMENTS;
+	NodeData sortedFragments[MAX_FRAGMENTS];
+	[unroll]
+	for (int j = 0; j < MAX_FRAGMENTS; j++)
+	{
+		sortedFragments[j] = (NodeData)0;
+	}
+
 	int counter;
 	insertionSort(index, sampleIndex, sortedFragments, counter);
 	for (int i = 0; i < counter; i++)
