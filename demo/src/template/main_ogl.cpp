@@ -58,7 +58,7 @@ public:
 		m_program->bindUniform<TestAppUniforms>(UF::NORMAL_MAP, "normalSampler");
 		m_program->bindUniform<TestAppUniforms>(UF::SPECULAR_MAP, "specularSampler");
 		m_program->bindUniform<TestAppUniforms>(UF::VIEW_POSITION, "viewPosition");
-		m_program->bindUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer", true);
+		m_program->bindStorageBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, "lightsDataBuffer");
 
 		// skybox texture
 		m_skyboxTexture.reset(new framework::Texture());
@@ -138,7 +138,7 @@ public:
 			m_program->setTexture<TestAppUniforms>(UF::DIFFUSE_MAP, m_texture);
 			m_program->setTexture<TestAppUniforms>(UF::NORMAL_MAP, m_normalTexture);
 			m_program->setTexture<TestAppUniforms>(UF::SPECULAR_MAP, m_specularTexture);
-			m_program->setUniformBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, m_lightsBuffer, 0);
+			m_program->setStorageBuffer<TestAppUniforms>(UF::LIGHTS_DATA_BUFFER, m_lightsBuffer, 0);
 
 			m_geometry->renderAllMeshes();
 		}

@@ -8,7 +8,8 @@ set(SHADERS_OGL ${SHADERS_DIR_OGL}/fragmentslist.fsh.glsl
 				${SHADERS_DIR_OGL}/opaque.vsh.glsl
 				${SHADERS_DIR_OGL}/screenquad.gsh.glsl
 				${SHADERS_DIR_OGL}/screenquad.vsh.glsl
-				${SHADERS_DIR_OGL}/transparent.fsh.glsl)
+				${SHADERS_DIR_OGL}/transparent.fsh.glsl
+				${SHADERS_DIR_OGL}/clear.fsh.glsl)
 
 # Direct3D 11
 set(SHADERS_DIR_DX11 ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/dx11/oit)				

@@ -62,7 +62,7 @@ bool UIRendererOGL::init()
 		utils::Logger::toLog("Error: could not initialize text rendering shader.\n");
 		return false;
 	}
-	m_textRendering->bindUniformBuffer<UIUniforms>(UIUF::CHARACTERS_DATA, "charactersData", false);
+	m_textRendering->bindUniformBuffer<UIUniforms>(UIUF::CHARACTERS_DATA, "charactersData");
 	m_textRendering->bindUniform<UIUniforms>(UIUF::HALF_SCREEN_SIZE, "halfScreenSize");
 	m_textRendering->bindUniform<UIUniforms>(UIUF::TEXTURE_SIZE, "textureSize");
 	m_textRendering->bindUniform<UIUniforms>(UIUF::TEXT_COLOR, "textColor");

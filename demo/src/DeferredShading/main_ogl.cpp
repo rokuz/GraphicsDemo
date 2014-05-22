@@ -98,7 +98,7 @@ public:
 			m_deferredShading->addShader(SHADERS_PATH + "deferredshading_msaa.fsh.glsl");
 		}
 		if (!m_deferredShading->init()) exit();
-		m_deferredShading->bindUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer", true);
+		m_deferredShading->bindStorageBuffer<DSAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::PROJECTIONINVERSE_MATRIX, "projectionInverseMatrix");
 		m_deferredShading->bindUniform<DSAppUniforms>(UF::VIEWINVERSE_MATRIX, "viewInverseMatrix");
@@ -275,7 +275,7 @@ public:
 		if (m_deferredShading->use())
 		{
 			TRACE_BLOCK("_DeferredShading")
-			m_deferredShading->setUniformBuffer<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_deferredShading->setStorageBuffer<DSAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 			m_deferredShading->setUint<DSAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
 			m_deferredShading->setVector<DSAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 			m_deferredShading->setMatrix<DSAppUniforms>(UF::VIEWINVERSE_MATRIX, invview);

@@ -87,8 +87,15 @@ public:
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_opaqueRendering->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
-		m_opaqueRendering->bindUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer", true);
+		m_opaqueRendering->bindStorageBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
 	
+		m_clearHeadBuffer.reset(new framework::GpuProgram());
+		m_clearHeadBuffer->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
+		m_clearHeadBuffer->addShader(SHADERS_PATH + "screenquad.gsh.glsl");
+		m_clearHeadBuffer->addShader(SHADERS_PATH + "clear.fsh.glsl");
+		if (!m_clearHeadBuffer->init()) exit();
+		m_clearHeadBuffer->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
+
 		m_fragmentsListCreation.reset(new framework::GpuProgram());
 		m_fragmentsListCreation->addShader(SHADERS_PATH + "opaque.vsh.glsl");
 		m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.fsh.glsl");
@@ -98,9 +105,9 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
-		m_fragmentsListCreation->bindUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer", true);
+		m_fragmentsListCreation->bindStorageBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
-		m_fragmentsListCreation->bindUniformBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList", true);
+		m_fragmentsListCreation->bindStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
 		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::FRAGMENTS_LIST_COUNTER, "fragmentsListCounter");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
@@ -109,7 +116,7 @@ public:
 		m_transparentRendering->addShader(SHADERS_PATH + "transparent.fsh.glsl");
 		if (!m_transparentRendering->init()) exit();
 		m_transparentRendering->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
-		m_transparentRendering->bindUniformBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList", true);
+		m_transparentRendering->bindStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
 
 		// entity
 		m_entity = initEntity("data/media/models/teapot.geom");
@@ -220,12 +227,6 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
-		// clear head buffer and fragments counter
-		m_fragmentsCounter->clear();
-		m_headBuffer->set();
-		m_headBuffer->clearColorAsUint(0, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff);
-		useDefaultRenderTarget();
-
 		// render skybox
 		renderSkybox(m_camera, m_skyboxTexture);
 		
@@ -235,7 +236,7 @@ public:
 			m_opaqueRendering->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
 			m_opaqueRendering->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());	
 			m_opaqueRendering->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
-			m_opaqueRendering->setUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_opaqueRendering->setStorageBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 			
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
@@ -243,16 +244,35 @@ public:
 			}
 		}
 
+		// clear fragments counter
+		m_fragmentsCounter->clear();
+
+		// clear head buffer
+		if (m_clearHeadBuffer->use())
+		{
+			//m_fragmentsListCreation->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0, true, true);
+			m_headBuffer->bindAsImage(0, 0, false, true);
+
+			framework::DepthState disableDepth(false);
+			disableDepth.apply();
+
+			glDrawArrays(GL_POINTS, 0, 1);
+			
+			disableDepth.cancel();
+		}
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
 		// build lists of fragments for transparent objects
 		if (m_fragmentsListCreation->use())
 		{
 			m_fragmentsListCreation->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
 			m_fragmentsListCreation->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 			m_fragmentsListCreation->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
-			m_fragmentsListCreation->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
-			m_fragmentsListCreation->setUniformBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			//m_fragmentsListCreation->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
+			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 1);
 			m_fragmentsCounter->bind(2);
+			m_headBuffer->bindAsImage(0, 0, true, true);
 
 			framework::PipelineState cullingDisable(GL_CULL_FACE, false);
 			cullingDisable.apply();
@@ -268,17 +288,20 @@ public:
 			disableDepthWriting.cancel();
 			cullingDisable.cancel();
 		}
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		// render transparent objects
 		if (m_transparentRendering->use())
 		{
-			m_transparentRendering->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
-			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 0);
+			//m_transparentRendering->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
+			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 1);
+			m_headBuffer->bindAsImage(0, 0, true, true);
 
 			framework::DepthState disableDepth(false);
 			disableDepth.apply();
 			framework::BlendState blendingEnable(true);
-			blendingEnable.setBlending(GL_ONE, GL_SRC_ALPHA);
+			//blendingEnable.setBlending(GL_ONE, GL_SRC_ALPHA);
+			blendingEnable.setBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			blendingEnable.apply();
 
 			glDrawArrays(GL_POINTS, 0, 1);
@@ -358,6 +381,8 @@ private:
 	
 	// gpu program to render opaque geometry
 	std::shared_ptr<framework::GpuProgram> m_opaqueRendering;
+	// gpu program to clear head buffer
+	std::shared_ptr<framework::GpuProgram> m_clearHeadBuffer;
 	// gpu program to create fragments list
 	std::shared_ptr<framework::GpuProgram> m_fragmentsListCreation;
 	// gpu program to render transparent geometry by fragments list

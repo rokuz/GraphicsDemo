@@ -77,10 +77,10 @@ void main()
 	vec3 color = vec3(0);
 	float alpha = 1.0f;
 
-	/*uint c = fragments[index].packedColor;
+	uint c = fragments[index].packedColor;
 	vec4 c2 = unpackColor(c);
-	alpha *= (1.0 - c2.a);
-	color = c2.rgb;*/
+	alpha = c2.a;
+	color = c2.rgb;
 	
 	/*NodeData sortedFragments[MAX_FRAGMENTS];
 	for (int i = 0; i < MAX_FRAGMENTS; i++)

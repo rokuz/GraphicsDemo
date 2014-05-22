@@ -69,6 +69,7 @@ float4 main(VS_OUTPUT input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
 {
 	uint2 upos = uint2(input.position.xy);
 	uint index = headBuffer[upos];
+	clip(index == 0xffffffff ? -1 : 1);
 	
 	float3 color = float3(0, 0, 0);
 	float alpha = 1;

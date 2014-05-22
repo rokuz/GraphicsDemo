@@ -292,6 +292,7 @@ void RenderTarget::bindAsImage(int targetIndex, int imageSlot, bool readFlag, bo
 		access = GL_WRITE_ONLY;
 
 	glBindImageTexture(imageSlot, m_colorBuffers[targetIndex], 0, GL_FALSE, 0, access, m_formats[targetIndex]);
+	CHECK_GL_ERROR;
 }
 
 void RenderTarget::copyDepthToCurrentDepthBuffer(int samplesCount)

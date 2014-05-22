@@ -71,7 +71,7 @@ public:
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::SPECULAR_MAP, "specularMap");
-		m_sceneRendering->bindUniformBuffer<PPAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer", true);
+		m_sceneRendering->bindStorageBuffer<PPAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_sceneRendering->bindUniform<PPAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 
@@ -240,7 +240,7 @@ public:
 		// render scene
 		if (m_sceneRendering->use())
 		{
-			m_sceneRendering->setUniformBuffer<PPAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_sceneRendering->setStorageBuffer<PPAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 			m_sceneRendering->setUint<PPAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
 			m_sceneRendering->setVector<PPAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 
