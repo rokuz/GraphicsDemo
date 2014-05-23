@@ -9,7 +9,8 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	VIEW_POSITION,
 	ENVIRONMENT_MAP,
 	HEAD_BUFFER,
-	FRAGMENTS_LIST
+	FRAGMENTS_LIST,
+	DEPTH_MAP
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
 
@@ -41,13 +42,15 @@ public:
 		m_lightsCount = 0;
 		m_renderDebug = false;
 		m_fragmentsBufferSize = 0;
+		m_samples = 0;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
 	{
-		m_info.title = "Order Independent Transparency (OpenGL 4)";
-		
+		m_info.title = "Order Independent Transparency (OpenGL 4)";	
 		applyStandardParams(params);
+		m_samples = (int)m_info.samples;
+		m_info.samples = 0;
 		
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 	}
@@ -59,6 +62,12 @@ public:
 
 		// overlays
 		initOverlays(root);
+
+		// scene buffer
+		m_sceneBuffer.reset(new framework::RenderTarget());
+		std::vector<int> sceneBufFormat;
+		sceneBufFormat.push_back(GL_RGBA8);
+		if (!m_sceneBuffer->init(m_info.windowWidth, m_info.windowHeight, sceneBufFormat, m_samples, GL_DEPTH_COMPONENT32F)) exit();
 
 		// head buffer
 		m_headBuffer.reset(new framework::RenderTarget());
@@ -104,6 +113,7 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
+		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEPTH_MAP, "depthMap");
 		m_fragmentsListCreation->bindStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
@@ -239,6 +249,10 @@ public:
 		// clear fragments counter
 		m_fragmentsCounter->clear();
 
+		// clear only depth (skybox will clear color)
+		m_sceneBuffer->set();
+		m_sceneBuffer->clearDepth();
+
 		// render skybox
 		renderSkybox(m_camera, m_skyboxTexture);
 		
@@ -258,28 +272,32 @@ public:
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
+		framework::DepthState disableDepth(false);
+		disableDepth.apply();
+
 		// build lists of fragments for transparent objects
 		if (m_fragmentsListCreation->use())
 		{
 			m_fragmentsListCreation->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
 			m_fragmentsListCreation->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 			m_fragmentsListCreation->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
+			m_fragmentsListCreation->setDepth<OITAppUniforms>(UF::DEPTH_MAP, m_sceneBuffer);
 			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 1);
 			m_fragmentsCounter->bind(0);
 
 			framework::PipelineState cullingDisable(GL_CULL_FACE, false);
 			cullingDisable.apply();
-			framework::DepthState disableDepthWriting(true);
-			disableDepthWriting.setWriteEnable(false);
-			disableDepthWriting.apply();
+			
+			framework::ColorOutputState disableColorWriting(false);
+			disableColorWriting.apply();
 			
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				if (m_entitiesData[i].transparent) renderEntity(m_fragmentsListCreation, m_entity, m_entitiesData[i]);
 			}
 
-			disableDepthWriting.cancel();
 			cullingDisable.cancel();
+			disableColorWriting.cancel();
 		}
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
@@ -287,22 +305,24 @@ public:
 		// render transparent objects
 		if (m_transparentRendering->use())
 		{
-			framework::DepthState disableDepth(false);
-			disableDepth.apply();
+			
 			framework::BlendState blendingEnable(true);
 			blendingEnable.setBlending(GL_ONE, GL_SRC_ALPHA);
 			blendingEnable.apply();
 
 			glDrawArrays(GL_POINTS, 0, 1);
-			
-			disableDepth.cancel();
+		
 			blendingEnable.cancel();
 		}
+
+		disableDepth.cancel();
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
 		// debug rendering
 		renderDebug();
+
+		m_sceneBuffer->copyColorToBackBuffer();
 
 		CHECK_GL_ERROR;
 	}
@@ -363,6 +383,8 @@ public:
 	}
 
 private:
+	// texture to render scene
+	std::shared_ptr<framework::RenderTarget> m_sceneBuffer;
 	// texture to store heads of dynamic lists
 	std::shared_ptr<framework::RenderTarget> m_headBuffer;
 	// atomic counter for fragments buffer
@@ -378,12 +400,6 @@ private:
 	std::shared_ptr<framework::GpuProgram> m_fragmentsListCreation;
 	// gpu program to render transparent geometry by fragments list
 	std::shared_ptr<framework::GpuProgram> m_transparentRendering;
-
-	// pipeline stages
-	//std::shared_ptr<framework::BlendStage> m_disableColorWriting;
-	//std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
-	//std::shared_ptr<framework::RasterizerStage> m_cullingOff;
-	//std::shared_ptr<framework::BlendStage> m_alphaBlending;
 
 	// entity
 	struct Entity
@@ -406,6 +422,7 @@ private:
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 	unsigned int m_lightsCount;
 	framework::FreeCamera m_camera;
+	int m_samples;
 
 	bool m_renderDebug;
 	unsigned int m_fragmentsBufferSize;

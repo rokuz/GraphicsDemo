@@ -57,7 +57,7 @@ public:
 		// scene buffer
 		m_sceneBuffer.reset(new framework::RenderTarget());
 		std::vector<int> formats;
-		formats.push_back(GL_RGBA8);
+		formats.push_back(GL_RGBA32F);
 		if (!m_sceneBuffer->init(m_info.windowWidth, m_info.windowHeight, formats, m_samples, GL_DEPTH_COMPONENT32F)) exit();
 
 		// gpu programs

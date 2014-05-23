@@ -190,6 +190,7 @@ void Application::renderGui(double elapsedTime)
 
 	if (gui::UIManager::instance().renderer())
 	{
+		useDefaultRenderTarget();
 		gui::UIManager::instance().renderer()->render();
 	}
 }

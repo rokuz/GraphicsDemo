@@ -9,7 +9,6 @@ in VS_OUTPUT
 } psinput;
 
 out vec4 outputColor;
-layout (depth_unchanged) out float gl_FragDepth;
 
 // lights
 struct LightData
@@ -31,6 +30,7 @@ layout(std430) buffer lightsDataBuffer
 };
 
 uniform samplerCube environmentMap;
+uniform sampler2D depthMap;
 uniform vec3 viewPosition;
 uniform uint lightsCount;
 
@@ -93,14 +93,16 @@ vec4 computeColorTransparent(bool frontFace)
 
 void main()
 {
-	gl_FragDepth = 1;
-	outputColor = vec4(1);
+	outputColor = vec4(0);
 	uint newHeadBufferValue = atomicCounterIncrement(fragmentsListCounter);
 	if (newHeadBufferValue == 0xffffffff) discard;
 
+	ivec2 upos = ivec2(gl_FragCoord.xy);
+	float depth = texelFetch(depthMap, upos, 0).r;
+	if (gl_FragCoord.z > depth) discard;
+
 	vec4 color = computeColorTransparent(gl_FrontFacing);
 	
-	ivec2 upos = ivec2(gl_FragCoord.xy);
 	uint previosHeadBufferValue = imageAtomicExchange(headBuffer, upos, newHeadBufferValue);
 	
 	uint currentDepth = packHalf2x16(vec2(psinput.worldPos.w, 0));

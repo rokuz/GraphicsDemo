@@ -321,4 +321,14 @@ void RenderTarget::copyDepthToCurrentDepthBuffer(int samplesCount)
 	}
 }
 
+void RenderTarget::copyColorToBackBuffer()
+{
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_framebufferObject);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	vector2 sz = Application::instance()->getScreenSize();
+	glBlitFramebuffer(0, 0, (int)m_width, (int)m_height, 0, 0, (int)sz.x, (int)sz.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	CHECK_GL_ERROR;
+}
+
 }
