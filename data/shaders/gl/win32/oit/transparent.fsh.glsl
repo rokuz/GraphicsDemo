@@ -21,7 +21,7 @@ struct NodeData
 	float depth;
 };
 
-const int MAX_FRAGMENTS = 4;
+const int MAX_FRAGMENTS = 16;
 
 vec4 unpackColor(uint color)
 {
@@ -77,12 +77,7 @@ void main()
 	vec3 color = vec3(0);
 	float alpha = 1.0f;
 
-	uint c = fragments[index].packedColor;
-	vec4 c2 = unpackColor(c);
-	alpha = c2.a;
-	color = c2.rgb;
-	
-	/*NodeData sortedFragments[MAX_FRAGMENTS];
+	NodeData sortedFragments[MAX_FRAGMENTS];
 	for (int i = 0; i < MAX_FRAGMENTS; i++)
 	{
 		sortedFragments[i] = NodeData(0, 0.0f);
@@ -95,7 +90,7 @@ void main()
 		vec4 c = unpackColor(sortedFragments[i].packedColor);
 		alpha *= (1.0 - c.a);
 		color = mix(color, c.rgb, c.a);
-	}*/
+	}
 
     outputColor = vec4(color, alpha);
 }

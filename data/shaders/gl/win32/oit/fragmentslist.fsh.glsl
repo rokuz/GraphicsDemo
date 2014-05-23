@@ -9,6 +9,7 @@ in VS_OUTPUT
 } psinput;
 
 out vec4 outputColor;
+layout (depth_unchanged) out float gl_FragDepth;
 
 // lights
 struct LightData
@@ -24,7 +25,7 @@ struct LightData
 	vec3 specularColor;
 	uint dummy2;
 };
-layout(std140) buffer lightsDataBuffer
+layout(std430) buffer lightsDataBuffer
 {
     LightData lightsData[];
 };
@@ -46,7 +47,7 @@ layout(std430) buffer fragmentsList
 	ListNode fragments[];
 };
 
-layout(binding = 2, offset = 0) uniform atomic_uint fragmentsListCounter;
+layout(offset = 0) uniform atomic_uint fragmentsListCounter;
 
 uint packColor(vec4 color)
 {
@@ -87,11 +88,13 @@ vec4 computeColorTransparent(bool frontFace)
 	float alpha = clamp(1.0f - dot(viewDir, normal), 0.3f, 1.0f);
 	vec3 diffuse = envColor * (diffColor + ambColor);
 	
-	return vec4(diffuse, alpha);
+	return vec4(clamp(diffuse, 0.0f, 1.0f), alpha);
 }
 
 void main()
 {
+	gl_FragDepth = 1;
+	outputColor = vec4(1);
 	uint newHeadBufferValue = atomicCounterIncrement(fragmentsListCounter);
 	if (newHeadBufferValue == 0xffffffff) discard;
 

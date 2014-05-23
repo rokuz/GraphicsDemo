@@ -9,7 +9,6 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	VIEW_POSITION,
 	ENVIRONMENT_MAP,
 	HEAD_BUFFER,
-	FRAGMENTS_LIST_COUNTER,
 	FRAGMENTS_LIST
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
@@ -27,7 +26,7 @@ struct SpatialData
 #pragma pack (pop)
 
 // constants
-const int MAX_LIGHTS_COUNT = 16;
+const int MAX_LIGHTS_COUNT = 8;
 const std::string SHADERS_PATH = "data/shaders/gl/win32/oit/";
 
 // application
@@ -105,18 +104,13 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::LIGHTS_COUNT, "lightsCount");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
-		m_fragmentsListCreation->bindStorageBuffer<OITAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
-		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
 		m_fragmentsListCreation->bindStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
-		//m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::FRAGMENTS_LIST_COUNTER, "fragmentsListCounter");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.glsl");
 		m_transparentRendering->addShader(SHADERS_PATH + "transparent.fsh.glsl");
 		if (!m_transparentRendering->init()) exit();
-		m_transparentRendering->bindUniform<OITAppUniforms>(UF::HEAD_BUFFER, "headBuffer");
-		m_transparentRendering->bindStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
 
 		// entity
 		m_entity = initEntity("data/media/models/teapot.geom");
@@ -186,7 +180,7 @@ public:
 		m_lightManager.addLightSource(source);
 
 		// directional light 2
-		/*framework::LightSource source2;
+		framework::LightSource source2;
 		source2.type = framework::LightType::DirectLight;
 		source2.position = vector3(15, 15, 0);
 		dir = vector3(0, -1, 1);
@@ -195,7 +189,7 @@ public:
 		source2.specularColor = vector3(0.1f, 0.1f, 0.1f);
 		source2.ambientColor = vector3(0.0f, 0.0f, 0.0f);
 		source2.orientation.set_from_axes(vector3(0, 0, 1), dir);
-		m_lightManager.addLightSource(source2);*/
+		m_lightManager.addLightSource(source2);
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
@@ -227,6 +221,24 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+
+		// clear head buffer
+		if (m_clearHeadBuffer->use())
+		{
+			m_headBuffer->bindAsImage(0, 0, true, true);
+
+			framework::DepthState disableDepth(false);
+			disableDepth.apply();
+
+			glDrawArrays(GL_POINTS, 0, 1);
+
+			disableDepth.cancel();
+		}
+
+		// clear fragments counter
+		m_fragmentsCounter->clear();
+
 		// render skybox
 		renderSkybox(m_camera, m_skyboxTexture);
 		
@@ -244,23 +256,7 @@ public:
 			}
 		}
 
-		// clear fragments counter
-		m_fragmentsCounter->clear();
-
-		// clear head buffer
-		if (m_clearHeadBuffer->use())
-		{
-			//m_fragmentsListCreation->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0, true, true);
-			m_headBuffer->bindAsImage(0, 0, false, true);
-
-			framework::DepthState disableDepth(false);
-			disableDepth.apply();
-
-			glDrawArrays(GL_POINTS, 0, 1);
-			
-			disableDepth.cancel();
-		}
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
 		// build lists of fragments for transparent objects
 		if (m_fragmentsListCreation->use())
@@ -268,18 +264,15 @@ public:
 			m_fragmentsListCreation->setUint<OITAppUniforms>(UF::LIGHTS_COUNT, m_lightsCount);
 			m_fragmentsListCreation->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 			m_fragmentsListCreation->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
-			//m_fragmentsListCreation->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
-			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 1);
-			m_fragmentsCounter->bind(2);
-			m_headBuffer->bindAsImage(0, 0, true, true);
+			m_fragmentsCounter->bind(0);
 
 			framework::PipelineState cullingDisable(GL_CULL_FACE, false);
 			cullingDisable.apply();
 			framework::DepthState disableDepthWriting(true);
 			disableDepthWriting.setWriteEnable(false);
 			disableDepthWriting.apply();
-
+			
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				if (m_entitiesData[i].transparent) renderEntity(m_fragmentsListCreation, m_entity, m_entitiesData[i]);
@@ -288,20 +281,16 @@ public:
 			disableDepthWriting.cancel();
 			cullingDisable.cancel();
 		}
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+		
 		// render transparent objects
 		if (m_transparentRendering->use())
 		{
-			//m_transparentRendering->setImage<OITAppUniforms>(UF::HEAD_BUFFER, m_headBuffer, 0);
-			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 1);
-			m_headBuffer->bindAsImage(0, 0, true, true);
-
 			framework::DepthState disableDepth(false);
 			disableDepth.apply();
 			framework::BlendState blendingEnable(true);
-			//blendingEnable.setBlending(GL_ONE, GL_SRC_ALPHA);
-			blendingEnable.setBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			blendingEnable.setBlending(GL_ONE, GL_SRC_ALPHA);
 			blendingEnable.apply();
 
 			glDrawArrays(GL_POINTS, 0, 1);
@@ -309,6 +298,8 @@ public:
 			disableDepth.cancel();
 			blendingEnable.cancel();
 		}
+
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
 		// debug rendering
 		renderDebug();

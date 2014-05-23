@@ -88,7 +88,7 @@ void AtomicCounter::bind(int bindingIndex)
 {
 	if (!isValid()) return;
 	
-	glBindBufferBase(GL_UNIFORM_BUFFER, bindingIndex, m_buffer);
+	glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, bindingIndex, m_buffer);
 }
 
 }

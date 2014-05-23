@@ -10,10 +10,6 @@ in VS_OUTPUT
 
 out vec4 outputColor;
 
-uniform samplerCube environmentMap;
-uniform vec3 viewPosition;
-uniform uint lightsCount;
-
 // lights
 struct LightData
 {
@@ -28,10 +24,14 @@ struct LightData
 	vec3 specularColor;
 	uint dummy2;
 };
-layout(std140) buffer lightsDataBuffer
+layout(std430) buffer lightsDataBuffer
 {
     LightData lightsData[];
 };
+
+uniform samplerCube environmentMap;
+uniform vec3 viewPosition;
+uniform uint lightsCount;
 
 void blinn(vec3 normal, vec3 viewDir, out vec3 diffColor, out vec3 specColor, out vec3 ambColor)
 {
@@ -67,5 +67,5 @@ void main()
 
 	vec3 diffuse = envColor * (diffColor + ambColor);
 	
-	outputColor = vec4(diffuse, 1.0f);
+	outputColor = vec4(clamp(diffuse, 0.0f, 1.0f), 1.0f);
 }
