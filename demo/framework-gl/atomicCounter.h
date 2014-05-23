@@ -40,6 +40,8 @@ public:
 	void clear(unsigned int value = 0);
 	void bind(int bindingIndex);
 
+	unsigned int getCurrentValue();
+
 private:
 	virtual void destroy();
 

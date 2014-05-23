@@ -91,4 +91,22 @@ void AtomicCounter::bind(int bindingIndex)
 	glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, bindingIndex, m_buffer);
 }
 
+unsigned int AtomicCounter::getCurrentValue()
+{
+	if (!isValid()) return 0;
+
+	unsigned int result = 0;
+	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, m_buffer);
+	
+	unsigned int* vbuf = (unsigned int*)glMapBuffer(GL_ATOMIC_COUNTER_BUFFER, GL_READ_ONLY);
+	result = *vbuf;
+	glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
+	
+	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+
+	CHECK_GL_ERROR;
+
+	return result;
+}
+
 }

@@ -4,6 +4,7 @@ set(DEMO_NAME Demo_OIT)
 set(SHADERS_DIR_OGL ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/gl/win32/oit)
 set(SOURCE_OGL main_ogl.cpp)
 set(SHADERS_OGL ${SHADERS_DIR_OGL}/fragmentslist.fsh.glsl
+				${SHADERS_DIR_OGL}/fragmentslist_msaa.fsh.glsl
 				${SHADERS_DIR_OGL}/opaque.fsh.glsl
 				${SHADERS_DIR_OGL}/opaque.vsh.glsl
 				${SHADERS_DIR_OGL}/screenquad.gsh.glsl

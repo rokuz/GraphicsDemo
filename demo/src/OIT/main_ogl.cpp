@@ -10,7 +10,8 @@ DECLARE_UNIFORMS_BEGIN(OITAppUniforms)
 	ENVIRONMENT_MAP,
 	HEAD_BUFFER,
 	FRAGMENTS_LIST,
-	DEPTH_MAP
+	DEPTH_MAP,
+	SAMPLES_COUNT
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<OITAppUniforms>::Uniform
 
@@ -106,7 +107,14 @@ public:
 
 		m_fragmentsListCreation.reset(new framework::GpuProgram());
 		m_fragmentsListCreation->addShader(SHADERS_PATH + "opaque.vsh.glsl");
-		m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.fsh.glsl");
+		if (m_samples == 0)
+		{
+			m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist.fsh.glsl");
+		}
+		else
+		{
+			m_fragmentsListCreation->addShader(SHADERS_PATH + "fragmentslist_msaa.fsh.glsl");
+		}
 		if (!m_fragmentsListCreation->init()) exit();
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");	
@@ -114,6 +122,7 @@ public:
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::ENVIRONMENT_MAP, "environmentMap");
 		m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::DEPTH_MAP, "depthMap");
+		if (m_samples > 0) m_fragmentsListCreation->bindUniform<OITAppUniforms>(UF::SAMPLES_COUNT, "samplesCount");
 		m_fragmentsListCreation->bindStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, "fragmentsList");
 		
 		m_transparentRendering.reset(new framework::GpuProgram());
@@ -282,6 +291,7 @@ public:
 			m_fragmentsListCreation->setVector<OITAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 			m_fragmentsListCreation->setTexture<OITAppUniforms>(UF::ENVIRONMENT_MAP, m_skyboxTexture);
 			m_fragmentsListCreation->setDepth<OITAppUniforms>(UF::DEPTH_MAP, m_sceneBuffer);
+			if (m_samples > 0) m_fragmentsListCreation->setInt<OITAppUniforms>(UF::SAMPLES_COUNT, m_samples);
 			m_fragmentsListCreation->setStorageBuffer<OITAppUniforms>(UF::FRAGMENTS_LIST, m_fragmentsBuffer, 1);
 			m_fragmentsCounter->bind(0);
 
@@ -339,7 +349,7 @@ public:
 	{
 		if (!m_renderDebug) return;
 
-		unsigned int bufferUsage = 0;//m_fragmentsBuffer->getActualSize();
+		unsigned int bufferUsage = m_fragmentsCounter->getCurrentValue();
 		unsigned int lostFragments = 0;
 		double usage = ((double)bufferUsage / (double)m_fragmentsBufferSize) * 100.0;
 		if (usage > 100.0)
