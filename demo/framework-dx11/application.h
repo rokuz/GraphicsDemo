@@ -58,6 +58,8 @@ public:
 	std::weak_ptr<GpuProgram> getUsingGpuProgram() const { return m_usingGpuProgram; }
 	Pipeline& getPipeline() { return m_pipeline; }
 	vector2 getScreenSize() const { return vector2((float)m_info.windowWidth, (float)m_info.windowHeight); }
+
+	bool isDebugEnabled() const;
 	
 	void useDefaultRenderTarget();
 	const std::shared_ptr<RenderTarget>& defaultRenderTarget() const;

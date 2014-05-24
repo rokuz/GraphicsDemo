@@ -287,11 +287,12 @@ ID3DBlob* GpuProgram::compileShader(ShaderType shaderType, const std::string& fi
 	ID3DBlob* compiledShader = 0;
 	ID3DBlob* errorMessages = 0;
 
-	UINT flags = D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
-#ifdef _DEBUG
-	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
+	UINT flags = D3DCOMPILE_PACK_MATRIX_ROW_MAJOR | D3DCOMPILE_SKIP_OPTIMIZATION;
+	if (Application::instance()->isDebugEnabled())
+	{
+		flags |= D3DCOMPILE_DEBUG;
+	}
+	
 	std::string shaderPath = utils::Utils::getPath(filename);
 	std::unique_ptr<GpuProgramInclude> includeHandler(new GpuProgramInclude(shaderPath));
 

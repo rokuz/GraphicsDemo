@@ -45,7 +45,7 @@ public:
 
 	typedef std::function<void(const std::string&, const Statistics&, int)> ProcessNodeFunc;
 
-protected:
+private:
 	struct Node
 	{
 		std::string name;
@@ -70,6 +70,8 @@ protected:
 	std::map<unsigned int, ProfilingTree*> m_profilingTrees;
 	bool m_isRun;
 	Timer m_timer;
+	std::string m_filename;
+	std::string m_header;
 
 	void beginTrace(const std::string& name);
 	void endTrace(bool historical);
@@ -98,6 +100,9 @@ public:
 	void forEach(unsigned int id, ProcessNodeFunc processNode);
 	std::vector<int> getProfilingThreads() const;
 	std::string getProfilingThreadDesc(unsigned int id) const;
+
+	void setFilename(const std::string& filename);
+	void setHeader(const std::string& header);
 
 	void saveToFile();
 };

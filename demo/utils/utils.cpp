@@ -246,4 +246,18 @@ std::map<std::string, int> Utils::parseCommandLine(const std::string& commandLin
 	return std::move(result);
 }
 
+std::string Utils::currentTimeDate(bool withoutSpaces)
+{
+	std::chrono::time_point<std::chrono::system_clock> tp = std::chrono::system_clock::now();
+	std::time_t t = std::chrono::system_clock::to_time_t(tp);
+	std::string str = std::ctime(&t);
+	if (withoutSpaces)
+	{
+		std::replace(str.begin(), str.end(), ' ', '_');
+		std::replace(str.begin(), str.end(), ':', '_');
+	}
+	str.pop_back(); // remove \n
+	return std::move(str);
+}
+
 }

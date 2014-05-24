@@ -25,6 +25,7 @@ struct SpatialData
 // constants
 const int MAX_LIGHTS_COUNT = 16;
 const std::string SHADERS_PATH = "data/shaders/dx11/oit/";
+#define PROFILING 0
 
 // application
 class OITApp : public framework::Application
@@ -45,14 +46,25 @@ public:
 		m_info.title = "Order Independent Transparency (DX11)";
 		
 		applyStandardParams(params);
-		
+
+		m_info.flags.debug = 1;
+
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
+
+	#if PROFILING
+		std::stringstream header;
+		header << m_info.title << "\n" << m_info.windowWidth << "x" << m_info.windowHeight 
+			   << ", samples = " << m_info.samples << ", fullscreen = " << (m_info.flags.fullscreen ? "yes" : "no") << "\n";
+		utils::Profiler::instance().setHeader(header.str());
+		utils::Profiler::instance().setFilename("profiler_" + utils::Utils::currentTimeDate(true) + ".txt");
+	#endif
 	}
 
 	virtual void startup(gui::WidgetPtr_T root)
 	{
 		// camera
-		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(-30, 30, -90), vector3());
+		//m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(-30, 30, -90), vector3());
+		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(-30.96, 4.15, -50.85), vector3(-30.96, 4.15, -49.85));
 
 		// overlays
 		initOverlays(root);
@@ -95,7 +107,14 @@ public:
 		m_transparentRendering.reset(new framework::GpuProgram());
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.hlsl");
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.hlsl");
-		m_transparentRendering->addShader(SHADERS_PATH + "transparent.psh.hlsl");
+		if (m_info.samples == 0)
+		{
+			m_transparentRendering->addShader(SHADERS_PATH + "transparent.psh.hlsl");
+		}
+		else
+		{
+			m_transparentRendering->addShader(SHADERS_PATH + "transparent_msaa.psh.hlsl");
+		}
 		if (!m_transparentRendering->init(true)) exit();
 
 		// entity
@@ -232,11 +251,13 @@ public:
 
 	virtual void shutdown()
 	{
+	#if PROFILING
 		if (utils::Profiler::instance().isRun())
 		{
 			utils::Profiler::instance().stop();
 		}
 		utils::Profiler::instance().saveToFile();
+	#endif
 	}
 
 	virtual void render(double elapsedTime)
@@ -345,6 +366,7 @@ public:
 			m_debugLabel->setVisible(m_renderDebug);
 			return;
 		}
+	#if PROFILING
 		if (key == InputKeys::P && pressed)
 		{
 			if (!utils::Profiler::instance().isRun())
@@ -353,6 +375,7 @@ public:
 				utils::Profiler::instance().stop();
 			return;
 		}
+	#endif
 		m_camera.onKeyButton(key, scancode, pressed);
 	}
 

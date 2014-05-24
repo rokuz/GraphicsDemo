@@ -44,7 +44,8 @@ Profiler& Profiler::instance()
 	return profiler;
 }
 
-Profiler::Profiler()
+Profiler::Profiler() :
+	m_filename("profiler.txt")
 {
 	m_isRun = false;
 	m_timer.init();
@@ -248,15 +249,29 @@ void Profiler::forEach(unsigned int id, ProcessNodeFunc processNode)
 	}
 }
 
+void Profiler::setFilename(const std::string& filename)
+{
+	m_filename = filename;
+}
+
+void Profiler::setHeader(const std::string& header)
+{
+	m_header = header;
+}
+
 void Profiler::saveToFile()
 {
 	std::vector<int> threads = getProfilingThreads();
 	if (!threads.empty())
 	{
 		std::ofstream profilerFile;
-		profilerFile.open("profiler.txt");
+		profilerFile.open(m_filename);
 		if (profilerFile.is_open())
 		{
+			if (!m_header.empty())
+			{
+				profilerFile << m_header << "\n";
+			}
 			for (size_t i = 0; i < threads.size(); i++)
 			{
 				profilerFile << "Thread (" << threads[i] << ", " << getProfilingThreadDesc(threads[i]) << "):\n";

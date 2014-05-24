@@ -939,4 +939,9 @@ void Application::applyStandardParams(const std::map<std::string, int>& params)
 	}
 }
 
+bool Application::isDebugEnabled() const
+{
+	return m_info.flags.debug != 0;
+}
+
 }

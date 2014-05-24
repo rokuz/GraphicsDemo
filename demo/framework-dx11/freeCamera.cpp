@@ -159,6 +159,8 @@ void FreeCamera::update(double elapsedTime)
 	{
 		m_position -= (m_orientation.x_direction() * m_speed * (float)elapsedTime);
 	}
+
+	//utils::Logger::toLogWithFormat("%.2f, %.2f, %.2f\n", m_position.x, m_position.y, m_position.z);
 }
 
 }

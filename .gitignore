@@ -1,5 +1,6 @@
 build*
 deps
 log.txt
-profiler.txt
+profiler*
 tools
+run-demo*

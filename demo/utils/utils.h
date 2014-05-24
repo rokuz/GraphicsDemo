@@ -45,6 +45,7 @@ public:
 	static std::wstring toUnicode(const std::string& str);
 	static vector3 random(float minValue = 0.0f, float maxValue = 1.0f);
 	static std::map<std::string, int> parseCommandLine(const std::string& commandLine);
+	static std::string currentTimeDate(bool withoutSpaces = false);
 	
 	template<typename StringType>
 	static std::list<std::pair<size_t, size_t> > tokenize(const StringType& str, typename StringType::value_type delimiter)
