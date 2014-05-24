@@ -18,7 +18,7 @@ struct VS_OUTPUT
     float4 position : SV_POSITION;
 };
 
-static const int MAX_FRAGMENTS = 32;
+static const int MAX_FRAGMENTS = 16;
 
 float4 unpackColor(uint color)
 {
