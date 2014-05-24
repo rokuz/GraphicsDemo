@@ -33,7 +33,7 @@ vec4 unpackColor(uint color)
 	return clamp(c, 0.0f, 1.0f);
 }
 
-void insertionSort(uint startIndex, inout NodeData sortedFragments[MAX_FRAGMENTS], out int counter)
+void insertionSort(uint startIndex, int sampleIndex, inout NodeData sortedFragments[MAX_FRAGMENTS], out int counter)
 {
 	counter = 0;
 	uint index = startIndex;
@@ -41,9 +41,13 @@ void insertionSort(uint startIndex, inout NodeData sortedFragments[MAX_FRAGMENTS
 	{
 		if (index != 0xffffffff)
 		{
-			sortedFragments[counter].packedColor = fragments[index].packedColor;
-			sortedFragments[counter].depth = unpackHalf2x16(fragments[index].depthAndCoverage).x;
-			counter++;
+			uint coverage = (fragments[index].depthAndCoverage >> 16);
+			if (coverage & (1 << sampleIndex))
+			{
+				sortedFragments[counter].packedColor = fragments[index].packedColor;
+				sortedFragments[counter].depth = unpackHalf2x16(fragments[index].depthAndCoverage).x;
+				counter++;
+			}
 			index = fragments[index].next;			
 		}
 	}
@@ -80,13 +84,50 @@ void main()
 	}
 
 	int counter;
-	insertionSort(index, sortedFragments, counter);
+	insertionSort(index, gl_SampleID, sortedFragments, counter);
+
+	// resolve multisampling
+	int resolveBuffer[MAX_FRAGMENTS];
+	vec4 colors[MAX_FRAGMENTS];
+	int resolveIndex = -1;
+	float prevdepth = -1.0f;
 	for (int i = 0; i < counter; i++)
+	{
+		if (sortedFragments[i].depth != prevdepth)
+		{
+			resolveIndex = -1;
+			resolveBuffer[i] = 1;
+			colors[i] = unpackColor(sortedFragments[i].packedColor);
+		}
+		else
+		{
+			if (resolveIndex < 0) { resolveIndex = i - 1; }
+
+			colors[resolveIndex] += unpackColor(sortedFragments[i].packedColor);
+			resolveBuffer[resolveIndex]++;
+
+			resolveBuffer[i] = 0;
+		}
+		prevdepth = sortedFragments[i].depth;
+	}
+
+	// gather
+	for (int i = 0; i < counter; i++)
+	{
+		if (resolveBuffer[i] != 0)
+		{
+			vec4 c = colors[i] / float(resolveBuffer[i]);
+			alpha *= (1.0 - c.a);
+			color = mix(color, c.rgb, c.a);
+		}
+	}
+	
+	/*for (int i = 0; i < counter; i++)
 	{
 		vec4 c = unpackColor(sortedFragments[i].packedColor);
 		alpha *= (1.0 - c.a);
 		color = mix(color, c.rgb, c.a);
-	}
+	}*/
 
     outputColor = vec4(color, alpha);
 }

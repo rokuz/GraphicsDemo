@@ -35,17 +35,35 @@ public:
 	UniformBuffer();
 	virtual ~UniformBuffer();
 
-	template<typename DataType> bool init(size_t count, bool isStorage = false)
+	template<typename DataType> bool init(size_t count)
 	{
 		destroy();
 
-		m_isStorage = isStorage;
+		m_isStorage = false;
 		initBuffer(sizeof(DataType) * count);
 		
 		if (CHECK_GL_ERROR)
 		{
 			destroy();
-			utils::Logger::toLog("Error: could not create an uniform buffer.\n");
+			utils::Logger::toLog("Error: could not initialize an uniform buffer.\n");
+			return false;
+		}
+
+		initDestroyable();
+		return true;
+	}
+
+	template<typename DataType> bool initStorage(size_t count)
+	{
+		destroy();
+
+		m_isStorage = true;
+		initBuffer(sizeof(DataType)* count);
+
+		if (CHECK_GL_ERROR)
+		{
+			destroy();
+			utils::Logger::toLog("Error: could not initialize a storage buffer.\n");
 			return false;
 		}
 

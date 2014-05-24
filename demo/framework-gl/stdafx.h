@@ -31,6 +31,7 @@
 #include <memory>
 #include <mutex>
 #include <functional>
+#include <sstream>
 
 #include "matrix.h"
 #include "vector.h"

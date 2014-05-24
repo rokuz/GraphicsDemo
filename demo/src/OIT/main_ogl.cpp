@@ -30,6 +30,7 @@ struct SpatialData
 // constants
 const int MAX_LIGHTS_COUNT = 8;
 const std::string SHADERS_PATH = "data/shaders/gl/win32/oit/";
+#define PROFILING 0
 
 // application
 class OITApp : public framework::Application
@@ -54,6 +55,14 @@ public:
 		m_info.samples = 0;
 		
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
+
+	#if PROFILING
+		std::stringstream header;
+		header << m_info.title << "\n" << m_info.windowWidth << "x" << m_info.windowHeight
+			   << ", samples = " << m_samples << ", fullscreen = " << (m_info.flags.fullscreen ? "yes" : "no") << "\n";
+		utils::Profiler::instance().setHeader(header.str());
+		utils::Profiler::instance().setFilename("profiler_" + utils::Utils::currentTimeDate(true) + ".txt");
+	#endif
 	}
 
 	virtual void startup(gui::WidgetPtr_T root)
@@ -128,7 +137,14 @@ public:
 		m_transparentRendering.reset(new framework::GpuProgram());
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.vsh.glsl");
 		m_transparentRendering->addShader(SHADERS_PATH + "screenquad.gsh.glsl");
-		m_transparentRendering->addShader(SHADERS_PATH + "transparent.fsh.glsl");
+		if (m_samples == 0)
+		{
+			m_transparentRendering->addShader(SHADERS_PATH + "transparent.fsh.glsl");
+		}
+		else
+		{
+			m_transparentRendering->addShader(SHADERS_PATH + "transparent_msaa.fsh.glsl");
+		}
 		if (!m_transparentRendering->init()) exit();
 
 		// entity
@@ -212,7 +228,7 @@ public:
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT, true)) exit();
+		if (!m_lightsBuffer->initStorage<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
 
 		m_lightsCount = std::min(m_lightManager.getLightSourcesCount(), (size_t)MAX_LIGHTS_COUNT);
 		for (size_t i = 0; i < m_lightsCount; i++)
@@ -233,6 +249,17 @@ public:
 		m_fpsLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
 		m_legendLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
 		m_debugLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
+	}
+
+	virtual void shutdown()
+	{
+	#if PROFILING
+		if (utils::Profiler::instance().isRun())
+		{
+			utils::Profiler::instance().stop();
+		}
+		utils::Profiler::instance().saveToFile();
+	#endif
 	}
 
 	virtual void render(double elapsedTime)
@@ -370,6 +397,16 @@ public:
 			m_debugLabel->setVisible(m_renderDebug);
 			return;
 		}
+		#if PROFILING
+		if (key == InputKeys::P && pressed)
+		{
+			if (!utils::Profiler::instance().isRun())
+				utils::Profiler::instance().run();
+			else
+				utils::Profiler::instance().stop();
+			return;
+		}
+		#endif
 		m_camera.onKeyButton(key, scancode, pressed);
 	}
 

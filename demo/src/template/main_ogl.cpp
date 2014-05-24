@@ -82,7 +82,7 @@ public:
 		m_lightManager.addLightSource(source);
 
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->init<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT, true)) exit();
+		if (!m_lightsBuffer->initStorage<framework::LightRawData>((size_t)MAX_LIGHTS_COUNT)) exit();
 
 		int lightsCount = std::min((int)m_lightManager.getLightSourcesCount(), MAX_LIGHTS_COUNT);
 		for (int i = 0; i < lightsCount; i++)

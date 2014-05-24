@@ -131,6 +131,7 @@ void Application::mainLoop()
 {
 	while (m_isRunning)
 	{
+		TRACE_BLOCK("_Frame");
 		m_fpsCounter.beginFrame();
 
 		// process events from the window

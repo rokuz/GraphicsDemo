@@ -10,6 +10,7 @@ set(SHADERS_OGL ${SHADERS_DIR_OGL}/fragmentslist.fsh.glsl
 				${SHADERS_DIR_OGL}/screenquad.gsh.glsl
 				${SHADERS_DIR_OGL}/screenquad.vsh.glsl
 				${SHADERS_DIR_OGL}/transparent.fsh.glsl
+				${SHADERS_DIR_OGL}/transparent_msaa.fsh.glsl
 				${SHADERS_DIR_OGL}/clear.fsh.glsl)
 
 # Direct3D 11

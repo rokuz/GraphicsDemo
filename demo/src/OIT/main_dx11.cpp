@@ -47,8 +47,6 @@ public:
 		
 		applyStandardParams(params);
 
-		m_info.flags.debug = 1;
-
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 
 	#if PROFILING
