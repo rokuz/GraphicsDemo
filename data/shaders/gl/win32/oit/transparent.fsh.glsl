@@ -81,11 +81,14 @@ void main()
 
 	int counter;
 	insertionSort(index, sortedFragments, counter);
-	for (int i = 0; i < counter; i++)
+	for (int i = 0; i < MAX_FRAGMENTS; i++)
 	{
-		vec4 c = unpackColor(sortedFragments[i].packedColor);
-		alpha *= (1.0 - c.a);
-		color = mix(color, c.rgb, c.a);
+		if (i < counter)
+		{
+			vec4 c = unpackColor(sortedFragments[i].packedColor);
+			alpha *= (1.0 - c.a);
+			color = mix(color, c.rgb, c.a);
+		}
 	}
 
     outputColor = vec4(color, alpha);

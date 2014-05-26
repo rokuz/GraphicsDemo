@@ -24,6 +24,7 @@ float4 main(VS_OUTPUT input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
 	float4 colors[MAX_FRAGMENTS];
 	int resolveIndex = -1;
 	float prevdepth = -1.0f;
+	[unroll(MAX_FRAGMENTS)]
 	for (int i = 0; i < counter; i++)
 	{
 		if (sortedFragments[i].depth != prevdepth)
@@ -45,6 +46,7 @@ float4 main(VS_OUTPUT input, uint sampleIndex : SV_SAMPLEINDEX) : SV_TARGET
 	}
 
 	// gather
+	[unroll(MAX_FRAGMENTS)]
 	for (int i = 0; i < counter; i++)
 	{
 		[branch]

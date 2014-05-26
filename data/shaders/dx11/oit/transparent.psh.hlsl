@@ -18,6 +18,7 @@ float4 main(VS_OUTPUT input) : SV_TARGET
 
 	int counter;
 	insertionSort(index, sortedFragments, counter);
+	[unroll(MAX_FRAGMENTS)]
 	for (int i = 0; i < counter; i++)
 	{
 		float4 c = unpackColor(sortedFragments[i].packedColor);

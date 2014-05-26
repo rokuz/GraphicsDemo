@@ -78,16 +78,17 @@ void main()
 	float alpha = 1.0f;
 
 	NodeData sortedFragments[MAX_FRAGMENTS];
+	int resolveBuffer[MAX_FRAGMENTS];
 	for (int i = 0; i < MAX_FRAGMENTS; i++)
 	{
 		sortedFragments[i] = NodeData(0, 0.0f);
+		resolveBuffer[i] = 0;
 	}
 
 	int counter;
 	insertionSort(index, gl_SampleID, sortedFragments, counter);
 
-	// resolve multisampling
-	int resolveBuffer[MAX_FRAGMENTS];
+	// resolve multisampling	
 	vec4 colors[MAX_FRAGMENTS];
 	int resolveIndex = -1;
 	float prevdepth = -1.0f;
@@ -112,7 +113,7 @@ void main()
 	}
 
 	// gather
-	for (int i = 0; i < counter; i++)
+	for (int i = 0; i < MAX_FRAGMENTS; i++)
 	{
 		if (resolveBuffer[i] != 0)
 		{
@@ -121,13 +122,6 @@ void main()
 			color = mix(color, c.rgb, c.a);
 		}
 	}
-	
-	/*for (int i = 0; i < counter; i++)
-	{
-		vec4 c = unpackColor(sortedFragments[i].packedColor);
-		alpha *= (1.0 - c.a);
-		color = mix(color, c.rgb, c.a);
-	}*/
 
     outputColor = vec4(color, alpha);
 }
