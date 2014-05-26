@@ -69,6 +69,7 @@ public:
 	{
 		// camera
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(-30, 30, -90), vector3());
+		//m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(-30.96f, 4.15f, -50.85f), vector3(-30.96, 4.15, -49.85));
 
 		// overlays
 		initOverlays(root);
