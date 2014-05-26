@@ -127,6 +127,7 @@ void OpenGLContext::destroy( HWND handle )
 
 void OpenGLContext::present()
 {
+	TRACE_FUNCTION;
 	if (!m_deviceContext) return;
 
 	::SwapBuffers(m_deviceContext);
@@ -342,6 +343,14 @@ std::vector<int> OpenGLContext::getMultisamplingLevels()
 	std::sort(multisamplingLevels.begin(), multisamplingLevels.end());
 
 	return std::move(multisamplingLevels);
+}
+
+void OpenGLContext::makeCurrent()
+{
+	if (m_deviceContext != 0 && m_renderingContext != 0)
+	{
+		wglMakeCurrent(m_deviceContext, m_renderingContext);
+	}
 }
 
 }

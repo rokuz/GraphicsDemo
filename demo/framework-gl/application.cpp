@@ -134,6 +134,8 @@ void Application::mainLoop()
 		TRACE_BLOCK("_Frame");
 		m_fpsCounter.beginFrame();
 
+		m_context.makeCurrent();
+
 		// process events from the window
 		m_context.getWindow().pollEvents();
 
@@ -187,6 +189,7 @@ void Application::resize()
 
 void Application::renderGui(double elapsedTime)
 {
+	TRACE_FUNCTION;
 	gui::UIManager::instance().injectFrameTime(elapsedTime);
 
 	if (gui::UIManager::instance().renderer())

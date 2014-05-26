@@ -31,6 +31,7 @@ class OpenGLContext
 public:
 	bool init(size_t width, size_t height, const std::string& title, bool fullscreen, int samples, bool vsync, bool enableStencil);
 	void destroy();
+	void makeCurrent();
 	void present();
 	Window& getWindow();
 
