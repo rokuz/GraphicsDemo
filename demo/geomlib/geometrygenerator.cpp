@@ -21,37 +21,18 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma warning(disable:4996)
-
-#include <list>
-#include <map>
-#include <vector>
-#include <memory>
-#include <string>
-#include <algorithm>
-
-#include "vector.h"
-#include "bbox.h"
-
-#include "utils.h"
-
-#include "geomformat.h"
-#include "data.h"
-
-#include "geometrysaver.h"
-#include "geometryloader.h"
-
-#include "geomsaver.h"
-#include "geomloader.h"
-#ifdef _USE_FBX
-#include <fbxsdk.h>
-#include "fbxloader.h"
-#endif
-
+#include "stdafx.h"
 #include "geometrygenerator.h"
-#include "planegenerator.h"
 
-#include "geometry.h"
+namespace geom
+{
 
-#undef min
-#undef max
+Data GeometryGenerator::generate()
+{
+	Data data;
+	DataWriter writer(&data);
+	writer.getLastErrorRef() = std::string("Generation method is undefined.");
+	return data;
+}
+
+}

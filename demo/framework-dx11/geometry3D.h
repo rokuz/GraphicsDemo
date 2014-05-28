@@ -24,6 +24,7 @@
 #pragma once
 
 #include "geometry.h"
+#include "planegenerator.h"
 
 namespace framework
 {
@@ -35,8 +36,28 @@ class Geometry3D : public Destroyable
 {
 	friend class Application;
 
-    geom::Data::Meshes m_meshes;
-    size_t m_additionalUVsCount;
+public:
+    Geometry3D();
+    virtual ~Geometry3D();
+
+	static D3D11_BUFFER_DESC getDefaultVertexBuffer(unsigned int size);
+	static D3D11_BUFFER_DESC getDefaultIndexBuffer(unsigned int size);
+	
+	bool init(const std::string& fileName);
+	bool initAsPlane(const geom::PlaneGenerationInfo& info);
+	void bindToGpuProgram(std::shared_ptr<GpuProgram> program);
+
+	const std::vector<D3D11_INPUT_ELEMENT_DESC>& getInputLayoutInfo() const { return m_inputLayoutInfo; }
+	const bbox3& getBoundingBox() const { return m_boundingBox; }
+    
+    size_t getMeshesCount() const;
+	void renderMesh(size_t index);
+	void renderAllMeshes();
+	void renderBoundingBox(const matrix44& mvp);
+
+private:
+	geom::Data::Meshes m_meshes;
+	size_t m_additionalUVsCount;
 	size_t m_verticesCount;
 	size_t m_indicesCount;
 	size_t m_vertexSize;
@@ -51,27 +72,10 @@ class Geometry3D : public Destroyable
 	bool m_isLoaded;
 	std::shared_ptr<Line3D> m_boundingBoxLine;
 
+	bool init(const geom::Data& data);
 	int getInputLayoutBindingIndex(int programId) const;
 	void applyInputLayout();
 	virtual void destroy();
-    
-public:
-    Geometry3D();
-    virtual ~Geometry3D();
-
-	static D3D11_BUFFER_DESC getDefaultVertexBuffer(unsigned int size);
-	static D3D11_BUFFER_DESC getDefaultIndexBuffer(unsigned int size);
-	
-	bool init(const std::string& fileName);
-	void bindToGpuProgram(std::shared_ptr<GpuProgram> program);
-
-	const std::vector<D3D11_INPUT_ELEMENT_DESC>& getInputLayoutInfo() const { return m_inputLayoutInfo; }
-	const bbox3& getBoundingBox() const { return m_boundingBox; }
-    
-    size_t getMeshesCount() const;
-	void renderMesh(size_t index);
-	void renderAllMeshes();
-	void renderBoundingBox(const matrix44& mvp);
 };
 
 }

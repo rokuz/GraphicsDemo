@@ -21,37 +21,40 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma warning(disable:4996)
-
-#include <list>
-#include <map>
-#include <vector>
-#include <memory>
-#include <string>
-#include <algorithm>
-
-#include "vector.h"
-#include "bbox.h"
-
-#include "utils.h"
-
-#include "geomformat.h"
-#include "data.h"
-
-#include "geometrysaver.h"
-#include "geometryloader.h"
-
-#include "geomsaver.h"
-#include "geomloader.h"
-#ifdef _USE_FBX
-#include <fbxsdk.h>
-#include "fbxloader.h"
-#endif
+#ifndef __PLANE_GENERATOR_H__
+#define __PLANE_GENERATOR_H__
 
 #include "geometrygenerator.h"
-#include "planegenerator.h"
 
-#include "geometry.h"
+namespace geom
+{
 
-#undef min
-#undef max
+struct PlaneGenerationInfo
+{
+	vector2 size;
+	int segments[2];
+	vector2 uvSize;
+
+	PlaneGenerationInfo() : size(10.0f, 10.0f), uvSize(1.0f, 1.0f)
+	{
+		segments[0] = 1;
+		segments[1] = 1;
+	}
+};
+
+class PlaneGenerator : public GeometryGenerator
+{
+public:
+	PlaneGenerator(){}
+	virtual ~PlaneGenerator(){}
+
+	void setPlaneGenerationInfo(const PlaneGenerationInfo& info);
+	virtual Data generate();
+
+private:
+	PlaneGenerationInfo m_info;
+};
+
+}
+
+#endif

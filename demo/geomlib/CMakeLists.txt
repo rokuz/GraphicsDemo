@@ -13,6 +13,10 @@ set(SOURCE_LIB 	geometryloader.h
 				geomsaver.h
 				geomsaver.cpp
 				geomformat.h
+				planegenerator.h
+				planegenerator.cpp
+				geometrygenerator.h
+				geometrygenerator.cpp
 )
 IF (USE_FBX)
 set (SOURCE_LIB ${SOURCE_LIB} fbxloader.h fbxloader.cpp)

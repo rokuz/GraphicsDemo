@@ -21,37 +21,39 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma warning(disable:4996)
+#ifndef __GEOMETRY_GENERATOR_H__
+#define __GEOMETRY_GENERATOR_H__
 
-#include <list>
-#include <map>
-#include <vector>
-#include <memory>
-#include <string>
-#include <algorithm>
+namespace geom
+{
 
-#include "vector.h"
-#include "bbox.h"
+class GeometryGenerator
+{
+public:
+	GeometryGenerator(){}
+	virtual ~GeometryGenerator(){}
 
-#include "utils.h"
+	virtual Data generate();
 
-#include "geomformat.h"
-#include "data.h"
+protected:
+	class DataWriter
+	{
+	public:
+		DataWriter(Data* data) : m_data(data) {}
 
-#include "geometrysaver.h"
-#include "geometryloader.h"
+		std::string& getLastErrorRef() { return m_data->m_lastError; }
+		Data::Meshes& getMeshesRef() { return m_data->m_meshes; }
+		size_t& getAdditionalUVsCountRef() { return m_data->m_additionalUVsCount; }
+		size_t& getVerticesCountRef() { return m_data->m_verticesCount; }
+		bbox3& getBoundingBoxRef() { return m_data->m_boundingBox; }
+		std::vector<unsigned char>& getVertexBufferRef() { return m_data->m_vertexBuffer; }
+		std::vector<unsigned int>& getIndexBufferRef() { return m_data->m_indexBuffer; }
 
-#include "geomsaver.h"
-#include "geomloader.h"
-#ifdef _USE_FBX
-#include <fbxsdk.h>
-#include "fbxloader.h"
+	private:
+		Data* m_data;
+	};
+};
+
+}
+
 #endif
-
-#include "geometrygenerator.h"
-#include "planegenerator.h"
-
-#include "geometry.h"
-
-#undef min
-#undef max

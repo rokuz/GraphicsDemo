@@ -30,6 +30,7 @@ namespace geom
 class Data
 {
 	friend class GeometryLoader;
+	friend class GeometryGenerator;
 
 public:
 	struct Vertex

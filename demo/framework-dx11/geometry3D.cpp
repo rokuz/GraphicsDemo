@@ -24,6 +24,8 @@
 #include "stdafx.h"
 #include "geometry3D.h"
 
+#include "planegenerator.h"
+
 namespace framework
 {
 
@@ -120,11 +122,10 @@ void Geometry3D::destroy()
 
 	m_boundingBoxLine.reset();
 }
+
 bool Geometry3D::init(const std::string& fileName)
 {
-	const Device& device = Application::instance()->getDevice();
 	destroy();
-
 	geom::Data data = geom::Geometry::instance().load(fileName);
 	if (!data.isCorrect())
 	{
@@ -133,6 +134,31 @@ bool Geometry3D::init(const std::string& fileName)
 		return m_isLoaded;
 	}
 
+	return init(data);
+}
+
+bool Geometry3D::initAsPlane(const geom::PlaneGenerationInfo& info)
+{
+	destroy();
+	
+	geom::PlaneGenerator generator;
+	generator.setPlaneGenerationInfo(info);
+
+	geom::Data data = generator.generate();
+	if (!data.isCorrect())
+	{
+		m_isLoaded = false;
+		utils::Logger::toLogWithFormat("Error: could not create a plane.\n");
+		return m_isLoaded;
+	}
+
+	return init(data);
+}
+
+bool Geometry3D::init(const geom::Data& data)
+{
+	const Device& device = Application::instance()->getDevice();
+	
 	m_boundingBox = data.getBoundingBox();
 	m_additionalUVsCount = data.getAdditionalUVsCount();
 	m_meshes = data.getMeshes();
