@@ -54,7 +54,10 @@ public:
 	{
 		m_shadowMapSize = 1024;
 		m_splitCount = 4;
+		m_currentSplitCount = m_splitCount;
 		m_splitLambda = 0.5f;
+		m_farPlane = 0;
+		m_splitShift = 10;
 
 		m_renderDebug = false;
 		m_furthestPointInCamera = 0;
@@ -81,6 +84,8 @@ public:
 		}
 
 		m_splitDistances.resize(m_splitCount + 1);
+		if (m_splitCount > 1) m_maxSplitDistances.resize(m_splitCount - 1);
+		m_currentSplitCount = m_splitCount;
 
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 
@@ -154,6 +159,7 @@ public:
 		m_plane = initEntity(planeInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds");
 		m_plane.geometry->bindToGpuProgram(m_sceneRendering);
 		m_planeData.model.ident();
+		m_planeData.isShadowCaster = false;
 
 		// rasterizer stage for shadowmap rendering
 		m_shadowMapRasterizer.reset(new framework::RasterizerStage());
@@ -306,6 +312,8 @@ public:
 
 	void renderEntity(bool shadowmap, const Entity& entity, const EntityData& entityData)
 	{
+		if (shadowmap && !entityData.isShadowCaster) return;
+
 		EntityDataRaw entityDataRaw;
 		entityDataRaw.modelViewProjection = entityData.mvp;
 		entityDataRaw.model = entityData.model;
@@ -314,7 +322,7 @@ public:
 
 		m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
 
-		entity.geometry->renderAllMeshes(shadowmap ? m_splitCount : 1);
+		entity.geometry->renderAllMeshes(shadowmap ? m_currentSplitCount : 1);
 	}
 
 	void renderDebug()
@@ -328,10 +336,10 @@ public:
 		std::wstringstream stream;
 		stream.precision(2);
 		stream << "Furthest point = " << std::fixed << m_furthestPointInCamera << "\nSplit lambda = " << std::fixed << m_splitLambda << "\nDistances = ";
-		for (size_t i = 0; i < m_splitDistances.size(); i++)
+		for (int i = 0; i < m_currentSplitCount + 1; i++)
 		{
 			stream << std::fixed << m_splitDistances[i];
-			if (i != m_splitDistances.size() - 1) 
+			if (i != m_currentSplitCount)
 			{	
 				if (i % 2 == 0 && i != 0) stream << ",\n"; else stream << ", ";
 			}
@@ -384,43 +392,56 @@ public:
 		m_planeData.mvp = m_planeData.model * vp;
 
 		// calculate shadow
-		matrix44 shadowView = calculateShadowView();
-		
+		ShadowDataRaw shadowData;
+		calculateMaxSplitDistances();
 		m_furthestPointInCamera = calculateFurthestPointInCamera(cameraView);
 		calculateSplitDistances();
+		matrix44 shadowView = calculateShadowView();
+		matrix44 shadowProjection = calculateShadowProjection();
+		for (int i = 0; i < m_currentSplitCount; i++)
+		{
+			float n = m_splitDistances[i];
+			float f = m_splitDistances[i + 1];
+			shadowData.shadowViewProjection[i] = calculateShadowCropMarix(shadowView, shadowProjection, n, f);
+		}
 
-		ShadowDataRaw shadowData;
 		m_shadowBuffer->setData(shadowData);
 		m_shadowBuffer->applyChanges();
 	}
 
-	matrix44 calculateShadowView()
+	void calculateMaxSplitDistances()
 	{
-		const float LIGHT_SOURCE_DIST = 50.0f;
+		float nearPlane = m_camera.getInternalCamera().GetNearPlane();
+		float farPlane = m_camera.getInternalCamera().GetFarPlane();
+		for (int i = 1; i < m_splitCount; i++)
+		{
+			float f = (float)i / (float)m_splitCount;
+			float l = nearPlane * pow(farPlane / nearPlane, f);
+			float u = nearPlane + (farPlane - nearPlane) * f;
+			m_maxSplitDistances[i - 1] = l * m_splitLambda + u * (1.0f - m_splitLambda);
+		}
 
-		auto lightSource = m_lightManager.getLightSource(0);
-		vector3 dir = lightSource.orientation.z_direction();
-		
-		matrix44 shadowView;
-		shadowView.pos_component() = m_camera.getPosition() - dir * LIGHT_SOURCE_DIST;
-		shadowView.lookatRh(shadowView.pos_component() + dir, lightSource.orientation.y_direction());
-		shadowView.invert_simple();
-
-		return shadowView;
+		m_farPlane = farPlane + m_splitShift;
 	}
 
 	float calculateFurthestPointInCamera(const matrix44& cameraView)
 	{
 		bbox3 scenebox;
 		scenebox.begin_extend();
-		bbox3 b = m_plane.geometry->getBoundingBox();
-		b.transform(m_planeData.model);
-		scenebox.extend(b);
+		if (m_planeData.isShadowCaster)
+		{
+			bbox3 b = m_plane.geometry->getBoundingBox();
+			b.transform(m_planeData.model);
+			scenebox.extend(b);
+		}
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
-			bbox3 b = m_entity.geometry->getBoundingBox();
-			b.transform(m_entitiesData[i].model);
-			scenebox.extend(b);
+			if (m_entitiesData[i].isShadowCaster)
+			{
+				bbox3 b = m_entity.geometry->getBoundingBox();
+				b.transform(m_entitiesData[i].model);
+				scenebox.extend(b);
+			}
 		}
 		scenebox.end_extend();
 
@@ -431,22 +452,145 @@ public:
 			float z = -cameraView.transform_coord(corner).z;
 			if(z > maxZ) maxZ = z;
 		}
-		return std::min(maxZ, m_camera.getInternalCamera().GetFarPlane());
+		return std::min(maxZ, m_farPlane);
 	}
 
 	void calculateSplitDistances()
 	{
-		float nearPlane = m_camera.getInternalCamera().GetNearPlane();
-		for(int i = 0; i < m_splitCount; i++)
+		// calculate how many shadow maps do we really need
+		m_currentSplitCount = 1;
+		if (!m_maxSplitDistances.empty())
 		{
-			float f = (float)i / (float)m_splitCount;
+			for (size_t i = 0; i < m_maxSplitDistances.size(); i++)
+			{
+				if (m_furthestPointInCamera >= m_maxSplitDistances[i]) m_currentSplitCount++;
+			}
+		}
+
+		float nearPlane = m_camera.getInternalCamera().GetNearPlane();
+		for (int i = 0; i < m_currentSplitCount; i++)
+		{
+			float f = (float)i / (float)m_currentSplitCount;
 			float l = nearPlane * pow(m_furthestPointInCamera / nearPlane, f);
 			float u = nearPlane + (m_furthestPointInCamera - nearPlane) * f;
 			m_splitDistances[i] = l * m_splitLambda + u * (1.0f - m_splitLambda);
 		}
 
 		m_splitDistances[0] = nearPlane;
-		m_splitDistances[m_splitCount] = m_furthestPointInCamera;
+		m_splitDistances[m_currentSplitCount] = m_furthestPointInCamera;
+	}
+
+	matrix44 calculateShadowView()
+	{
+		const float LIGHT_SOURCE_HEIGHT = 200.0f;
+
+		vector3 viewDir = m_camera.getOrientation().z_direction();
+		vector3 center = m_camera.getPosition() + viewDir * (m_furthestPointInCamera * 0.5f - m_splitShift);
+		center.y = 0;
+
+		auto lightSource = m_lightManager.getLightSource(0);
+		vector3 lightDir = lightSource.orientation.z_direction();
+
+		matrix44 shadowView;
+		shadowView.pos_component() = center - lightDir * LIGHT_SOURCE_HEIGHT;
+		shadowView.lookatRh(shadowView.pos_component() + lightDir, lightSource.orientation.y_direction());
+		shadowView.invert_simple();
+
+		return shadowView;
+	}
+
+	matrix44 calculateShadowProjection()
+	{
+		matrix44 shadowProj;
+		shadowProj.orthoRh(m_furthestPointInCamera, m_furthestPointInCamera, 0.1f, 1000.0f);
+		return shadowProj;
+	}
+
+	void calculateFrustumCorners(float nearPlane, float farPlane, vector3 frustum[8])
+	{
+		vector3 eye = m_camera.getPosition();
+		vector3 vZ = m_camera.getOrientation().z_direction();
+		vector3 vX = m_camera.getOrientation().x_direction();
+		vector3 vY = m_camera.getOrientation().y_direction();
+		float fov = n_deg2rad(m_camera.getInternalCamera().GetAngleOfView());
+		float aspect = m_camera.getInternalCamera().GetAspectRatio();
+
+		float nearPlaneHeight = n_tan(fov * 0.5f) * nearPlane;
+		float nearPlaneWidth = nearPlaneHeight * aspect;
+		float farPlaneHeight = n_tan(fov * 0.5f) * farPlane;
+		float farPlaneWidth = farPlaneHeight * aspect;
+		vector3 nearPlaneCenter = eye + vZ * nearPlane;
+		vector3 farPlaneCenter = eye + vZ * farPlane;
+
+		frustum[0] = vector3(nearPlaneCenter - vX * nearPlaneWidth - vY * nearPlaneHeight);
+		frustum[1] = vector3(nearPlaneCenter - vX * nearPlaneWidth + vY * nearPlaneHeight);
+		frustum[2] = vector3(nearPlaneCenter + vX * nearPlaneWidth + vY * nearPlaneHeight);
+		frustum[3] = vector3(nearPlaneCenter + vX * nearPlaneWidth - vY * nearPlaneHeight);
+		frustum[4] = vector3(farPlaneCenter - vX * farPlaneWidth - vY * farPlaneHeight);
+		frustum[5] = vector3(farPlaneCenter - vX * farPlaneWidth + vY * farPlaneHeight);
+		frustum[6] = vector3(farPlaneCenter + vX * farPlaneWidth + vY * farPlaneHeight);
+		frustum[7] = vector3(farPlaneCenter + vX * farPlaneWidth - vY * farPlaneHeight);
+
+		vector3 center(0, 0, 0);
+		for (int i = 0; i < 8; i++) center += frustum[i];
+		center *= 0.125f;
+
+		const float SCALE = 1.1f;
+		for (int i = 0; i < 8; i++)
+		{
+			frustum[i] += (frustum[i] - center) * (SCALE - 1.0f);
+		}
+	}
+
+	matrix44 calculateShadowCropMarix(const matrix44& shadowView, const matrix44& shadowProjection, float nearPlane, float farPlane)
+	{
+		vector3 frustumCorners[8];
+		calculateFrustumCorners(nearPlane, farPlane, frustumCorners);
+
+		matrix44 shadowViewProj = shadowView * shadowProjection;
+
+		float maxX = -FLT_MAX;
+		float maxY = -FLT_MAX;
+		float minX = FLT_MAX;
+		float minY = FLT_MAX;
+		float maxZ = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			vector4 transformed;
+			shadowViewProj.mult(vector4(frustumCorners[i]), transformed);
+			transformed.x /= transformed.w;
+			transformed.y /= transformed.w;
+
+			if (transformed.x > maxX) maxX = transformed.x;
+			if (transformed.y > maxY) maxY = transformed.y;
+			if (transformed.y < minY) minY = transformed.y;
+			if (transformed.x < minX) minX = transformed.x;
+			if (transformed.z > maxZ) maxZ = transformed.z;
+		}
+
+		maxX = n_clamp(maxX, -1.0f, 1.0f);
+		maxY = n_clamp(maxY, -1.0f, 1.0f);
+		minX = n_clamp(minX, -1.0f, 1.0f);
+		minY = n_clamp(minY, -1.0f, 1.0f);
+
+		const float BIAS = 1.5f;
+		float newFarLight = maxZ + BIAS;
+
+		float scaleX = 2.0f / (maxX - minX);
+		float scaleY = 2.0f / (maxY - minY);
+		float offsetX = -0.5f * (maxX + minX) * scaleX;
+		float offsetY = -0.5f * (maxY + minY) * scaleY;
+
+		matrix44 cropView(scaleX, 0.0f, 0.0f, 0.0f,
+						  0.0f, scaleY, 0.0f, 0.0f,
+						  0.0f, 0.0f, 1.0f, 0.0f,
+						  offsetX, offsetY, 0.0f, 1.0f);
+
+		matrix44 croppedShadowViewProj;
+		croppedShadowViewProj = shadowViewProj * cropView;
+		croppedShadowViewProj.m[2][2] /= newFarLight;
+		croppedShadowViewProj.m[3][2] /= newFarLight;
+		return croppedShadowViewProj;
 	}
 
 private:
@@ -472,6 +616,8 @@ private:
 	{
 		matrix44 model;
 		matrix44 mvp;
+		bool isShadowCaster;
+		EntityData() : isShadowCaster(true) {}
 	};
 	Entity m_entity;
 	std::vector<EntityData> m_entitiesData;
@@ -487,13 +633,18 @@ private:
 	framework::FreeCamera m_camera;
 
 	int m_shadowMapSize;
+
+	std::vector<float> m_maxSplitDistances;
+	float m_farPlane;
+	float m_splitShift;
 	int m_splitCount;
+	int m_currentSplitCount;
 	float m_splitLambda;
 	std::vector<float> m_splitDistances;
+	float m_furthestPointInCamera;
 
 	bool m_renderDebug;
 	gui::LabelPtr_T m_debugLabel;
-	float m_furthestPointInCamera;
 };
 
 DECLARE_MAIN(PSSMApp);
