@@ -16,11 +16,16 @@ struct VS_OUTPUT
 	float3 viewDirection : TEXCOORD3;
 };
 
-cbuffer spaceData
+cbuffer onFrameData : register(b0)
 {
-	matrix modelViewProjection : packoffset(c0);
-	matrix model : packoffset(c4);
-	float3 viewPosition : packoffset(c8);
+	float3 viewPosition;
+	uint onFrameData_dummy;
+};
+
+cbuffer entityData : register(b1)
+{
+	matrix modelViewProjection;
+	matrix model;
 };
 
 VS_OUTPUT main(VS_INPUT input)
