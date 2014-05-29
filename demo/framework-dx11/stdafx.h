@@ -34,6 +34,7 @@
 #include <functional>
 #include <utility>
 #include <fstream>
+#include <iomanip>
 
 #include "matrix.h"
 #include "vector.h"

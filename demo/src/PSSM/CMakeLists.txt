@@ -7,7 +7,10 @@ set(SOURCE_OGL "skipped")
 set(SHADERS_DIR_DX11 ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/dx11/pssm)				
 set(SOURCE_DX11 main_dx11.cpp)
 set(SHADERS_DX11 ${SHADERS_DIR_DX11}/scene.vsh.hlsl
-				 ${SHADERS_DIR_DX11}/scene.psh.hlsl)
+				 ${SHADERS_DIR_DX11}/scene.psh.hlsl
+				 ${SHADERS_DIR_DX11}/shadowmap.vsh.hlsl
+				 ${SHADERS_DIR_DX11}/shadowmap.gsh.hlsl
+				 ${SHADERS_DIR_DX11}/shadowmap.psh.hlsl)
 				 
 source_group(shaders FILES ${SHADERS_DX11})
 source_group(shaders FILES ${SHADERS_OGL})
