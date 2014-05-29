@@ -60,6 +60,119 @@ D3D11_UNORDERED_ACCESS_VIEW_DESC ResourceView::getDefaultUAVDesc()
 	return desc;
 }
 
+D3D11_SHADER_RESOURCE_VIEW_DESC ResourceView::getTexture2DShaderDesc( int arraySize, bool msaa )
+{
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.ViewDimension = arraySize > 1 ? (msaa ? D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY : D3D11_SRV_DIMENSION_TEXTURE2DARRAY) : 
+										 (msaa ? D3D11_SRV_DIMENSION_TEXTURE2DMS : D3D11_SRV_DIMENSION_TEXTURE2D);
+	if (arraySize > 1)
+	{
+		if (msaa)
+		{
+			desc.Texture2DArray.FirstArraySlice = 0;
+			desc.Texture2DArray.ArraySize = arraySize;
+		}
+		else
+		{
+			desc.Texture2DArray.FirstArraySlice = 0;
+			desc.Texture2DArray.ArraySize = arraySize;
+			desc.Texture2DArray.MipLevels = -1;
+			desc.Texture2DArray.MostDetailedMip = 0;
+		}
+	}
+	else
+	{
+		if (!msaa)
+		{
+			desc.Texture2D.MipLevels = -1;
+			desc.Texture2D.MostDetailedMip = 0;
+		}
+	}
+	return desc;
+}
+
+D3D11_RENDER_TARGET_VIEW_DESC ResourceView::getTexture2DRenderTargetDesc( int arraySize, bool msaa )
+{
+	D3D11_RENDER_TARGET_VIEW_DESC desc;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.ViewDimension = arraySize > 1 ? (msaa ? D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY : D3D11_RTV_DIMENSION_TEXTURE2DARRAY) : 
+										 (msaa ? D3D11_RTV_DIMENSION_TEXTURE2DMS : D3D11_RTV_DIMENSION_TEXTURE2D);
+	if (arraySize > 1)
+	{
+		if (msaa)
+		{
+			desc.Texture2DArray.MipSlice = 0;
+			desc.Texture2DArray.FirstArraySlice = 0;
+			desc.Texture2DArray.ArraySize = arraySize;
+		}
+		else
+		{
+			desc.Texture2DArray.FirstArraySlice = 0;
+			desc.Texture2DArray.ArraySize = arraySize;
+			desc.Texture2DArray.MipSlice = 0;
+		}
+	}
+	else
+	{
+		if (!msaa)
+		{
+			desc.Texture2D.MipSlice = 0;
+		}
+	}
+	return desc;
+}
+
+D3D11_DEPTH_STENCIL_VIEW_DESC ResourceView::getTexture2DDepthStencilDesc( int arraySize, bool msaa )
+{
+	D3D11_DEPTH_STENCIL_VIEW_DESC desc;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.Flags = 0;
+	desc.ViewDimension = arraySize > 1 ? (msaa ? D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY : D3D11_DSV_DIMENSION_TEXTURE2DARRAY) : 
+										 (msaa ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D);
+	if (arraySize > 1)
+	{
+		if (msaa)
+		{
+			desc.Texture2DArray.MipSlice = 0;
+			desc.Texture2DArray.FirstArraySlice = 0;
+			desc.Texture2DArray.ArraySize = arraySize;
+		}
+		else
+		{
+			desc.Texture2DArray.FirstArraySlice = 0;
+			desc.Texture2DArray.ArraySize = arraySize;
+			desc.Texture2DArray.MipSlice = 0;
+		}
+	}
+	else
+	{
+		if (!msaa)
+		{
+			desc.Texture2D.MipSlice = 0;
+		}
+	}
+	return desc;
+}
+
+D3D11_UNORDERED_ACCESS_VIEW_DESC ResourceView::getTexture2DUAVDesc( int arraySize )
+{
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.ViewDimension = arraySize > 1 ? D3D11_UAV_DIMENSION_TEXTURE2DARRAY : D3D11_UAV_DIMENSION_TEXTURE2D;
+	if (arraySize > 1)
+	{
+		desc.Texture2DArray.MipSlice = 0;
+		desc.Texture2DArray.FirstArraySlice = 0;
+		desc.Texture2DArray.ArraySize = arraySize;
+	}
+	else
+	{
+		desc.Texture2D.MipSlice = 0;
+	}
+	return desc;
+}
+
 ResourceView::ResourceView() :
 	m_shaderDesc(std::make_pair(D3D11_SHADER_RESOURCE_VIEW_DESC(), false)),
 	m_renderTargetDesc(std::make_pair(D3D11_RENDER_TARGET_VIEW_DESC(), false)),
@@ -112,6 +225,11 @@ void ResourceView::init(const Device& device, ID3D11Resource* resource, unsigned
 		{
 			utils::Logger::toLog("Error: could not create shader resource view.\n");
 		}
+		m_shaderDesc.second = true;
+	}
+	else
+	{
+		m_shaderDesc.second = false;
 	}
 
 	if ((bindFlags & D3D11_BIND_RENDER_TARGET) == D3D11_BIND_RENDER_TARGET)
@@ -122,6 +240,11 @@ void ResourceView::init(const Device& device, ID3D11Resource* resource, unsigned
 		{
 			utils::Logger::toLog("Error: could not create render target view.\n");
 		}
+		m_renderTargetDesc.second = true;
+	}
+	else
+	{
+		m_renderTargetDesc.second = false;
 	}
 
 	if ((bindFlags & D3D11_BIND_DEPTH_STENCIL) == D3D11_BIND_DEPTH_STENCIL)
@@ -132,6 +255,11 @@ void ResourceView::init(const Device& device, ID3D11Resource* resource, unsigned
 		{
 			utils::Logger::toLog("Error: could not create depth stencil view.\n");
 		}
+		m_depthStencilDesc.second = true;
+	}
+	else
+	{
+		m_depthStencilDesc.second = false;
 	}
 
 	if ((bindFlags & D3D11_BIND_UNORDERED_ACCESS) == D3D11_BIND_UNORDERED_ACCESS)
@@ -142,6 +270,11 @@ void ResourceView::init(const Device& device, ID3D11Resource* resource, unsigned
 		{
 			utils::Logger::toLog("Error: could not create unordered access view.\n");
 		}
+		m_uavDesc.second = true;
+	}
+	else
+	{
+		m_uavDesc.second = false;
 	}
 }
 

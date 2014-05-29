@@ -255,7 +255,7 @@ void Geometry3D::applyInputLayout()
 	}
 }
 
-void Geometry3D::renderMesh(size_t index)
+void Geometry3D::renderMesh(size_t index, size_t instancesCount)
 {
     if (index >= m_meshes.size()) return;
 
@@ -267,10 +267,17 @@ void Geometry3D::renderMesh(size_t index)
 	device.context->IASetVertexBuffers(0, 1, &m_vertexBuffer, &vertexStride, &vertexOffset);
 	device.context->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
     device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	device.context->DrawIndexed(m_meshes[index].indicesCount, m_meshes[index].offsetInIB, 0);
+	if (instancesCount <= 1)
+	{
+		device.context->DrawIndexed(m_meshes[index].indicesCount, m_meshes[index].offsetInIB, 0);
+	}
+	else
+	{
+		device.context->DrawIndexedInstanced(m_meshes[index].indicesCount, instancesCount, m_meshes[index].offsetInIB, 0, 0);
+	}
 }
 
-void Geometry3D::renderAllMeshes()
+void Geometry3D::renderAllMeshes(size_t instancesCount)
 {
 	const Device& device = Application::instance()->getDevice();
 
@@ -282,7 +289,14 @@ void Geometry3D::renderAllMeshes()
 	device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	for (size_t i = 0; i < m_meshes.size(); i++)
 	{
-		device.context->DrawIndexed(m_meshes[i].indicesCount, m_meshes[i].offsetInIB, 0);
+		if (instancesCount <= 1)
+		{
+			device.context->DrawIndexed(m_meshes[i].indicesCount, m_meshes[i].offsetInIB, 0);
+		}
+		else
+		{
+			device.context->DrawIndexedInstanced(m_meshes[i].indicesCount, instancesCount, m_meshes[i].offsetInIB, 0, 0);
+		}
 	}
 }
 

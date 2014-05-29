@@ -51,8 +51,8 @@ public:
 	const bbox3& getBoundingBox() const { return m_boundingBox; }
     
     size_t getMeshesCount() const;
-	void renderMesh(size_t index);
-	void renderAllMeshes();
+	void renderMesh(size_t index, size_t instancesCount = 1);
+	void renderAllMeshes(size_t instancesCount = 1);
 	void renderBoundingBox(const matrix44& mvp);
 
 private:

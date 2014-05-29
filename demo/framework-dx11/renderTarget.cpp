@@ -182,6 +182,7 @@ bool RenderTarget::createDepth(size_t index)
 	const Device& device = Application::instance()->getDevice();
 
 	m_depthBufferDesc = getDefaultDepthDesc(m_colorBufferDesc[index].Width, m_colorBufferDesc[index].Height);
+	m_depthBufferDesc.ArraySize = m_colorBufferDesc[index].ArraySize;
 	m_depthBufferDesc.SampleDesc.Count = m_colorBufferDesc[index].SampleDesc.Count;
 	m_depthBufferDesc.SampleDesc.Quality = m_colorBufferDesc[index].SampleDesc.Quality;
 
@@ -194,6 +195,13 @@ bool RenderTarget::createDepth(size_t index)
 	}
 
 	// initialize depth view
+	if (m_depthBufferDesc.ArraySize > 1)
+	{
+		m_depthView.setShaderDesc(ResourceView::getTexture2DShaderDesc(m_depthBufferDesc.ArraySize, m_depthBufferDesc.SampleDesc.Count > 1));
+		m_depthView.setRenderTargetDesc(ResourceView::getTexture2DRenderTargetDesc(m_depthBufferDesc.ArraySize, m_depthBufferDesc.SampleDesc.Count > 1));
+		m_depthView.setDepthStencilDesc(ResourceView::getTexture2DDepthStencilDesc(m_depthBufferDesc.ArraySize, m_depthBufferDesc.SampleDesc.Count > 1));
+		m_depthView.setUnorderedAccessDesc(ResourceView::getTexture2DUAVDesc(m_depthBufferDesc.ArraySize));
+	}
 	m_depthView.init(device, m_depthBuffer, m_depthBufferDesc.BindFlags);
 	if (!m_depthView.isValid())
 	{
@@ -208,6 +216,13 @@ bool RenderTarget::createView(size_t index)
 {
 	const Device& device = Application::instance()->getDevice();
 
+	if (m_colorBufferDesc[index].ArraySize > 1)
+	{
+		m_view[index].setShaderDesc(ResourceView::getTexture2DShaderDesc(m_colorBufferDesc[index].ArraySize, m_colorBufferDesc[index].SampleDesc.Count > 1));
+		m_view[index].setRenderTargetDesc(ResourceView::getTexture2DRenderTargetDesc(m_colorBufferDesc[index].ArraySize, m_colorBufferDesc[index].SampleDesc.Count > 1));
+		m_view[index].setDepthStencilDesc(ResourceView::getTexture2DDepthStencilDesc(m_colorBufferDesc[index].ArraySize, m_colorBufferDesc[index].SampleDesc.Count > 1));
+		m_view[index].setUnorderedAccessDesc(ResourceView::getTexture2DUAVDesc(m_colorBufferDesc[index].ArraySize));
+	}
 	m_view[index].init(device, m_colorBuffer[index], m_colorBufferDesc[index].BindFlags);
 	if (!m_view[index].isValid())
 	{

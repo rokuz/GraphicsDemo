@@ -36,6 +36,10 @@ class ResourceView
 	static D3D11_RENDER_TARGET_VIEW_DESC getDefaultRenderTargetDesc();
 	static D3D11_DEPTH_STENCIL_VIEW_DESC getDefaultDepthStencilDesc();
 	static D3D11_UNORDERED_ACCESS_VIEW_DESC getDefaultUAVDesc();
+	static D3D11_SHADER_RESOURCE_VIEW_DESC getTexture2DShaderDesc(int arraySize, bool msaa);
+	static D3D11_RENDER_TARGET_VIEW_DESC getTexture2DRenderTargetDesc(int arraySize, bool msaa);
+	static D3D11_DEPTH_STENCIL_VIEW_DESC getTexture2DDepthStencilDesc(int arraySize, bool msaa);
+	static D3D11_UNORDERED_ACCESS_VIEW_DESC getTexture2DUAVDesc(int arraySize);
 
 	void setShaderDesc(const D3D11_SHADER_RESOURCE_VIEW_DESC& desc);
 	void setRenderTargetDesc(const D3D11_RENDER_TARGET_VIEW_DESC& desc);

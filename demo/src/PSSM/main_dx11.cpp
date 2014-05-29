@@ -43,6 +43,8 @@ public:
 	PSSMApp()
 	{
 		m_renderDebug = false;
+		m_shadowMapSize = 1024;
+		m_splitCount = 4;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
@@ -50,6 +52,20 @@ public:
 		m_info.title = "Parallel-Split Shadow Mapping (DX11)";
 
 		applyStandardParams(params);
+		auto smSize = params.find("shadowmap");
+		if (smSize != params.end())
+		{
+			m_shadowMapSize = smSize->second;
+			if (m_shadowMapSize < 0) m_shadowMapSize = 1024;
+			if (m_shadowMapSize > 8192) m_shadowMapSize = 8192;
+		}
+		auto split = params.find("split");
+		if (split != params.end())
+		{
+			m_splitCount = split->second;
+			if (m_splitCount < 1) m_splitCount = 1;
+			if (m_splitCount > 16) m_splitCount = 16;
+		}
 
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 
@@ -69,6 +85,12 @@ public:
 
 		// overlays
 		initOverlays(root);
+
+		D3D11_TEXTURE2D_DESC desc = framework::RenderTarget::getDefaultDesc(m_shadowMapSize, m_shadowMapSize, DXGI_FORMAT_R32_FLOAT);
+		desc.ArraySize = m_splitCount;
+		m_shadowMap.reset(new framework::RenderTarget());
+		m_shadowMap->initWithDescription(desc, true);
+		if (!m_shadowMap->isValid()) exit();
 
 		// gpu programs
 		m_sceneRendering.reset(new framework::GpuProgram());
@@ -308,6 +330,11 @@ public:
 private:
 	// gpu program to render scene
 	std::shared_ptr<framework::GpuProgram> m_sceneRendering;
+	// gpu program to render shadow map
+	std::shared_ptr<framework::GpuProgram> m_shadowMapRendering;
+
+	// shadow map
+	std::shared_ptr<framework::RenderTarget> m_shadowMap;
 
 	// entity
 	struct Entity
@@ -333,6 +360,10 @@ private:
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 
 	framework::FreeCamera m_camera;
+
+	int m_shadowMapSize;
+	int m_splitCount;
+
 	bool m_renderDebug;
 	gui::LabelPtr_T m_debugLabel;
 };
