@@ -269,8 +269,9 @@ const D3D11_TEXTURE2D_DESC& RenderTarget::getDesc(int index) const
 	return m_colorBufferDesc[index];
 }
 
-ID3D11Texture2D* RenderTarget::getTexture( int index ) const
+ID3D11Texture2D* RenderTarget::getTexture(int index) const
 {
+	if (index < 0 || index >= (int)m_colorBuffer.size()) return 0;
 	return m_colorBuffer[index];
 }
 

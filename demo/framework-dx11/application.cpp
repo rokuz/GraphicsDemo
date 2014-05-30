@@ -908,6 +908,12 @@ void Application::saveTextureToFile( std::shared_ptr<Texture> texture, const std
 	DirectX::SaveDDSTextureToFile(m_device.context, texture->getResource(), utils::Utils::toUnicode(filename).c_str());
 }
 
+void Application::saveTextureToFile( std::shared_ptr<RenderTarget> renderTarget, int index, const std::string& filename )
+{
+	if (m_device.context == 0 && renderTarget && renderTarget->getTexture(index) != 0) return;
+	DirectX::SaveDDSTextureToFile(m_device.context, renderTarget->getTexture(index), utils::Utils::toUnicode(filename).c_str());
+}
+
 void Application::applyStandardParams(const std::map<std::string, int>& params)
 {
 	auto w = params.find("w");

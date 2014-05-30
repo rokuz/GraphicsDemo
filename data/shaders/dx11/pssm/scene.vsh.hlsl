@@ -13,16 +13,10 @@ struct VS_OUTPUT
 	float2 uv0 : TEXCOORD0;
 	float3 tangent : TEXCOORD1;
 	float3 normal : TEXCOORD2;
-	float3 viewDirection : TEXCOORD3;
+	float3 worldPos : TEXCOORD3; 
 };
 
-cbuffer onFrameData : register(b0)
-{
-	float3 viewPosition;
-	uint onFrameData_dummy;
-};
-
-cbuffer entityData : register(b1)
+cbuffer entityData : register(b0)
 {
 	matrix modelViewProjection;
 	matrix model;
@@ -35,8 +29,7 @@ VS_OUTPUT main(VS_INPUT input)
     output.uv0 = input.uv0;
 	output.normal = mul(normalize(input.normal), (float3x3)model);
 	output.tangent = mul(normalize(input.tangent), (float3x3)model);
-	float3 worldPos = mul(float4(input.position, 1), model);
-	output.viewDirection = normalize(worldPos - viewPosition);
+	output.worldPos = mul(float4(input.position, 1), model);
 	
 	return output;
 }

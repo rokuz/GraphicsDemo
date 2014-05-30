@@ -70,6 +70,7 @@ public:
 	const std::shared_ptr<BlendStage>& defaultAlphaBlending() const { return m_defaultAlphaBlending; }
 	
 	void saveTextureToFile(std::shared_ptr<Texture> texture, const std::string& filename);
+	void saveTextureToFile(std::shared_ptr<RenderTarget> renderTarget, int index, const std::string& filename);
 
 protected:
 	struct AppInfo

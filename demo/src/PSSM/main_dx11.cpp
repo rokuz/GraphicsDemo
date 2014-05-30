@@ -8,7 +8,9 @@ DECLARE_UNIFORMS_BEGIN(PSSMAppUniforms)
 	SHADOW_DATA,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
-	DEFAULT_SAMPLER
+	SHADOW_MAP,
+	DEFAULT_SAMPLER,
+	SHADOW_MAP_SAMPLER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<PSSMAppUniforms>::Uniform
 
@@ -31,7 +33,7 @@ struct EntityDataRaw
 struct OnFrameDataRaw
 {
 	vector3 viewPosition;
-	unsigned int : 32;
+	int splitCount;
 };
 #pragma pack (pop)
 
@@ -57,7 +59,7 @@ public:
 		m_currentSplitCount = m_splitCount;
 		m_splitLambda = 0.5f;
 		m_farPlane = 0;
-		m_splitShift = 10;
+		m_splitShift = 0;
 
 		m_renderDebug = false;
 		m_furthestPointInCamera = 0;
@@ -120,9 +122,12 @@ public:
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::ENTITY_DATA, "entityData");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_DATA, "shadowData");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_MAP, "shadowMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, "shadowMapSampler");
 
 		m_shadowMapRendering.reset(new framework::GpuProgram());
 		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.vsh.hlsl");
@@ -139,7 +144,7 @@ public:
 
 		const int ENTITIES_IN_ROW = 6;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
-		const float AREA_HALFLENGTH = 45.0f;
+		const float AREA_HALFLENGTH = 100.0f;
 		m_entitiesData.resize(ENTITIES_IN_ROW * ENTITIES_IN_ROW);
 		for (int i = 0; i < ENTITIES_IN_ROW; i++)
 		{
@@ -168,6 +173,20 @@ public:
 		if (!m_shadowMapRasterizer->isValid()) exit();
 		m_shadowMapRasterizer->getViewports().resize(1);
 		m_shadowMapRasterizer->getViewports()[0] = framework::RasterizerStage::getDefaultViewport(m_shadowMapSize, m_shadowMapSize);
+
+		// sampler for shadow mapping
+		m_shadowMapSampler.reset(new framework::Sampler());
+		D3D11_SAMPLER_DESC samplerDesc = framework::Sampler::getDefault();
+		samplerDesc.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC;
+		samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS;
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+		samplerDesc.BorderColor[0] = 1.0f;
+		samplerDesc.BorderColor[1] = 1.0f;
+		samplerDesc.BorderColor[2] = 1.0f;
+		samplerDesc.BorderColor[3] = 1.0f;
+		m_shadowMapSampler->initWithDescription(samplerDesc);
+		if (!m_shadowMapSampler->isValid()) exit();
 
 		// entity's data buffer
 		m_entityDataBuffer.reset(new framework::UniformBuffer());
@@ -265,7 +284,7 @@ public:
 		update(elapsedTime);
 
 		// render shadow map
-		getPipeline().clearRenderTarget(m_shadowMap);
+		getPipeline().clearRenderTarget(m_shadowMap, vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX));
 		getPipeline().setRenderTarget(m_shadowMap);
 		if (m_shadowMapRendering->use())
 		{
@@ -283,6 +302,7 @@ public:
 		// set up on-frame data
 		OnFrameDataRaw onFrameData;
 		onFrameData.viewPosition = m_camera.getPosition();
+		onFrameData.splitCount = m_currentSplitCount;
 		m_onFrameDataBuffer->setData(onFrameData);
 		m_onFrameDataBuffer->applyChanges();
 
@@ -294,6 +314,9 @@ public:
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+
+			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_DATA, m_shadowBuffer);
+			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP, m_shadowMap);
 
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, m_entity.diffuseTexture);
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::NORMAL_MAP, m_entity.normalTexture);
@@ -320,8 +343,16 @@ public:
 		m_entityDataBuffer->setData(entityDataRaw);
 		m_entityDataBuffer->applyChanges();
 
-		m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-
+		if (shadowmap)
+		{
+			m_shadowMapRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+		}
+		else
+		{
+			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, m_shadowMapSampler);
+		}
+		
 		entity.geometry->renderAllMeshes(shadowmap ? m_currentSplitCount : 1);
 	}
 
@@ -354,6 +385,11 @@ public:
 		{
 			m_renderDebug = !m_renderDebug;
 			m_debugLabel->setVisible(m_renderDebug);
+			return;
+		}
+		if (key == InputKeys::M && pressed)
+		{
+			this->saveTextureToFile(m_shadowMap, 0, "shadowmap.dds");
 			return;
 		}
 	#if PROFILING
@@ -603,6 +639,7 @@ private:
 	std::shared_ptr<framework::RenderTarget> m_shadowMap;
 
 	std::shared_ptr<framework::RasterizerStage> m_shadowMapRasterizer;
+	std::shared_ptr<framework::Sampler> m_shadowMapSampler;
 
 	// entity
 	struct Entity

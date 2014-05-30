@@ -14,16 +14,16 @@ struct VS_OUTPUT
 	uint instanceID : SV_InstanceID;
 };
 
-static const int MAX_SPLITS = 8;
-cbuffer shadowData : register(b0)
-{
-	matrix shadowViewProjection[MAX_SPLITS];
-};
-
-cbuffer entityData : register(b1)
+cbuffer entityData : register(b0)
 {
 	matrix modelViewProjection;
 	matrix model;
+};
+
+static const int MAX_SPLITS = 8;
+cbuffer shadowData : register(b1)
+{
+	matrix shadowViewProjection[MAX_SPLITS];
 };
 
 VS_OUTPUT main(VS_INPUT input, unsigned int instanceID : SV_InstanceID)
