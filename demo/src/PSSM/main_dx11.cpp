@@ -59,7 +59,7 @@ public:
 		m_currentSplitCount = m_splitCount;
 		m_splitLambda = 0.5f;
 		m_farPlane = 0;
-		m_splitShift = 0;
+		m_splitShift = 10;
 
 		m_renderDebug = false;
 		m_furthestPointInCamera = 0;
@@ -177,7 +177,7 @@ public:
 		// sampler for shadow mapping
 		m_shadowMapSampler.reset(new framework::Sampler());
 		D3D11_SAMPLER_DESC samplerDesc = framework::Sampler::getDefault();
-		samplerDesc.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC;
+		samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 		samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS;
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -432,13 +432,11 @@ public:
 		calculateMaxSplitDistances();
 		m_furthestPointInCamera = calculateFurthestPointInCamera(cameraView);
 		calculateSplitDistances();
-		matrix44 shadowView = calculateShadowView();
-		matrix44 shadowProjection = calculateShadowProjection();
 		for (int i = 0; i < m_currentSplitCount; i++)
 		{
 			float n = m_splitDistances[i];
 			float f = m_splitDistances[i + 1];
-			shadowData.shadowViewProjection[i] = calculateShadowCropMarix(shadowView, shadowProjection, n, f);
+			shadowData.shadowViewProjection[i] = calculateShadowViewProjection(n, f);
 		}
 
 		m_shadowBuffer->setData(shadowData);
@@ -516,12 +514,15 @@ public:
 		m_splitDistances[m_currentSplitCount] = m_furthestPointInCamera;
 	}
 
-	matrix44 calculateShadowView()
+	matrix44 calculateShadowViewProjection(float nearPlane, float farPlane)
 	{
 		const float LIGHT_SOURCE_HEIGHT = 200.0f;
 
+		bbox3 box = calculateFrustumBox(nearPlane, farPlane);
+
 		vector3 viewDir = m_camera.getOrientation().z_direction();
-		vector3 center = m_camera.getPosition() + viewDir * (m_furthestPointInCamera * 0.5f - m_splitShift);
+		vector3 size = box.size();
+		vector3 center = box.center() - viewDir * m_splitShift;
 		center.y = 0;
 
 		auto lightSource = m_lightManager.getLightSource(0);
@@ -532,17 +533,14 @@ public:
 		shadowView.lookatRh(shadowView.pos_component() + lightDir, lightSource.orientation.y_direction());
 		shadowView.invert_simple();
 
-		return shadowView;
+		matrix44 shadowProj;	
+		float d = std::max(size.x, size.z);
+		shadowProj.orthoRh(d, d, 0.1f, 1000.0f);
+
+		return shadowView * shadowProj;
 	}
 
-	matrix44 calculateShadowProjection()
-	{
-		matrix44 shadowProj;
-		shadowProj.orthoRh(m_furthestPointInCamera, m_furthestPointInCamera, 0.1f, 1000.0f);
-		return shadowProj;
-	}
-
-	void calculateFrustumCorners(float nearPlane, float farPlane, vector3 frustum[8])
+	bbox3 calculateFrustumBox(float nearPlane, float farPlane)
 	{
 		vector3 eye = m_camera.getPosition();
 		vector3 vZ = m_camera.getOrientation().z_direction();
@@ -558,75 +556,18 @@ public:
 		vector3 nearPlaneCenter = eye + vZ * nearPlane;
 		vector3 farPlaneCenter = eye + vZ * farPlane;
 
-		frustum[0] = vector3(nearPlaneCenter - vX * nearPlaneWidth - vY * nearPlaneHeight);
-		frustum[1] = vector3(nearPlaneCenter - vX * nearPlaneWidth + vY * nearPlaneHeight);
-		frustum[2] = vector3(nearPlaneCenter + vX * nearPlaneWidth + vY * nearPlaneHeight);
-		frustum[3] = vector3(nearPlaneCenter + vX * nearPlaneWidth - vY * nearPlaneHeight);
-		frustum[4] = vector3(farPlaneCenter - vX * farPlaneWidth - vY * farPlaneHeight);
-		frustum[5] = vector3(farPlaneCenter - vX * farPlaneWidth + vY * farPlaneHeight);
-		frustum[6] = vector3(farPlaneCenter + vX * farPlaneWidth + vY * farPlaneHeight);
-		frustum[7] = vector3(farPlaneCenter + vX * farPlaneWidth - vY * farPlaneHeight);
-
-		vector3 center(0, 0, 0);
-		for (int i = 0; i < 8; i++) center += frustum[i];
-		center *= 0.125f;
-
-		const float SCALE = 1.1f;
-		for (int i = 0; i < 8; i++)
-		{
-			frustum[i] += (frustum[i] - center) * (SCALE - 1.0f);
-		}
-	}
-
-	matrix44 calculateShadowCropMarix(const matrix44& shadowView, const matrix44& shadowProjection, float nearPlane, float farPlane)
-	{
-		vector3 frustumCorners[8];
-		calculateFrustumCorners(nearPlane, farPlane, frustumCorners);
-
-		matrix44 shadowViewProj = shadowView * shadowProjection;
-
-		float maxX = -FLT_MAX;
-		float maxY = -FLT_MAX;
-		float minX = FLT_MAX;
-		float minY = FLT_MAX;
-		float maxZ = 0;
-		for (int i = 0; i < 8; i++)
-		{
-			vector4 transformed;
-			shadowViewProj.mult(vector4(frustumCorners[i]), transformed);
-			transformed.x /= transformed.w;
-			transformed.y /= transformed.w;
-
-			if (transformed.x > maxX) maxX = transformed.x;
-			if (transformed.y > maxY) maxY = transformed.y;
-			if (transformed.y < minY) minY = transformed.y;
-			if (transformed.x < minX) minX = transformed.x;
-			if (transformed.z > maxZ) maxZ = transformed.z;
-		}
-
-		maxX = n_clamp(maxX, -1.0f, 1.0f);
-		maxY = n_clamp(maxY, -1.0f, 1.0f);
-		minX = n_clamp(minX, -1.0f, 1.0f);
-		minY = n_clamp(minY, -1.0f, 1.0f);
-
-		const float BIAS = 1.5f;
-		float newFarLight = maxZ + BIAS;
-
-		float scaleX = 2.0f / (maxX - minX);
-		float scaleY = 2.0f / (maxY - minY);
-		float offsetX = -0.5f * (maxX + minX) * scaleX;
-		float offsetY = -0.5f * (maxY + minY) * scaleY;
-
-		matrix44 cropView(scaleX, 0.0f, 0.0f, 0.0f,
-						  0.0f, scaleY, 0.0f, 0.0f,
-						  0.0f, 0.0f, 1.0f, 0.0f,
-						  offsetX, offsetY, 0.0f, 1.0f);
-
-		matrix44 croppedShadowViewProj;
-		croppedShadowViewProj = shadowViewProj * cropView;
-		croppedShadowViewProj.m[2][2] /= newFarLight;
-		croppedShadowViewProj.m[3][2] /= newFarLight;
-		return croppedShadowViewProj;
+		bbox3 box;
+		box.begin_extend();
+		box.extend(vector3(nearPlaneCenter - vX * nearPlaneWidth - vY * nearPlaneHeight));
+		box.extend(vector3(nearPlaneCenter - vX * nearPlaneWidth + vY * nearPlaneHeight));
+		box.extend(vector3(nearPlaneCenter + vX * nearPlaneWidth + vY * nearPlaneHeight));
+		box.extend(vector3(nearPlaneCenter + vX * nearPlaneWidth - vY * nearPlaneHeight));
+		box.extend(vector3(farPlaneCenter - vX * farPlaneWidth - vY * farPlaneHeight));
+		box.extend(vector3(farPlaneCenter - vX * farPlaneWidth + vY * farPlaneHeight));
+		box.extend(vector3(farPlaneCenter + vX * farPlaneWidth + vY * farPlaneHeight));
+		box.extend(vector3(farPlaneCenter + vX * farPlaneWidth - vY * farPlaneHeight));
+		box.end_extend();
+		return box;
 	}
 
 private:

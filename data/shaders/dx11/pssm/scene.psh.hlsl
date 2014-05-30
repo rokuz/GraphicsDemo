@@ -36,6 +36,7 @@ cbuffer shadowData : register(b3)
 {
 	matrix shadowViewProjection[MAX_SPLITS];
 };
+static const float SHADOW_BIASES[MAX_SPLITS] = { 0.0005, 0.001, 0.002, 0.003, 0.003, 0.003, 0.003, 0.003 };
 
 texture2D diffuseMap : register(t1);
 texture2D normalMap : register(t2);
@@ -55,21 +56,19 @@ float sampleShadowMap(int index, float3 coords, float bias)
 { 
 	float3 uv = float3(coords.xy, index); 
 	float receiver = coords.z;
-	return shadowMap.SampleCmpLevelZero(shadowMapSampler, uv, receiver - bias); 
+	//return shadowMap.SampleCmpLevelZero(shadowMapSampler, uv, receiver - bias); 
 
-	/*float sum = 0.0;
+	float sum = 0.0;
 	const float step = 1.0 / 1024.0;
-	
-	for (int i = 0; i <= filterSize; i++)
+	const int FILTER_SIZE = 3;
+	for (int i = 0; i < FILTER_SIZE; i++)
 	{
-		for (int j = 0; j <= filterSize; j++)
+		for (int j = 0; j < FILTER_SIZE; j++)
 		{
-			sum += sm.SampleCmpLevelZero(ssShadowMap, uv + step * float2(i,j), zReceiver - bias); 
+			sum += shadowMap.SampleCmpLevelZero(shadowMapSampler, uv + step * float3(i, j, 0), receiver - bias);
 		}	
 	}
-	float sz = ((float)filterSize + 1.0);
-	
-	return sum / (sz * sz);*/
+	return sum / (FILTER_SIZE * FILTER_SIZE);
 }
 
 float shadow(float3 worldPos)
@@ -80,7 +79,7 @@ float shadow(float3 worldPos)
 	for (int i = 0; i < splitsCount; i++)
 	{
 		float3 coords = getShadowCoords(i, worldPos);
-		shadowValue += (1.0 - sampleShadowMap(i, coords, 0.001));
+		shadowValue += (1.0 - sampleShadowMap(i, coords, SHADOW_BIASES[i]));
 	}
 		
 	return 1.0 - saturate(shadowValue);
@@ -100,7 +99,9 @@ float4 main(VS_OUTPUT input) : SV_TARGET
 	//float3 textureColor = diffuseMap.Sample(defaultSampler, input.uv0).rgb;
 	//return float4(textureColor * shadowValue, 1);
 	
-	float3 textureColor = diffuseMap.Sample(defaultSampler, input.uv0).rgb * shadowValue;
+	const float SHADOW_INTENSITY = 0.7;
+	float3 textureColor = diffuseMap.Sample(defaultSampler, input.uv0).rgb;
+	textureColor = lerp(textureColor, textureColor * shadowValue, SHADOW_INTENSITY);
 	float3 diffuse = textureColor * light.diffuseColor * ndol;
 	
 	float3 viewDirection = normalize(input.worldPos - viewPosition);
