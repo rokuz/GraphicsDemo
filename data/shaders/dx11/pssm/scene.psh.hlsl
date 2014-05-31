@@ -1,4 +1,6 @@
-struct VS_OUTPUT
+#include <common.h.hlsl>
+
+struct PS_INPUT
 {
     float4 position : SV_POSITION;
 	float2 uv0 : TEXCOORD0;
@@ -6,37 +8,6 @@ struct VS_OUTPUT
 	float3 normal : TEXCOORD2;
 	float3 worldPos : TEXCOORD3;
 };
-
-cbuffer onFrameData : register(b1)
-{
-	float3 viewPosition;
-	int splitsCount;
-};
-
-struct LightData
-{
-	float3 position;
-	uint lightType;
-	float3 direction;
-	float falloff;
-	float3 diffuseColor;
-	float angle;
-	float3 ambientColor;
-	uint dummy;
-	float3 specularColor;
-	uint dummy2;
-};
-cbuffer lightsData : register(b2)
-{
-	LightData light;
-};
-
-static const int MAX_SPLITS = 8;
-cbuffer shadowData : register(b3)
-{
-	matrix shadowViewProjection[MAX_SPLITS];
-};
-static const float SHADOW_BIASES[MAX_SPLITS] = { 0.0005, 0.001, 0.002, 0.003, 0.003, 0.003, 0.003, 0.003 };
 
 texture2D diffuseMap : register(t1);
 texture2D normalMap : register(t2);
@@ -85,7 +56,7 @@ float shadow(float3 worldPos)
 	return 1.0 - saturate(shadowValue);
 }
 
-float4 main(VS_OUTPUT input) : SV_TARGET
+float4 main(PS_INPUT input) : SV_TARGET
 {
 	const float specPower = 30.0;
 
@@ -95,10 +66,7 @@ float4 main(VS_OUTPUT input) : SV_TARGET
 	float ndol = max(0, dot(light.direction, normal));
 
 	float shadowValue = shadow(input.worldPos);
-	//ndol = min(ndol, shadowValue);
-	//float3 textureColor = diffuseMap.Sample(defaultSampler, input.uv0).rgb;
-	//return float4(textureColor * shadowValue, 1);
-	
+
 	const float SHADOW_INTENSITY = 0.7;
 	float3 textureColor = diffuseMap.Sample(defaultSampler, input.uv0).rgb;
 	textureColor = lerp(textureColor, textureColor * shadowValue, SHADOW_INTENSITY);

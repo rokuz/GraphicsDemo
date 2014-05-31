@@ -6,7 +6,8 @@ set(SOURCE_OGL "skipped")
 # Direct3D 11
 set(SHADERS_DIR_DX11 ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/dx11/pssm)				
 set(SOURCE_DX11 main_dx11.cpp)
-set(SHADERS_DX11 ${SHADERS_DIR_DX11}/scene.vsh.hlsl
+set(SHADERS_DX11 ${SHADERS_DIR_DX11}/common.h.hlsl
+				 ${SHADERS_DIR_DX11}/scene.vsh.hlsl
 				 ${SHADERS_DIR_DX11}/scene.psh.hlsl
 				 ${SHADERS_DIR_DX11}/shadowmap.vsh.hlsl
 				 ${SHADERS_DIR_DX11}/shadowmap.gsh.hlsl

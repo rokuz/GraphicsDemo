@@ -16,7 +16,7 @@ DECLARE_UNIFORMS_END()
 
 // constants
 const std::string SHADERS_PATH = "data/shaders/dx11/pssm/";
-const int MAX_SPLITS = 8;
+const int MAX_SPLITS = 4;
 #define PROFILING 0
 
 // entity data
@@ -25,6 +25,7 @@ struct EntityDataRaw
 {
 	matrix44 modelViewProjection;
 	matrix44 model;
+	int shadowIndices[MAX_SPLITS];
 };
 #pragma pack (pop)
 
@@ -55,7 +56,7 @@ public:
 	PSSMApp()
 	{
 		m_shadowMapSize = 1024;
-		m_splitCount = 4;
+		m_splitCount = MAX_SPLITS;
 		m_currentSplitCount = m_splitCount;
 		m_splitLambda = 0.5f;
 		m_farPlane = 0;
@@ -335,11 +336,12 @@ public:
 
 	void renderEntity(bool shadowmap, const Entity& entity, const EntityData& entityData)
 	{
-		if (shadowmap && !entityData.isShadowCaster) return;
+		if (shadowmap && (!entityData.isShadowCaster || entityData.shadowInstancesCount == 0)) return;
 
 		EntityDataRaw entityDataRaw;
 		entityDataRaw.modelViewProjection = entityData.mvp;
 		entityDataRaw.model = entityData.model;
+		memcpy(entityDataRaw.shadowIndices, entityData.shadowIndices, sizeof(unsigned int) * MAX_SPLITS);
 		m_entityDataBuffer->setData(entityDataRaw);
 		m_entityDataBuffer->applyChanges();
 
@@ -353,7 +355,7 @@ public:
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, m_shadowMapSampler);
 		}
 		
-		entity.geometry->renderAllMeshes(shadowmap ? m_currentSplitCount : 1);
+		entity.geometry->renderAllMeshes(shadowmap ? entityData.shadowInstancesCount : 1);
 	}
 
 	void renderDebug()
@@ -366,7 +368,7 @@ public:
 
 		std::wstringstream stream;
 		stream.precision(2);
-		stream << "Furthest point = " << std::fixed << m_furthestPointInCamera << "\nSplit lambda = " << std::fixed << m_splitLambda << "\nDistances = ";
+		stream << "Furthest point = " << std::fixed << m_furthestPointInCamera << "\nDistances = ";
 		for (int i = 0; i < m_currentSplitCount + 1; i++)
 		{
 			stream << std::fixed << m_splitDistances[i];
@@ -423,9 +425,11 @@ public:
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
 			m_entitiesData[i].mvp = m_entitiesData[i].model * vp;
+			m_entitiesData[i].shadowInstancesCount = 0;
 		}
 
 		m_planeData.mvp = m_planeData.model * vp;
+		m_planeData.shadowInstancesCount = 0;
 
 		// calculate shadow
 		ShadowDataRaw shadowData;
@@ -436,7 +440,9 @@ public:
 		{
 			float n = m_splitDistances[i];
 			float f = m_splitDistances[i + 1];
-			shadowData.shadowViewProjection[i] = calculateShadowViewProjection(n, f);
+			bbox3 box = calculateFrustumBox(n, f);
+			shadowData.shadowViewProjection[i] = calculateShadowViewProjection(box);
+			updateShadowVisibilityMask(box, i);
 		}
 
 		m_shadowBuffer->setData(shadowData);
@@ -497,7 +503,8 @@ public:
 		{
 			for (size_t i = 0; i < m_maxSplitDistances.size(); i++)
 			{
-				if (m_furthestPointInCamera >= m_maxSplitDistances[i]) m_currentSplitCount++;
+				float d = m_maxSplitDistances[i] - m_splitShift;
+				if (m_furthestPointInCamera >= d) m_currentSplitCount++;
 			}
 		}
 
@@ -514,15 +521,13 @@ public:
 		m_splitDistances[m_currentSplitCount] = m_furthestPointInCamera;
 	}
 
-	matrix44 calculateShadowViewProjection(float nearPlane, float farPlane)
+	matrix44 calculateShadowViewProjection(const bbox3& frustumBox)
 	{
 		const float LIGHT_SOURCE_HEIGHT = 200.0f;
 
-		bbox3 box = calculateFrustumBox(nearPlane, farPlane);
-
 		vector3 viewDir = m_camera.getOrientation().z_direction();
-		vector3 size = box.size();
-		vector3 center = box.center() - viewDir * m_splitShift;
+		vector3 size = frustumBox.size();
+		vector3 center = frustumBox.center() - viewDir * m_splitShift;
 		center.y = 0;
 
 		auto lightSource = m_lightManager.getLightSource(0);
@@ -570,6 +575,53 @@ public:
 		return box;
 	}
 
+	void updateShadowVisibilityMask(const bbox3& frustumBox, int splitIndex)
+	{
+		vector3 viewDir = m_camera.getOrientation().z_direction();
+		matrix44 boxOffset;
+		boxOffset.set_translation(-viewDir * m_splitShift);
+		bbox3 box = frustumBox;
+		box.transform(boxOffset);
+
+		if (m_planeData.isShadowCaster)
+		{
+			updateShadowVisibilityMask(box, m_plane, m_planeData, splitIndex);
+		}
+		for (size_t i = 0; i < m_entitiesData.size(); i++)
+		{
+			if (m_entitiesData[i].isShadowCaster)
+			{
+				updateShadowVisibilityMask(box, m_entity, m_entitiesData[i], splitIndex);
+			}
+		}
+	}
+
+	void updateShadowVisibilityMask(const bbox3& frustumBox, const Entity& entity, EntityData& entityData, int splitIndex)
+	{
+		bbox3 b = entity.geometry->getBoundingBox();
+		b.transform(entityData.model);
+
+		// shadow box computation
+		auto lightSource = m_lightManager.getLightSource(0);
+		vector3 lightDir = lightSource.orientation.z_direction();
+		float shadowBoxL = b.size().y / -lightDir.z;
+		bbox3 shadowBox;
+		shadowBox.begin_extend();
+		for (int i = 0; i < 8; i++)
+		{
+			shadowBox.extend(b.corner_point(i));
+			shadowBox.extend(b.corner_point(i) + lightDir * shadowBoxL);
+		}
+		shadowBox.end_extend();
+	
+		if (frustumBox.clipstatus(shadowBox) != bbox3::Outside)
+		{
+			int i = entityData.shadowInstancesCount;
+			entityData.shadowIndices[i] = splitIndex;
+			entityData.shadowInstancesCount++;
+		}
+	}
+
 private:
 	// gpu program to render scene
 	std::shared_ptr<framework::GpuProgram> m_sceneRendering;
@@ -594,8 +646,13 @@ private:
 	{
 		matrix44 model;
 		matrix44 mvp;
+		unsigned int shadowInstancesCount;
+		unsigned int shadowIndices[MAX_SPLITS];
 		bool isShadowCaster;
-		EntityData() : isShadowCaster(true) {}
+		EntityData() : isShadowCaster(true), shadowInstancesCount(0)
+		{
+			memset(shadowIndices, 0, sizeof(unsigned int) * MAX_SPLITS);
+		}
 	};
 	Entity m_entity;
 	std::vector<EntityData> m_entitiesData;

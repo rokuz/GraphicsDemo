@@ -1,11 +1,4 @@
-struct VS_INPUT
-{
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-    float2 uv0 : TEXCOORD0;
-	float3 tangent : TANGENT;
-	float3 binormal : BINORMAL;
-};
+#include <common.h.hlsl>
 
 struct VS_OUTPUT
 {
@@ -14,12 +7,6 @@ struct VS_OUTPUT
 	float3 tangent : TEXCOORD1;
 	float3 normal : TEXCOORD2;
 	float3 worldPos : TEXCOORD3; 
-};
-
-cbuffer entityData : register(b0)
-{
-	matrix modelViewProjection;
-	matrix model;
 };
 
 VS_OUTPUT main(VS_INPUT input)

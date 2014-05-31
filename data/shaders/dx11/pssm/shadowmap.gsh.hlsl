@@ -1,4 +1,6 @@
-struct VS_INPUT
+#include <common.h.hlsl>
+
+struct GS_INPUT
 {
     float4 position : SV_POSITION;
 	float depth : TEXCOORD0;
@@ -13,10 +15,18 @@ struct GS_OUTPUT
 };
 
 [maxvertexcount(3)]
-void main(triangle VS_INPUT pnt[3], inout TriangleStream<GS_OUTPUT> triStream)
+void main(triangle GS_INPUT pnt[3], inout TriangleStream<GS_OUTPUT> triStream)
 {
-	triStream.Append((GS_OUTPUT)pnt[0]);
-	triStream.Append((GS_OUTPUT)pnt[1]);
-	triStream.Append((GS_OUTPUT)pnt[2]);
+	GS_OUTPUT p = (GS_OUTPUT)pnt[0];
+	p.index = shadowIndices[pnt[0].instanceID];
+	triStream.Append(p);
+
+	p = (GS_OUTPUT)pnt[1];
+	p.index = shadowIndices[pnt[1].instanceID];
+	triStream.Append(p);
+
+	p = (GS_OUTPUT)pnt[2];
+	p.index = shadowIndices[pnt[2].instanceID];
+	triStream.Append(p);
 	triStream.RestartStrip();
 }
