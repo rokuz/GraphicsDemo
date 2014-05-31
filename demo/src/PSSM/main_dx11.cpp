@@ -203,6 +203,10 @@ public:
 
 		// lights
 		initLights();
+
+		// skybox texture
+		//m_skyboxTexture.reset(new framework::Texture());
+		//if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
 	}
 
 	Entity initEntity(const geom::PlaneGenerationInfo& planeInfo, const std::string& diffuseMap, const std::string& normalMap)
@@ -309,6 +313,9 @@ public:
 
 		useDefaultRenderTarget();
 
+		// render skybox
+		//renderSkybox(m_camera, m_skyboxTexture);
+
 		// render scene
 		if (m_sceneRendering->use())
 		{
@@ -377,6 +384,23 @@ public:
 				if (i % 2 == 0 && i != 0) stream << ",\n"; else stream << ", ";
 			}
 		}
+
+		int objectsCount = 0;
+		int instancesCount = 0;
+		for (size_t i = 0; i < m_entitiesData.size(); i++)
+		{
+			if (m_entitiesData[i].shadowInstancesCount > 0)
+			{
+				objectsCount++;
+				instancesCount += (m_entitiesData[i].shadowInstancesCount - 1);
+			}
+		}
+		if (m_planeData.shadowInstancesCount > 0)
+		{
+			objectsCount++;
+			instancesCount += (m_planeData.shadowInstancesCount - 1);
+		}
+		stream << "\nRendered to SM objects = " << objectsCount << "\nRendered to SM instances = " << instancesCount;
 
 		m_debugLabel->setText(stream.str());
 	}
@@ -680,6 +704,8 @@ private:
 
 	bool m_renderDebug;
 	gui::LabelPtr_T m_debugLabel;
+
+	std::shared_ptr<framework::Texture> m_skyboxTexture;
 };
 
 DECLARE_MAIN(PSSMApp);
