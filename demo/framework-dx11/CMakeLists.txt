@@ -80,10 +80,10 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 add_subdirectory(dds)
 
 #headers search
-include_directories(../geomlib ../mathlib ../utils ../guilib)
+include_directories(../geomlib ../mathlib ../utils ../guilib ../json)
 
 #dependences
-set(DEPS_LIBS utils mathlib geomlib guilib ddslib)
+set(DEPS_LIBS utils mathlib geomlib guilib ddslib jsonlib)
 
 #link libraries
 target_link_libraries(framework ${DEPS_LIBS})

@@ -32,10 +32,10 @@ ENDIF(USE_FBX)
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 #headers search
-include_directories(../mathlib ../utils)
+include_directories(../mathlib ../utils ../json)
 
 #dependences
-set (LINKED_PROJECTS mathlib utils)
+set (LINKED_PROJECTS mathlib utils jsonlib)
 
 #link FBX SDK
 IF (USE_FBX)
@@ -45,21 +45,14 @@ set_target_properties(${LIBRARY_NAME} PROPERTIES
 	INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/fbxsdk/include
 )
 set_target_properties(${LIBRARY_NAME} PROPERTIES
-	IMPORTED_IMPLIB_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/fbxsdk/lib/vs/x86/debug/libfbxsdk.lib
-	IMPORTED_IMPLIB_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/fbxsdk/lib/vs/x86/release/libfbxsdk.lib
+	IMPORTED_IMPLIB_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/fbxsdk/lib/vs/x86/debug/libfbxsdk-md.lib
+	IMPORTED_IMPLIB_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/fbxsdk/lib/vs/x86/release/libfbxsdk-md.lib
 )
 set(LINKED_PROJECTS ${LINKED_PROJECTS} fbxsdk)
 
 #link libraries
 target_link_libraries(geomlib ${LINKED_PROJECTS})
 
-#copyable binaries FBX SDK
-set (FBXSDK_COPIABLE_BINARIES_DIR_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/fbxsdk/lib/vs/x86/debug CACHE INTERNAL "")
-set(FBXSDK_COPIABLE_BINARIES_DEBUG libfbxsdk.dll
-CACHE INTERNAL "")
-set (FBXSDK_COPIABLE_BINARIES_DIR_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/fbxsdk/lib/vs/x86/release CACHE INTERNAL "")
-set(FBXSDK_COPIABLE_BINARIES_RELEASE libfbxsdk.dll
-CACHE INTERNAL "")
 ENDIF(USE_FBX)
 
 #precompiled headers

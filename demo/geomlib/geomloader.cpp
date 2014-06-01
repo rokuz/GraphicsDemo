@@ -23,6 +23,8 @@
 
 #include "stdafx.h"
 #include "geomloader.h"
+#include "json/json.h"
+#include <fstream>
 
 namespace geom
 {
@@ -127,8 +129,35 @@ Data GeomLoader::load(const std::string& filename)
 	fread(writer.getIndexBufferRef().data(), sizeof(unsigned int), indicesCount, fp);
 
 	fclose(fp);
+
+	loadMaterial(utils::Utils::trimExtention(filename) + ".material", writer);
 	
 	return data;
+}
+
+void GeomLoader::loadMaterial(const std::string& filename, DataWriter& dataWriter)
+{
+	std::ifstream matFile(filename);
+	if (!matFile.is_open()) return;
+
+	Json::Value root;
+	Json::Reader reader;
+	bool parsingSuccessful = reader.parse(matFile, root);
+	matFile.close();
+	if (!parsingSuccessful) return;
+
+	for (size_t i = 0; i < root.size(); i++)
+	{
+		Data::Material mat;
+		mat.diffuseMapFilename = root[i]["diffuseMap"].asString();
+		mat.normalMapFilename = root[i]["normalMap"].asString();
+		mat.specularMapFilename = root[i]["specularMap"].asString();
+
+		if (i < dataWriter.getMeshesRef().size())
+		{
+			dataWriter.getMeshesRef()[i].material = mat;
+		}
+	}
 }
 
 }

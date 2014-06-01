@@ -23,6 +23,7 @@
 
 #include "stdafx.h"
 #include "geomsaver.h"
+#include "json/json.h"
 
 namespace geom
 {
@@ -30,7 +31,6 @@ namespace geom
 bool GeomSaver::save(const Data& data, const std::string& filename)
 {
 	FILE* fp = 0;
-	size_t filesize = 0;
 	fp = fopen(filename.c_str(), "wb");
 	if (!fp)
 	{
@@ -79,7 +79,43 @@ bool GeomSaver::save(const Data& data, const std::string& filename)
 
 	fclose(fp);
 
+	saveMaterial(data, utils::Utils::trimExtention(filename) + ".material");
+
 	return true;
+}
+
+void GeomSaver::saveMaterial(const Data& data, const std::string& filename)
+{
+	bool hasMaterial = false;
+	auto meshes = data.getMeshes();
+	for (size_t i = 0; i < meshes.size(); i++)
+	{
+		if (!meshes[i].material.diffuseMapFilename.empty() ||
+			!meshes[i].material.normalMapFilename.empty() ||
+			!meshes[i].material.specularMapFilename.empty()) hasMaterial = true;
+	}
+
+	if (hasMaterial)
+	{
+		FILE* fp = 0;
+		fp = fopen(filename.c_str(), "w");
+		if (!fp) return;
+
+		Json::Value root;
+		for (size_t i = 0; i < meshes.size(); i++)
+		{
+			Json::Value mat;
+			mat["diffuseMap"] = meshes[i].material.diffuseMapFilename;
+			mat["normalMap"] = meshes[i].material.normalMapFilename;
+			mat["specularMap"] = meshes[i].material.specularMapFilename;
+			root.append(mat);
+		}
+		Json::StyledWriter writer;
+		std::string data = writer.write(root);
+		fwrite(data.c_str(), data.length(), 1, fp);
+
+		fclose(fp);
+	}
 }
 
 }

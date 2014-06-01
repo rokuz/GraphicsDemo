@@ -34,6 +34,9 @@ public:
 	virtual ~GeomLoader(){}
 	
 	virtual Data load(const std::string& filename);
+
+private:
+	void loadMaterial(const std::string& filename, DataWriter& dataWriter);
 };
 
 }

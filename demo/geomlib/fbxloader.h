@@ -44,11 +44,12 @@ private:
 		std::map<size_t, size_t> reindexer;
 	};
 
-    void ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<FbxMesh*>& meshes);
-    size_t GetAdditionalUVsCount(const std::list<FbxMesh*>& meshes);   
+	void ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<std::pair<FbxMesh*, Data::Material> >& meshes);
+	size_t GetAdditionalUVsCount(const std::list<std::pair<FbxMesh*, Data::Material> >& meshes);
     bool CheckVertexContent(DataWriter& dataWriter, FbxMesh* mesh);
 	void GetSmoothingGroup(FbxMesh* mesh, std::vector<int>& group);
 	void Reindexing(FbxMesh* mesh, std::vector<GroupData>& groups, size_t& reindexerIndex);
+	std::string GetTextureName(FbxSurfaceMaterial* material, const std::string& textureType);
 
 	template <typename ElementType, typename VectorType> 
 	void FbxVectorToBuffer(const VectorType& fbxVec, float* ptr, size_t count)

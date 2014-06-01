@@ -132,6 +132,17 @@ std::string Utils::getFilename(const std::string& path)
 	return p.substr(it->first, it->second - it->first + 1);
 }
 
+std::string Utils::trimExtention(const std::string& fileName)
+{
+	size_t dot_sign = fileName.find_last_of('.');
+	if (dot_sign != std::string::npos)
+	{
+		if (dot_sign == 0) return "";
+		return fileName.substr(0, dot_sign);
+	}
+	return fileName;
+}
+
 float* Utils::convert(const vector4& v)
 {
 	static float arr[4];

@@ -42,10 +42,18 @@ public:
 		vector3 binormal;   // 4
 	};
 
+	struct Material
+	{
+		std::string diffuseMapFilename;
+		std::string normalMapFilename;
+		std::string specularMapFilename;
+	};
+
 	struct Mesh
 	{
 		size_t offsetInIB;
 		size_t indicesCount;
+		Material material;
 		Mesh() : offsetInIB(0), indicesCount(0) {}
 	};
 

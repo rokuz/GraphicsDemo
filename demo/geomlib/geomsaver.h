@@ -34,6 +34,9 @@ public:
 	virtual ~GeomSaver(){}
 	
 	virtual bool save(const Data& data, const std::string& filename);
+
+private:
+	void saveMaterial(const Data& data, const std::string& filename);
 };
 
 }

@@ -79,7 +79,7 @@ Data FbxLoader::load(const std::string& filename)
         
     importer->Destroy();
         
-    std::list<FbxMesh*> meshes;
+    std::list<std::pair<FbxMesh*, Data::Material> > meshes;
     FbxNode* pFbxRootNode = fbxScene->GetRootNode();
     if (pFbxRootNode != 0)
     {
@@ -112,9 +112,9 @@ Data FbxLoader::load(const std::string& filename)
 	size_t reindexerIndex = 0;
 	size_t verticesCount = 0;
     size_t indicesCount = 0;
-	for (std::list<FbxMesh*>::const_iterator it = meshes.cbegin(); it != meshes.cend(); ++it, ++i)
+	for (auto it = meshes.cbegin(); it != meshes.cend(); ++it, ++i)
     {
-		Reindexing(*it, meshesData[i], reindexerIndex);
+		Reindexing(it->first, meshesData[i], reindexerIndex);
 		for (size_t j = 0; j < meshesData[i].size(); j++)
 		{
 			verticesCount += meshesData[i][j].reindexer.size();
@@ -133,7 +133,7 @@ Data FbxLoader::load(const std::string& filename)
     size_t meshesCounter = 0;
 	writer.getBoundingBoxRef().begin_extend();
 
-    for (std::list<FbxMesh*>::const_iterator it = meshes.cbegin(); it != meshes.cend(); ++it, ++meshesCounter)
+    for (auto it = meshes.cbegin(); it != meshes.cend(); ++it, ++meshesCounter)
     {
 		size_t vertexCounter = 0;
 		for (size_t j = 0; j < meshesData[meshesCounter].size(); j++)
@@ -142,7 +142,7 @@ Data FbxLoader::load(const std::string& filename)
 			{
 				for (size_t k = 0; k < 3; k++)
 				{
-					int index_k = (*it)->GetPolygonVertex(*it2, k);
+					int index_k = it->first->GetPolygonVertex(*it2, k);
 					size_t new_index = meshesData[meshesCounter][j].reindexer[(size_t)index_k];
 
 					for (size_t component = 0; component < data.getVertexComponentsCount(); component++)
@@ -154,7 +154,7 @@ Data FbxLoader::load(const std::string& filename)
 						if (component == 0) // position
 						{
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							FbxVector4 vertex = (*it)->GetControlPointAt(index_k);
+							FbxVector4 vertex = it->first->GetControlPointAt(index_k);
 							ptr[0] = (float)vertex[0];
 							ptr[1] = (float)vertex[1];
 							ptr[2] = (float)vertex[2];
@@ -162,34 +162,34 @@ Data FbxLoader::load(const std::string& filename)
 						}
 						else if (component == 1) // normal
 						{
-							FbxGeometryElementNormal* normalElement = (*it)->GetElementNormal();
+							FbxGeometryElementNormal* normalElement = it->first->GetElementNormal();
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementNormal, FbxVector4>(normalElement, ptr, *it, (*it2) * 3 + k, componentSize / sizeof(float));
+							ImportComponent<FbxGeometryElementNormal, FbxVector4>(normalElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 						else if (component == 2) // uv0
 						{
-							FbxGeometryElementUV* uvElement = (*it)->GetElementUV(0);
+							FbxGeometryElementUV* uvElement = it->first->GetElementUV(0);
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementUV, FbxVector2>(uvElement, ptr, *it, (*it2) * 3 + k, componentSize / sizeof(float));
+							ImportComponent<FbxGeometryElementUV, FbxVector2>(uvElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 						else if (component == 3) // tangent
 						{
-							FbxGeometryElementTangent* tangentElement = (*it)->GetElementTangent();
+							FbxGeometryElementTangent* tangentElement = it->first->GetElementTangent();
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementTangent, FbxVector4>(tangentElement, ptr, *it, (*it2) * 3 + k, componentSize / sizeof(float));
+							ImportComponent<FbxGeometryElementTangent, FbxVector4>(tangentElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 						else if (component == 4) // binormal
 						{
-							FbxGeometryElementBinormal* binormalElement = (*it)->GetElementBinormal();
+							FbxGeometryElementBinormal* binormalElement = it->first->GetElementBinormal();
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementBinormal, FbxVector4>(binormalElement, ptr, *it, (*it2) * 3 + k, componentSize / sizeof(float));
+							ImportComponent<FbxGeometryElementBinormal, FbxVector4>(binormalElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 						else // additional uvs
 						{
 							int uvIndex = (int)component - 4;
-							FbxGeometryElementUV* uvElement = (*it)->GetElementUV((int)uvIndex);
+							FbxGeometryElementUV* uvElement = it->first->GetElementUV((int)uvIndex);
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementUV, FbxVector2>(uvElement,ptr, *it, (*it2) * 3 + k, componentSize / sizeof(float));
+							ImportComponent<FbxGeometryElementUV, FbxVector2>(uvElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 					}
 				}
@@ -205,7 +205,7 @@ Data FbxLoader::load(const std::string& filename)
   
     meshesCounter = 0;
 	size_t meshOffsetInIB = 0;
-    for (std::list<FbxMesh*>::const_iterator it = meshes.cbegin(); it != meshes.cend(); ++it, ++meshesCounter)
+    for (auto it = meshes.cbegin(); it != meshes.cend(); ++it, ++meshesCounter)
     {
 		size_t indicesInMesh = 0;
 		for (size_t j = 0; j < meshesData[meshesCounter].size(); j++)
@@ -214,7 +214,7 @@ Data FbxLoader::load(const std::string& filename)
 			{
 				for (size_t k = 0; k < 3; k++)
 				{
-					int index_k = (*it)->GetPolygonVertex(*it2, k);
+					int index_k = it->first->GetPolygonVertex(*it2, k);
 					size_t new_index = meshesData[meshesCounter][j].reindexer[(size_t)index_k];
 					writer.getIndexBufferRef().data()[meshOffsetInIB + indicesInMesh + k] = (unsigned int)new_index;
 				}
@@ -224,6 +224,7 @@ Data FbxLoader::load(const std::string& filename)
 
 		writer.getMeshesRef()[meshesCounter].indicesCount = indicesInMesh;
 		writer.getMeshesRef()[meshesCounter].offsetInIB = meshOffsetInIB;
+		writer.getMeshesRef()[meshesCounter].material = it->second;
         meshOffsetInIB += indicesInMesh;
     }
 		    
@@ -232,7 +233,7 @@ Data FbxLoader::load(const std::string& filename)
 	return data;
 }
 
-void FbxLoader::ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<FbxMesh*>& meshes)
+void FbxLoader::ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<std::pair<FbxMesh*, Data::Material> >& meshes)
 {
     if (node->GetNodeAttribute() == 0)
         return;
@@ -297,15 +298,51 @@ void FbxLoader::ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<
 		}
 	}
 
-    meshes.push_back(mesh);
+	Data::Material mat;
+	int materialsCount = mesh->GetElementMaterialCount();
+	if (materialsCount == 1)
+	{
+		FbxGeometryElementMaterial* materialElement = mesh->GetElementMaterial(0);
+		if (materialElement != 0 && materialElement->GetMappingMode() != FbxGeometryElement::eByPolygon)
+		{
+			FbxSurfaceMaterial* material = mesh->GetNode()->GetMaterial(materialElement->GetIndexArray().GetAt(0));
+			int matId = materialElement->GetIndexArray().GetAt(0);
+			if (material != 0 && matId >= 0)
+			{
+				mat.diffuseMapFilename = GetTextureName(material, FbxSurfaceMaterial::sDiffuse);
+				mat.normalMapFilename = GetTextureName(material, FbxSurfaceMaterial::sNormalMap);
+				mat.specularMapFilename = GetTextureName(material, FbxSurfaceMaterial::sSpecular);
+			}
+		}
+	}
+
+	meshes.push_back(std::make_pair(mesh, mat));
+}
+
+std::string FbxLoader::GetTextureName(FbxSurfaceMaterial* material, const std::string& textureType)
+{
+	FbxProperty diffTexProperty = material->FindProperty(textureType.c_str());
+	if (diffTexProperty.GetSrcObjectCount<FbxFileTexture>() > 0)
+	{
+		FbxFileTexture* texture = diffTexProperty.GetSrcObject<FbxFileTexture>(0);
+		if (texture != 0)
+		{
+			std::string textureName = texture->GetFileName();
+			if (textureName.empty()) textureName = texture->GetRelativeFileName();
+			textureName = utils::Utils::getFilename(textureName);
+			textureName = utils::Utils::trimExtention(textureName);
+			return textureName;
+		}
+	}
+	return "";
 }
     
-size_t FbxLoader::GetAdditionalUVsCount(const std::list<FbxMesh*>& meshes)
+size_t FbxLoader::GetAdditionalUVsCount(const std::list<std::pair<FbxMesh*, Data::Material> >& meshes)
 {
     size_t additional = 0;
-    for (std::list<FbxMesh*>::const_iterator it = meshes.cbegin(); it != meshes.cend(); ++it)
+    for (auto it = meshes.cbegin(); it != meshes.cend(); ++it)
     {
-        size_t uvcount = (*it)->GetUVLayerCount();
+        size_t uvcount = it->first->GetUVLayerCount();
         if (uvcount > 1)
         {
             size_t a = uvcount - 1;

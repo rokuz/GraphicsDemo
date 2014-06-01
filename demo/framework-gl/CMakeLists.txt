@@ -68,10 +68,10 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 add_subdirectory(GL)
 
 #headers search
-include_directories(../geomlib ../mathlib ../guilib ../utils)
+include_directories(../geomlib ../mathlib ../guilib ../utils ../json)
 
 #dependences
-set(DEPS_LIBS gl3w utils mathlib geomlib guilib)
+set(DEPS_LIBS gl3w utils mathlib geomlib guilib jsonlib)
 
 #link KTX
 set(LIBRARY_NAME ktx)

@@ -139,7 +139,7 @@ public:
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::ENTITY_DATA, "entityData");
 
 		// entity
-		m_entity = initEntity("data/media/cube/cube.geom", "data/media/cube/cube_diff.dds", "data/media/cube/cube_normal.dds");
+		m_entity = initEntity("data/media/spaceship/spaceship.geom", "data/media/cube/cube_diff.dds", "data/media/cube/cube_normal.dds");
 		m_entity.geometry->bindToGpuProgram(m_sceneRendering);
 		m_entity.geometry->bindToGpuProgram(m_shadowMapRendering);
 
@@ -628,7 +628,7 @@ public:
 		// shadow box computation
 		auto lightSource = m_lightManager.getLightSource(0);
 		vector3 lightDir = lightSource.orientation.z_direction();
-		float shadowBoxL = b.size().y / -lightDir.z;
+		float shadowBoxL = fabs(lightDir.z) < 1e-5 ? 1000.0f : (b.size().y / -lightDir.z);
 		bbox3 shadowBox;
 		shadowBox.begin_extend();
 		for (int i = 0; i < 8; i++)

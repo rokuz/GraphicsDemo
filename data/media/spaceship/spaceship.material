@@ -1,0 +1,12 @@
+[
+   {
+      "diffuseMap" : "spaceship_diff",
+      "normalMap" : "spaceship_normal",
+      "specularMap" : "spaceship_specular"
+   },
+   {
+      "diffuseMap" : "spaceship_diff",
+      "normalMap" : "spaceship_normal",
+      "specularMap" : "spaceship_specular"
+   }
+]
