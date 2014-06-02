@@ -90,13 +90,65 @@ void MaterialManager::initializeMaterial( const std::shared_ptr<Geometry3D>& geo
 	m_materials.insert(std::make_pair(id, dat));
 }
 
+void MaterialManager::initializeMaterial(const std::shared_ptr<Geometry3D>& geometry,
+										 const std::string& diffuseMap,
+										 const std::string& normalMap,
+										 const std::string& specularMap)
+{
+	if (!geometry) return;
+	auto meshes = geometry->getMeshes();
+
+	int id = geometry->getID();
+	if (m_materials.find(id) != m_materials.end()) return;
+
+	std::vector<MaterialData> dat;
+	dat.reserve(meshes.size());
+
+	for (size_t i = 0; i < meshes.size(); i++)
+	{
+		MaterialData mat;
+
+		if (!diffuseMap.empty())
+		{
+			mat.textures[MAT_DIFFUSE_MAP] = createTexture(diffuseMap);
+		}
+
+		if (!normalMap.empty())
+		{
+			mat.textures[MAT_NORMAL_MAP] = createTexture(normalMap);
+		}
+
+		if (!specularMap.empty())
+		{
+			mat.textures[MAT_SPECULAR_MAP] = createTexture(specularMap);
+		}
+
+		dat.push_back(mat);
+	}
+
+	m_materials.insert(std::make_pair(id, dat));
+}
+
 std::shared_ptr<Texture> MaterialManager::getTexture( const std::shared_ptr<Geometry3D>& geometry, int meshIndex, MaterialTexture textureType )
 {
+	int id = geometry->getID();
+	auto it = m_materials.find(id);
+	if (it != m_materials.end())
+	{
+		if (meshIndex >= 0 && meshIndex < (int)it->second.size())
+		{
+			auto texPtr = it->second[meshIndex].textures[textureType];
+			if (!texPtr.expired()) return texPtr.lock();
+		}
+	}
+
 	return std::shared_ptr<Texture>();
 }
 
 std::weak_ptr<Texture> MaterialManager::createTexture( const std::string& path )
 {
+	if (path.empty()) return std::weak_ptr<Texture>();
+
 	auto it = m_textures.find(path);
 	if (it != m_textures.end())
 	{

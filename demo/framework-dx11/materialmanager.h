@@ -44,6 +44,10 @@ public:
 	static MaterialManager& instance();
 
 	void initializeMaterial(const std::shared_ptr<Geometry3D>& geometry);
+	void initializeMaterial(const std::shared_ptr<Geometry3D>& geometry, 
+							const std::string& diffuseMap,
+							const std::string& normalMap,
+							const std::string& specularMap);
 	std::shared_ptr<Texture> getTexture(const std::shared_ptr<Geometry3D>& geometry, int meshIndex, MaterialTexture textureType);
 
 	void destroy();

@@ -139,7 +139,7 @@ public:
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::ENTITY_DATA, "entityData");
 
 		// entity
-		m_entity = initEntity("data/media/spaceship/spaceship.geom", "data/media/cube/cube_diff.dds", "data/media/cube/cube_normal.dds");
+		m_entity = initEntity("data/media/cube/cube.geom");
 		m_entity.geometry->bindToGpuProgram(m_sceneRendering);
 		m_entity.geometry->bindToGpuProgram(m_shadowMapRendering);
 
@@ -215,29 +215,18 @@ public:
 
 		ent.geometry.reset(new framework::Geometry3D());
 		if (!ent.geometry->initAsPlane(planeInfo)) exit();
-
-		ent.diffuseTexture.reset(new framework::Texture());
-		if (!ent.diffuseTexture->initWithDDS(diffuseMap)) exit();
-
-		ent.normalTexture.reset(new framework::Texture());
-		if (!ent.normalTexture->initWithDDS(normalMap)) exit();
+		framework::MaterialManager::instance().initializeMaterial(ent.geometry, diffuseMap, normalMap, "");
 
 		return std::move(ent);
 	}
 
-	Entity initEntity(const std::string& geometry, const std::string& diffuseMap, const std::string& normalMap)
+	Entity initEntity(const std::string& geometry)
 	{
 		Entity ent;
 
 		ent.geometry.reset(new framework::Geometry3D());
 		if (!ent.geometry->init(geometry)) exit();
 		else framework::MaterialManager::instance().initializeMaterial(ent.geometry);
-
-		ent.diffuseTexture.reset(new framework::Texture());
-		if (!ent.diffuseTexture->initWithDDS(diffuseMap)) exit();
-
-		ent.normalTexture.reset(new framework::Texture());
-		if (!ent.normalTexture->initWithDDS(normalMap)) exit();
 
 		return std::move(ent);
 	}
@@ -327,15 +316,11 @@ public:
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_DATA, m_shadowBuffer);
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP, m_shadowMap);
 
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, m_entity.diffuseTexture);
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::NORMAL_MAP, m_entity.normalTexture);
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				renderEntity(false, m_entity, m_entitiesData[i]);
 			}
 
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, m_plane.diffuseTexture);
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::NORMAL_MAP, m_plane.normalTexture);
 			renderEntity(false, m_plane, m_planeData);
 		}
 
@@ -353,17 +338,24 @@ public:
 		m_entityDataBuffer->setData(entityDataRaw);
 		m_entityDataBuffer->applyChanges();
 
-		if (shadowmap)
+		for (size_t i = 0; i < entity.geometry->getMeshesCount(); i++)
 		{
-			m_shadowMapRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-		}
-		else
-		{
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, m_shadowMapSampler);
-		}
-		
-		entity.geometry->renderAllMeshes(shadowmap ? entityData.shadowInstancesCount : 1);
+			if (shadowmap)
+			{
+				m_shadowMapRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+			}
+			else
+			{
+				auto diffMap = framework::MaterialManager::instance().getTexture(entity.geometry, i, framework::MAT_DIFFUSE_MAP);
+				auto normMap = framework::MaterialManager::instance().getTexture(entity.geometry, i, framework::MAT_NORMAL_MAP);
+				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, diffMap);
+				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::NORMAL_MAP, normMap);
+
+				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, m_shadowMapSampler);
+			}
+			entity.geometry->renderMesh(i, shadowmap ? entityData.shadowInstancesCount : 1);
+		}	
 	}
 
 	void renderDebug()
@@ -663,8 +655,6 @@ private:
 	struct Entity
 	{
 		std::shared_ptr<framework::Geometry3D> geometry;
-		std::shared_ptr<framework::Texture> diffuseTexture;
-		std::shared_ptr<framework::Texture> normalTexture;
 	};
 
 	struct EntityData
