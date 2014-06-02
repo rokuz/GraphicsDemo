@@ -231,6 +231,7 @@ public:
 
 		ent.geometry.reset(new framework::Geometry3D());
 		if (!ent.geometry->init(geometry)) exit();
+		else framework::MaterialManager::instance().initializeMaterial(ent.geometry);
 
 		ent.diffuseTexture.reset(new framework::Texture());
 		if (!ent.diffuseTexture->initWithDDS(diffuseMap)) exit();

@@ -79,6 +79,8 @@
 #include "freeCamera.h"
 #include "lightManager.h"
 
+#include "materialmanager.h"
+
 #include "uimanager.h"
 #include "uifactoryd3d11.h"
 

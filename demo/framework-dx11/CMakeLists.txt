@@ -52,6 +52,8 @@ set(SOURCE_ENT  camera.h
 				geometry3D.cpp
 				lightManager.h
 				lightManager.cpp
+				materialmanager.h
+				materialmanager.cpp
 )
 set(SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/dx11/text.vsh.hlsl
 			${CMAKE_CURRENT_SOURCE_DIR}/../../data/gui/shaders/dx11/text.gsh.hlsl

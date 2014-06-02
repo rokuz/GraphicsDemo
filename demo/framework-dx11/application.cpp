@@ -130,6 +130,7 @@ int Application::run(Application* self, const std::string& commandLine)
 
 	// destroy everything
 	shutdown();
+	MaterialManager::instance().destroy();
 	destroyAllDestroyable();
 	destroyGui();
 	destroyD3D11();

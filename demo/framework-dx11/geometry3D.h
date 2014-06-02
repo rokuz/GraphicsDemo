@@ -51,9 +51,13 @@ public:
 	const bbox3& getBoundingBox() const { return m_boundingBox; }
     
     size_t getMeshesCount() const;
+	const geom::Data::Meshes& getMeshes() const { return m_meshes; }
 	void renderMesh(size_t index, size_t instancesCount = 1);
 	void renderAllMeshes(size_t instancesCount = 1);
 	void renderBoundingBox(const matrix44& mvp);
+
+	int getID() const { return m_id; }
+	const std::string& getFilename() const { return m_filename; }
 
 private:
 	geom::Data::Meshes m_meshes;
@@ -72,9 +76,14 @@ private:
 	bool m_isLoaded;
 	std::shared_ptr<Line3D> m_boundingBoxLine;
 
+	std::string m_filename;
+	int m_id;
+
 	bool init(const geom::Data& data);
 	int getInputLayoutBindingIndex(int programId) const;
 	void applyInputLayout();
+	static int generateId();
+
 	virtual void destroy();
 };
 

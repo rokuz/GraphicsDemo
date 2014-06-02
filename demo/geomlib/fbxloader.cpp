@@ -23,6 +23,8 @@
 
 #include "stdafx.h"
 #include "fbxloader.h"
+#include "json/json.h"
+#include <fstream>
 
 namespace geom
 {
@@ -83,11 +85,11 @@ Data FbxLoader::load(const std::string& filename)
     FbxNode* pFbxRootNode = fbxScene->GetRootNode();
     if (pFbxRootNode != 0)
     {
-        ProcessFbxNode(writer, pFbxRootNode, meshes);
+        processFbxNode(writer, pFbxRootNode, meshes);
         for(int i = 0; i < pFbxRootNode->GetChildCount(); i++)
         {
             FbxNode* pFbxChildNode = pFbxRootNode->GetChild(i);
-            ProcessFbxNode(writer, pFbxChildNode, meshes);
+            processFbxNode(writer, pFbxChildNode, meshes);
         }
     }
 	if (!data.isCorrect())
@@ -114,7 +116,7 @@ Data FbxLoader::load(const std::string& filename)
     size_t indicesCount = 0;
 	for (auto it = meshes.cbegin(); it != meshes.cend(); ++it, ++i)
     {
-		Reindexing(it->first, meshesData[i], reindexerIndex);
+		reindexing(it->first, meshesData[i], reindexerIndex);
 		for (size_t j = 0; j < meshesData[i].size(); j++)
 		{
 			verticesCount += meshesData[i][j].reindexer.size();
@@ -123,7 +125,7 @@ Data FbxLoader::load(const std::string& filename)
 	}
 		
 	writer.getVerticesCountRef() = verticesCount;
-    writer.getAdditionalUVsCountRef() = GetAdditionalUVsCount(meshes);
+    writer.getAdditionalUVsCountRef() = getAdditionalUVsCount(meshes);
         
     size_t vertexSize = data.getVertexSize();
         
@@ -164,32 +166,32 @@ Data FbxLoader::load(const std::string& filename)
 						{
 							FbxGeometryElementNormal* normalElement = it->first->GetElementNormal();
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementNormal, FbxVector4>(normalElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
+							importComponent<FbxGeometryElementNormal, FbxVector4>(normalElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 						else if (component == 2) // uv0
 						{
 							FbxGeometryElementUV* uvElement = it->first->GetElementUV(0);
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementUV, FbxVector2>(uvElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
+							importComponent<FbxGeometryElementUV, FbxVector2>(uvElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 						else if (component == 3) // tangent
 						{
 							FbxGeometryElementTangent* tangentElement = it->first->GetElementTangent();
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementTangent, FbxVector4>(tangentElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
+							importComponent<FbxGeometryElementTangent, FbxVector4>(tangentElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 						else if (component == 4) // binormal
 						{
 							FbxGeometryElementBinormal* binormalElement = it->first->GetElementBinormal();
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementBinormal, FbxVector4>(binormalElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
+							importComponent<FbxGeometryElementBinormal, FbxVector4>(binormalElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 						else // additional uvs
 						{
 							int uvIndex = (int)component - 4;
 							FbxGeometryElementUV* uvElement = it->first->GetElementUV((int)uvIndex);
 							float* ptr = (float*)(writer.getVertexBufferRef().data() + new_index * vertexSize + offset);
-							ImportComponent<FbxGeometryElementUV, FbxVector2>(uvElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
+							importComponent<FbxGeometryElementUV, FbxVector2>(uvElement, ptr, it->first, (*it2) * 3 + k, componentSize / sizeof(float));
 						}
 					}
 				}
@@ -230,10 +232,12 @@ Data FbxLoader::load(const std::string& filename)
 		    
     fbxScene->Destroy();	
 	
+	loadMaterial(utils::Utils::trimExtention(filename) + ".material", writer);
+
 	return data;
 }
 
-void FbxLoader::ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<std::pair<FbxMesh*, Data::Material> >& meshes)
+void FbxLoader::processFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<std::pair<FbxMesh*, Data::Material> >& meshes)
 {
     if (node->GetNodeAttribute() == 0)
         return;
@@ -261,7 +265,7 @@ void FbxLoader::ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<
 		return;
 	}
 
-	if (!CheckVertexContent(dataWriter, mesh))
+	if (!checkVertexContent(dataWriter, mesh))
 	{
 		return;
 	}
@@ -309,9 +313,9 @@ void FbxLoader::ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<
 			int matId = materialElement->GetIndexArray().GetAt(0);
 			if (material != 0 && matId >= 0)
 			{
-				mat.diffuseMapFilename = GetTextureName(material, FbxSurfaceMaterial::sDiffuse);
-				mat.normalMapFilename = GetTextureName(material, FbxSurfaceMaterial::sNormalMap);
-				mat.specularMapFilename = GetTextureName(material, FbxSurfaceMaterial::sSpecular);
+				mat.diffuseMapFilename = getTextureName(material, FbxSurfaceMaterial::sDiffuse);
+				mat.normalMapFilename = getTextureName(material, FbxSurfaceMaterial::sNormalMap);
+				mat.specularMapFilename = getTextureName(material, FbxSurfaceMaterial::sSpecular);
 			}
 		}
 	}
@@ -319,7 +323,7 @@ void FbxLoader::ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<
 	meshes.push_back(std::make_pair(mesh, mat));
 }
 
-std::string FbxLoader::GetTextureName(FbxSurfaceMaterial* material, const std::string& textureType)
+std::string FbxLoader::getTextureName(FbxSurfaceMaterial* material, const std::string& textureType)
 {
 	FbxProperty diffTexProperty = material->FindProperty(textureType.c_str());
 	if (diffTexProperty.GetSrcObjectCount<FbxFileTexture>() > 0)
@@ -337,7 +341,7 @@ std::string FbxLoader::GetTextureName(FbxSurfaceMaterial* material, const std::s
 	return "";
 }
     
-size_t FbxLoader::GetAdditionalUVsCount(const std::list<std::pair<FbxMesh*, Data::Material> >& meshes)
+size_t FbxLoader::getAdditionalUVsCount(const std::list<std::pair<FbxMesh*, Data::Material> >& meshes)
 {
     size_t additional = 0;
     for (auto it = meshes.cbegin(); it != meshes.cend(); ++it)
@@ -352,7 +356,7 @@ size_t FbxLoader::GetAdditionalUVsCount(const std::list<std::pair<FbxMesh*, Data
     return additional;
 }
     
-bool FbxLoader::CheckVertexContent(DataWriter& dataWriter, FbxMesh* mesh)
+bool FbxLoader::checkVertexContent(DataWriter& dataWriter, FbxMesh* mesh)
 {
     // normals
     FbxLayer* normalsLayer = mesh->GetLayer(0, FbxLayerElement::EType::eNormal);
@@ -395,7 +399,7 @@ bool FbxLoader::CheckVertexContent(DataWriter& dataWriter, FbxMesh* mesh)
 	return true;
 }
     
-void FbxLoader::GetSmoothingGroup(FbxMesh* mesh, std::vector<int>& group)
+void FbxLoader::getSmoothingGroup(FbxMesh* mesh, std::vector<int>& group)
 {
 	FbxGeometryElementSmoothing* lSmoothingElement = mesh->GetElementSmoothing();
 	group.resize(mesh->GetPolygonCount());
@@ -411,10 +415,10 @@ void FbxLoader::GetSmoothingGroup(FbxMesh* mesh, std::vector<int>& group)
     }
 }
 
-void FbxLoader::Reindexing(FbxMesh* mesh, std::vector<GroupData>& groups, size_t& reindexerIndex)
+void FbxLoader::reindexing(FbxMesh* mesh, std::vector<GroupData>& groups, size_t& reindexerIndex)
 {
 	std::vector<int> smoothingGroupsPerPolygon;
-	GetSmoothingGroup(mesh, smoothingGroupsPerPolygon);
+	getSmoothingGroup(mesh, smoothingGroupsPerPolygon);
 		
 	std::vector<int> smoothingGroups = smoothingGroupsPerPolygon;
 	std::vector<int>::iterator it = std::unique(smoothingGroups.begin(), smoothingGroups.end());
@@ -443,6 +447,31 @@ void FbxLoader::Reindexing(FbxMesh* mesh, std::vector<GroupData>& groups, size_t
 					}
 				}
 			}
+		}
+	}
+}
+
+void FbxLoader::loadMaterial(const std::string& filename, DataWriter& dataWriter)
+{
+	std::ifstream matFile(filename);
+	if (!matFile.is_open()) return;
+
+	Json::Value root;
+	Json::Reader reader;
+	bool parsingSuccessful = reader.parse(matFile, root);
+	matFile.close();
+	if (!parsingSuccessful) return;
+
+	for (size_t i = 0; i < root.size(); i++)
+	{
+		Data::Material mat;
+		mat.diffuseMapFilename = root[i]["diffuseMap"].asString();
+		mat.normalMapFilename = root[i]["normalMap"].asString();
+		mat.specularMapFilename = root[i]["specularMap"].asString();
+
+		if (i < dataWriter.getMeshesRef().size())
+		{
+			dataWriter.getMeshesRef()[i].material = mat;
 		}
 	}
 }

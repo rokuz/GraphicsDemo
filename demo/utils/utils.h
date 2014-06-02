@@ -38,6 +38,7 @@ public:
 	static std::string trimExtention(const std::string& fileName);
 	static std::string getPath(const std::string& path);
 	static std::string getFilename(const std::string& path);
+	static std::list<std::string> findFilesInDirectory(const std::string& path, const std::string& mask);
 	static float* convert(const vector4& v);
 	static float* convert(const vector3& v);
 	static float* convert(const vector2& v);

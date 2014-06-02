@@ -69,7 +69,8 @@ Geometry3D::Geometry3D() :
     m_isLoaded(false),
 	m_verticesCount(0),
 	m_indicesCount(0),
-	m_vertexSize(0)
+	m_vertexSize(0),
+	m_id(-1)
 {
     
 }
@@ -126,6 +127,7 @@ void Geometry3D::destroy()
 bool Geometry3D::init(const std::string& fileName)
 {
 	destroy();
+
 	geom::Data data = geom::Geometry::instance().load(fileName);
 	if (!data.isCorrect())
 	{
@@ -133,6 +135,7 @@ bool Geometry3D::init(const std::string& fileName)
 		utils::Logger::toLogWithFormat("Error: could not load geometry from '%s'.\n", fileName.c_str());
 		return m_isLoaded;
 	}
+	m_filename = fileName;
 
 	return init(data);
 }
@@ -211,8 +214,9 @@ bool Geometry3D::init(const geom::Data& data)
 	}
 
 	m_isLoaded = true;
+	initDestroyable();
+	m_id = generateId();
 
-	if (m_isLoaded) initDestroyable();
 	return m_isLoaded;
 }
 
@@ -326,6 +330,12 @@ void Geometry3D::renderBoundingBox(const matrix44& mvp)
 	{
 		m_boundingBoxLine->renderWithStandardGpuProgram(mvp, vector4(1, 1, 0, 1));
 	}
+}
+
+int Geometry3D::generateId()
+{
+	static int counter = 0;
+	return counter++;
 }
 
 }

@@ -271,4 +271,27 @@ std::string Utils::currentTimeDate(bool withoutSpaces)
 	return std::move(str);
 }
 
+std::list<std::string> Utils::findFilesInDirectory( const std::string& path, const std::string& mask )
+{
+	std::list<std::string> files;
+	if (path.empty() || mask.empty()) return files;
+
+	WIN32_FIND_DATA dat;
+	std::string s = path + mask + "*";
+	HANDLE h = FindFirstFile(s.c_str(), &dat);
+	if (h != INVALID_HANDLE_VALUE)
+	{
+		do
+		{
+			if ((dat.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) || (dat.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) continue;
+			std::string f = dat.cFileName;
+			files.push_back(f);
+		}
+		while (FindNextFile(h, &dat));
+		FindClose(h);
+	}
+
+	return files;
+}
+
 }

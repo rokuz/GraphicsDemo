@@ -44,15 +44,15 @@ private:
 		std::map<size_t, size_t> reindexer;
 	};
 
-	void ProcessFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<std::pair<FbxMesh*, Data::Material> >& meshes);
-	size_t GetAdditionalUVsCount(const std::list<std::pair<FbxMesh*, Data::Material> >& meshes);
-    bool CheckVertexContent(DataWriter& dataWriter, FbxMesh* mesh);
-	void GetSmoothingGroup(FbxMesh* mesh, std::vector<int>& group);
-	void Reindexing(FbxMesh* mesh, std::vector<GroupData>& groups, size_t& reindexerIndex);
-	std::string GetTextureName(FbxSurfaceMaterial* material, const std::string& textureType);
+	void processFbxNode(DataWriter& dataWriter, FbxNode* node, std::list<std::pair<FbxMesh*, Data::Material> >& meshes);
+	size_t getAdditionalUVsCount(const std::list<std::pair<FbxMesh*, Data::Material> >& meshes);
+    bool checkVertexContent(DataWriter& dataWriter, FbxMesh* mesh);
+	void getSmoothingGroup(FbxMesh* mesh, std::vector<int>& group);
+	void reindexing(FbxMesh* mesh, std::vector<GroupData>& groups, size_t& reindexerIndex);
+	std::string getTextureName(FbxSurfaceMaterial* material, const std::string& textureType);
 
 	template <typename ElementType, typename VectorType> 
-	void FbxVectorToBuffer(const VectorType& fbxVec, float* ptr, size_t count)
+	void fbxVectorToBuffer(const VectorType& fbxVec, float* ptr, size_t count)
     {
         for (size_t i = 0; i < count; i++)
         {
@@ -61,7 +61,7 @@ private:
     }
 
     template <typename ElementType, typename VectorType>
-    void ImportComponent(ElementType* element, float* vbuf, FbxMesh* mesh, int polygonIndex, size_t componentSize)
+    void importComponent(ElementType* element, float* vbuf, FbxMesh* mesh, int polygonIndex, size_t componentSize)
     {
         if (element)
         {
@@ -74,12 +74,12 @@ private:
                         
             VectorType val = element->GetDirectArray().GetAt(elementIndex);
                     
-            FbxVectorToBuffer<ElementType, VectorType>(val, vbuf, componentSize);
+            fbxVectorToBuffer<ElementType, VectorType>(val, vbuf, componentSize);
         }
     }
 
 	template <>
-	void FbxVectorToBuffer<FbxGeometryElementUV, FbxVector2>(const FbxVector2& fbxVec, float* ptr, size_t count)
+	void fbxVectorToBuffer<FbxGeometryElementUV, FbxVector2>(const FbxVector2& fbxVec, float* ptr, size_t count)
     {
         ptr[0] = (float)fbxVec[0];
 		
@@ -88,6 +88,8 @@ private:
 		float fv = v - (float)iv;
 		ptr[1] = float(iv + 1) - fv;
     }
+
+	void loadMaterial(const std::string& filename, DataWriter& dataWriter);
 };
 
 }
