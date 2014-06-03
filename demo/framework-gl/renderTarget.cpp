@@ -56,7 +56,9 @@ RenderTarget::RenderTarget() :
 	m_width(0),
 	m_height(0),
 	m_samples(0),
-	m_target(-1)
+	m_target(-1),
+	m_depthFormat(-1),
+	m_arraySize(1)
 {
 
 }
@@ -80,16 +82,43 @@ bool RenderTarget::init(int width, int height, const std::vector<GLint>& formats
 	m_height = height;
 	m_samples = samples;
 	m_formats = formats;
+	m_depthFormat = depthFormat;
+	m_arraySize = 1;
 	m_target = GL_TEXTURE_2D;
 	if (m_samples > 0) m_target = GL_TEXTURE_2D_MULTISAMPLE;
 
+	return initFramebuffer();
+}
+
+bool RenderTarget::initArray(int arraySize, int width, int height, GLint format, int samples, GLint depthFormat)
+{
+	if (width <= 0 || height <= 0 || arraySize <= 0)
+	{
+		utils::Logger::toLog("Error: could not initialize a render target, incorrect parameters.\n");
+		return false;
+	}
+
+	destroy();
+
+	m_width = width;
+	m_height = height;
+	m_samples = samples;
+	m_formats.clear();
+	m_formats.push_back(format);
+	m_depthFormat = depthFormat;
+	m_arraySize = arraySize;
+	m_target = m_arraySize > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
+	if (m_samples > 0) m_target = m_arraySize > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_MULTISAMPLE;
+
+	return initFramebuffer();
+}
+
+bool RenderTarget::initFramebuffer()
+{
 	glGenFramebuffers(1, &m_framebufferObject);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferObject);
-	initColorBuffers(width, height, formats);
-	if (depthFormat >= 0)
-	{
-		initDepth(width, height, depthFormat);
-	}
+	initColorBuffers();
+	if (m_depthFormat >= 0) initDepth();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if (!checkStatus() || CHECK_GL_ERROR) 
@@ -103,37 +132,41 @@ bool RenderTarget::init(int width, int height, const std::vector<GLint>& formats
 	return m_isInitialized;
 }
 
-void RenderTarget::initColorBuffers(int width, int height, const std::vector<GLint>& formats)
+void RenderTarget::initColorBuffers()
 {
-	m_colorBuffers.resize(formats.size());
-	glGenTextures(formats.size(), m_colorBuffers.data());
+	m_colorBuffers.resize(m_formats.size());
+	glGenTextures(m_formats.size(), m_colorBuffers.data());
 
-	for (size_t i = 0; i < formats.size(); i++)
+	for (size_t i = 0; i < m_formats.size(); i++)
 	{
 		glBindTexture(m_target, m_colorBuffers[i]);
 		if (m_samples == 0)
 		{
 			glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexStorage2D(m_target, 1, formats[i], width, height);
+
+			if (m_arraySize <= 1) glTexStorage2D(m_target, 1, m_formats[i], m_width, m_height);
+			else glTexStorage3D(m_target, 1, m_formats[i], m_width, m_height, m_arraySize);
 		}
 		else
 		{
 			glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, 0);
-			glTexImage2DMultisample(m_target, m_samples, formats[i], width, height, GL_TRUE);
+
+			if (m_arraySize <= 1) glTexImage2DMultisample(m_target, m_samples, m_formats[i], m_width, m_height, GL_TRUE);
+			else glTexImage3DMultisample(m_target, m_samples, m_formats[i], m_width, m_height, m_arraySize, GL_TRUE);
 		}
 	}
 
 	glBindTexture(m_target, 0);
 
-	for (size_t i = 0; i < formats.size(); i++)
+	for (size_t i = 0; i < m_formats.size(); i++)
 	{
 		glFramebufferTexture(GL_FRAMEBUFFER, COLOR_ATTACHMENTS[i], m_colorBuffers[i], 0);
 	}
 }
 
-void RenderTarget::initDepth(int width, int height, GLint depthFormat)
+void RenderTarget::initDepth()
 {
 	m_isUsedDepth = true;
 	glGenTextures(1, &m_depthBuffer);
@@ -142,13 +175,17 @@ void RenderTarget::initDepth(int width, int height, GLint depthFormat)
 	{
 		glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, 0);
-		glTexStorage2D(m_target, 1, depthFormat, width, height);
+		
+		if (m_arraySize <= 1) glTexStorage2D(m_target, 1, m_depthFormat, m_width, m_height);
+		else glTexStorage3D(m_target, 1, m_depthFormat, m_width, m_height, m_arraySize);
 	}
 	else
 	{
 		glTexParameteri(m_target, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, 0);
-		glTexImage2DMultisample(m_target, m_samples, depthFormat, width, height, GL_TRUE);
+
+		if (m_arraySize <= 1) glTexImage2DMultisample(m_target, m_samples, m_depthFormat, m_width, m_height, GL_TRUE);
+		else glTexImage3DMultisample(m_target, m_samples, m_depthFormat, m_width, m_height, m_arraySize, GL_TRUE);
 	}
 	glBindTexture(m_target, 0);
 
@@ -233,31 +270,31 @@ bool RenderTarget::checkStatus()
 		switch (fboStatus)
 		{
 			case GL_FRAMEBUFFER_UNDEFINED: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer is undefined.\n");
+				utils::Logger::toLog("Error: OpenGL framebuffer is undefined.\n");
 				return false;
 			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer has incomplete attachments.\n");
+				utils::Logger::toLog("Error: OpenGL framebuffer has incomplete attachments.\n");
 				return false;
 			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer has missing attachments.\n");
+				utils::Logger::toLog("Error: OpenGL framebuffer has missing attachments.\n");
 				return false;
 			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer has incomplete draw buffer.\n");
+				utils::Logger::toLog("Error: OpenGL framebuffer has incomplete draw buffer.\n");
 				return false;
 			case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER: 
-				utils::Logger::toLog("RenderTarget error: OpenGL framebuffer has incomplete read buffer.\n");
+				utils::Logger::toLog("Error: OpenGL framebuffer has incomplete read buffer.\n");
 				return false;
 			case GL_FRAMEBUFFER_UNSUPPORTED: 
-				utils::Logger::toLog("RenderTarget error: Formats combination is unsupported.\n");
+				utils::Logger::toLog("Error: formats combination in a framebuffer is unsupported.\n");
 				return false;
 			case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-				utils::Logger::toLog("RenderTarget error: The number of samples for each attachment must be the same.\n");
+				utils::Logger::toLog("Error: the number of samples for each attachment in a framebuffer must be the same.\n");
 				return false;
 			case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS: 
-				utils::Logger::toLog("RenderTarget error: The number of layers for each attachment must be the same.\n");
+				utils::Logger::toLog("Error: the number of layers for each attachment in a framebuffer must be the same.\n");
 				return false;
 			default:
-				utils::Logger::toLog("RenderTarget error: Unknown error.\n");
+				utils::Logger::toLog("Error: unknown error.\n");
 				return false;
 		}
 	}

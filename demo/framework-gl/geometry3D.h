@@ -25,6 +25,7 @@
 #define __GEOMETRY_3D_H__
 
 #include "geometry.h"
+#include "planegenerator.h"
 
 namespace framework
 {
@@ -40,13 +41,17 @@ public:
     virtual ~Geometry3D();
 	
 	bool init(const std::string& fileName);
-    
+    bool initAsPlane(const geom::PlaneGenerationInfo& info);
+
     size_t getMeshesCount() const;
+	const geom::Data::Meshes& getMeshes() const { return m_meshes; }
+	const bbox3& getBoundingBox() const { return m_boundingBox; }
+	int getID() const { return m_id; }
+	const std::string& getFilename() const { return m_filename; }
+
     void renderMesh(size_t index);
 	void renderAllMeshes();
 	void renderBoundingBox(const matrix44& mvp);
-
-	const bbox3& getBoundingBox() const { return m_boundingBox; }
 
 private:
 	GLuint m_vertexArray;
@@ -59,9 +64,14 @@ private:
 	size_t m_indicesCount;
 	bbox3 m_boundingBox;
 
+	std::string m_filename;
+	int m_id;
+
 	bool m_isLoaded;
 	std::shared_ptr<Line3D> m_boundingBoxLine;
 
+	bool init(const geom::Data& data);
+	static int generateId();
 	virtual void destroy();
 };
 

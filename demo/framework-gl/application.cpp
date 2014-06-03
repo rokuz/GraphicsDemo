@@ -119,6 +119,7 @@ int Application::run(Application* self, const std::string& commandLine)
 	mainLoop();
 
 	shutdown();
+	MaterialManager::instance().destroy();
 	destroyAllDestroyable();
 	destroyGui();
 	Texture::cleanup();

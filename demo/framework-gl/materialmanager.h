@@ -21,62 +21,50 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma warning(disable:4996)
+#pragma once
 
-#include <string>
-#include <list>
-#include <map>
-#include <vector>
-#include <algorithm>
-#include <memory>
-#include <mutex>
-#include <functional>
-#include <sstream>
+namespace framework
+{
 
-#include "matrix.h"
-#include "vector.h"
-#include "quaternion.h"
-#include "ncamera2.h"
-#include "bbox.h"
+class Geometry3D;
+class Texture;
 
-#include <windows.h>
-#include "GL/gl3w.h"
-#include "GL/wglext.h"
+enum MaterialTexture
+{
+	MAT_DIFFUSE_MAP = 0,
+	MAT_NORMAL_MAP,
+	MAT_SPECULAR_MAP,
 
-#include "window.h"
+	MAT_TEXTURE_COUNT
+};
 
-#include "openglcontext.h"
+class MaterialManager
+{
+public:
+	static MaterialManager& instance();
 
-#include "logger.h"
-#include "utils.h"
-#include "timer.h"
-#include "profiler.h"
-#include "inputkeys.h"
-#include "fpscounter.h"
-#include "profiler.h"
+	void initializeMaterial(const std::shared_ptr<Geometry3D>& geometry);
+	void initializeMaterial(const std::shared_ptr<Geometry3D>& geometry, 
+							const std::string& diffuseMap,
+							const std::string& normalMap,
+							const std::string& specularMap);
+	std::shared_ptr<Texture> getTexture(const std::shared_ptr<Geometry3D>& geometry, int meshIndex, MaterialTexture textureType);
 
-#include "destroyable.h"
-#include "geometry3D.h"
-#include "line3D.h"
-#include "texture.h"
-#include "uniformBuffer.h"
-#include "storageBuffer.h"
-#include "atomicCounter.h"
-#include "renderTarget.h"
-#include "gpuprogram.h"
-#include "standardGpuPrograms.h"
+	void destroy();
 
-#include "freeCamera.h"
-#include "lightManager.h"
+private:
+	MaterialManager();
+	~MaterialManager();
 
-#include "materialmanager.h"
+	struct MaterialData
+	{
+		std::weak_ptr<Texture> textures[MAT_TEXTURE_COUNT];
+	};
+	std::map<int, std::vector<MaterialData> > m_materials;
+	std::map<std::string, std::shared_ptr<Texture> > m_textures;
 
-#include "uimanager.h"
-#include "uifactory.h"
+	std::string findTextureName(const std::string& dir, const std::string& name);
+	std::weak_ptr<Texture> createTexture(const std::string& path); 
+};
 
-#include "pipelinestate.h"
-
-#include "application.h"
-
-#undef min
-#undef max
+}

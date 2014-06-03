@@ -36,7 +36,8 @@ Geometry3D::Geometry3D() :
     m_additionalUVsCount(0),
     m_isLoaded(false),
 	m_verticesCount(0),
-	m_indicesCount(0)
+	m_indicesCount(0),
+	m_id(-1)
 {
     
 }
@@ -70,6 +71,7 @@ void Geometry3D::destroy()
 
 	m_isLoaded = false;
 }
+
 bool Geometry3D::init(const std::string& fileName)
 {
 	destroy();
@@ -78,9 +80,34 @@ bool Geometry3D::init(const std::string& fileName)
 	if (!data.isCorrect())
 	{
 		m_isLoaded = false;
+		utils::Logger::toLogWithFormat("Error: could not load geometry from '%s'.\n", fileName.c_str());
+		return m_isLoaded;
+	}
+	m_filename = fileName;
+
+	return init(data);
+}
+
+bool Geometry3D::initAsPlane(const geom::PlaneGenerationInfo& info)
+{
+	destroy();
+
+	geom::PlaneGenerator generator;
+	generator.setPlaneGenerationInfo(info);
+
+	geom::Data data = generator.generate();
+	if (!data.isCorrect())
+	{
+		m_isLoaded = false;
+		utils::Logger::toLog("Error: could not create a plane.\n");
 		return m_isLoaded;
 	}
 
+	return init(data);
+}
+
+bool Geometry3D::init(const geom::Data& data)
+{
 	m_boundingBox = data.getBoundingBox();
 	m_additionalUVsCount = data.getAdditionalUVsCount();
 	m_meshes = data.getMeshes();
@@ -124,8 +151,9 @@ bool Geometry3D::init(const std::string& fileName)
 	}
 
 	m_isLoaded = true;
+	initDestroyable();
+	m_id = generateId();
 
-	if (m_isLoaded) initDestroyable();
 	return m_isLoaded;
 }
 
@@ -178,6 +206,12 @@ void Geometry3D::renderBoundingBox(const matrix44& mvp)
 	{
 		m_boundingBoxLine->renderWithStandardGpuProgram(mvp, vector4(1, 1, 0, 1), false);
 	}
+}
+
+int Geometry3D::generateId()
+{
+	static int counter = 0;
+	return counter++;
 }
 
 }
