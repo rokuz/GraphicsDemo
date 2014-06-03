@@ -80,7 +80,7 @@ void MaterialManager::initializeMaterial( const std::shared_ptr<Geometry3D>& geo
 			std::string path = dir + meshes[i].material.specularMapFilename + ".dds";
 			if (utils::Utils::exists(path))
 			{
-				mat.textures[MAT_NORMAL_MAP] = createTexture(path);
+				mat.textures[MAT_SPECULAR_MAP] = createTexture(path);
 			}
 		}
 

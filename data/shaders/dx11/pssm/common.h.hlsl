@@ -38,7 +38,7 @@ cbuffer shadowData : register(b3)
 
 static const float SHADOW_BIASES[MAX_SPLITS] = 
 { 
-	0.0003, 0.001, 0.002, 0.003
+	0.0009, 0.002, 0.0025, 0.003
 };
 
 struct VS_INPUT

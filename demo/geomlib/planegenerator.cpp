@@ -72,9 +72,9 @@ Data PlaneGenerator::generate()
 			float px = (float(x) / float(sx - 1) - 0.5f) * m_info.size.x;
 			Data::Vertex* vertex = reinterpret_cast<Data::Vertex*>(writer.getVertexBufferRef().data() + i * sizeof(Data::Vertex));
 			vertex->position = vector3(px, 0, pz);
-			vertex->normal = vector3(0.0f, 1.0f, 0.0f);
-			vertex->tangent = vector3(1.0f, 0.0f, 0.0f);
-			vertex->normal = vector3(0.0f, 0.0f, 1.0f);
+			vertex->normal = vector3(0.0f, -1.0f, 0.0f);
+			vertex->tangent = vector3(-1.0f, 0.0f, 0.0f);
+			vertex->normal = vector3(0.0f, 0.0f, -1.0f);
 			vertex->texCoord0 = vector2(float(x) * m_info.uvSize.x / float(sx - 1), float(y) * m_info.uvSize.y / float(sy - 1));
 		}
 	}

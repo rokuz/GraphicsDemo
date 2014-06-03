@@ -65,8 +65,15 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float3 normal = -normalize(mul(normalTS, ts));
 	float ndol = max(0, dot(light.direction, normal));
 
-	float shadowValue = shadow(input.worldPos);
-
+	// a kind of elimination of double shading
+	float shadowValue = 1;
+	[branch]
+	if (ndol > 0.1)
+	{
+		shadowValue = shadow(input.worldPos);
+	}
+	//return float4(shadowValue, shadowValue, shadowValue, 1);
+		
 	const float SHADOW_INTENSITY = 0.7;
 	float3 textureColor = diffuseMap.Sample(defaultSampler, input.uv0).rgb;
 	textureColor = lerp(textureColor, textureColor * shadowValue, SHADOW_INTENSITY);
@@ -74,7 +81,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	
 	float3 viewDirection = normalize(input.worldPos - viewPosition);
 	float3 h = normalize(viewDirection + light.direction);
-	float3 specular = light.specularColor * pow(max(dot(normal, h), 0.0), specPower);
+	float3 specular = light.specularColor * pow(max(dot(normal, h), 0.0), specPower) * shadowValue;
 	
 	float3 ambient = textureColor * light.ambientColor;
 	

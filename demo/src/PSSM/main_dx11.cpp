@@ -139,9 +139,9 @@ public:
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::ENTITY_DATA, "entityData");
 
 		// entity
-		m_entity = initEntity("data/media/cube/cube.geom");
-		m_entity.geometry->bindToGpuProgram(m_sceneRendering);
-		m_entity.geometry->bindToGpuProgram(m_shadowMapRendering);
+		m_entityGeometry = initEntity("data/media/cube/cube.geom");
+		m_entityGeometry->bindToGpuProgram(m_sceneRendering);
+		m_entityGeometry->bindToGpuProgram(m_shadowMapRendering);
 
 		const int ENTITIES_IN_ROW = 6;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
@@ -162,8 +162,8 @@ public:
 		geom::PlaneGenerationInfo planeInfo;
 		planeInfo.size = vector2(1000.0f, 1000.0f);
 		planeInfo.uvSize = vector2(50.0f, 50.0f);
-		m_plane = initEntity(planeInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds");
-		m_plane.geometry->bindToGpuProgram(m_sceneRendering);
+		m_planeGeometry = initEntity(planeInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds");
+		m_planeGeometry->bindToGpuProgram(m_sceneRendering);
 		m_planeData.model.ident();
 		m_planeData.isShadowCaster = false;
 
@@ -209,24 +209,32 @@ public:
 		//if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
 	}
 
-	Entity initEntity(const geom::PlaneGenerationInfo& planeInfo, const std::string& diffuseMap, const std::string& normalMap)
+	std::shared_ptr<framework::Geometry3D> initEntity(const geom::PlaneGenerationInfo& planeInfo, const std::string& diffuseMap, const std::string& normalMap)
 	{
-		Entity ent;
-
-		ent.geometry.reset(new framework::Geometry3D());
-		if (!ent.geometry->initAsPlane(planeInfo)) exit();
-		framework::MaterialManager::instance().initializeMaterial(ent.geometry, diffuseMap, normalMap, "");
-
+		std::shared_ptr<framework::Geometry3D> ent(new framework::Geometry3D());
+		if (!ent->initAsPlane(planeInfo)) 
+		{
+			exit();
+		}
+		else
+		{
+			framework::MaterialManager::instance().initializeMaterial(ent, diffuseMap, normalMap, "");
+		}
+		
 		return std::move(ent);
 	}
 
-	Entity initEntity(const std::string& geometry)
+	std::shared_ptr<framework::Geometry3D> initEntity(const std::string& geometry)
 	{
-		Entity ent;
-
-		ent.geometry.reset(new framework::Geometry3D());
-		if (!ent.geometry->init(geometry)) exit();
-		else framework::MaterialManager::instance().initializeMaterial(ent.geometry);
+		std::shared_ptr<framework::Geometry3D> ent(new framework::Geometry3D());
+		if (!ent->init(geometry))
+		{
+			exit();
+		}
+		else
+		{
+			framework::MaterialManager::instance().initializeMaterial(ent);
+		}
 
 		return std::move(ent);
 	}
@@ -288,9 +296,9 @@ public:
 			m_shadowMapRasterizer->apply();
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
-				renderEntity(true, m_entity, m_entitiesData[i]);
+				renderGeometry(true, m_entityGeometry, m_entitiesData[i]);
 			}
-			renderEntity(true, m_plane, m_planeData);
+			renderGeometry(true, m_planeGeometry, m_planeData);
 			m_shadowMapRasterizer->cancel();
 		}
 
@@ -318,16 +326,16 @@ public:
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
-				renderEntity(false, m_entity, m_entitiesData[i]);
+				renderGeometry(false, m_entityGeometry, m_entitiesData[i]);
 			}
 
-			renderEntity(false, m_plane, m_planeData);
+			renderGeometry(false, m_planeGeometry, m_planeData);
 		}
 
 		renderDebug();
 	}
 
-	void renderEntity(bool shadowmap, const Entity& entity, const EntityData& entityData)
+	void renderGeometry(bool shadowmap, const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
 	{
 		if (shadowmap && (!entityData.isShadowCaster || entityData.shadowInstancesCount == 0)) return;
 
@@ -338,7 +346,7 @@ public:
 		m_entityDataBuffer->setData(entityDataRaw);
 		m_entityDataBuffer->applyChanges();
 
-		for (size_t i = 0; i < entity.geometry->getMeshesCount(); i++)
+		for (size_t i = 0; i < geometry->getMeshesCount(); i++)
 		{
 			if (shadowmap)
 			{
@@ -346,15 +354,15 @@ public:
 			}
 			else
 			{
-				auto diffMap = framework::MaterialManager::instance().getTexture(entity.geometry, i, framework::MAT_DIFFUSE_MAP);
-				auto normMap = framework::MaterialManager::instance().getTexture(entity.geometry, i, framework::MAT_NORMAL_MAP);
+				auto diffMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_DIFFUSE_MAP);
+				auto normMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_NORMAL_MAP);
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, diffMap);
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::NORMAL_MAP, normMap);
 
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, m_shadowMapSampler);
 			}
-			entity.geometry->renderMesh(i, shadowmap ? entityData.shadowInstancesCount : 1);
+			geometry->renderMesh(i, shadowmap ? entityData.shadowInstancesCount : 1);
 		}	
 	}
 
@@ -487,7 +495,7 @@ public:
 		scenebox.begin_extend();
 		if (m_planeData.isShadowCaster)
 		{
-			bbox3 b = m_plane.geometry->getBoundingBox();
+			bbox3 b = m_planeGeometry->getBoundingBox();
 			b.transform(m_planeData.model);
 			scenebox.extend(b);
 		}
@@ -495,7 +503,7 @@ public:
 		{
 			if (m_entitiesData[i].isShadowCaster)
 			{
-				bbox3 b = m_entity.geometry->getBoundingBox();
+				bbox3 b = m_entityGeometry->getBoundingBox();
 				b.transform(m_entitiesData[i].model);
 				scenebox.extend(b);
 			}
@@ -602,20 +610,20 @@ public:
 
 		if (m_planeData.isShadowCaster)
 		{
-			updateShadowVisibilityMask(box, m_plane, m_planeData, splitIndex);
+			updateShadowVisibilityMask(box, m_planeGeometry, m_planeData, splitIndex);
 		}
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
 			if (m_entitiesData[i].isShadowCaster)
 			{
-				updateShadowVisibilityMask(box, m_entity, m_entitiesData[i], splitIndex);
+				updateShadowVisibilityMask(box, m_entityGeometry, m_entitiesData[i], splitIndex);
 			}
 		}
 	}
 
-	void updateShadowVisibilityMask(const bbox3& frustumBox, const Entity& entity, EntityData& entityData, int splitIndex)
+	void updateShadowVisibilityMask(const bbox3& frustumBox, const std::shared_ptr<framework::Geometry3D>& entity, EntityData& entityData, int splitIndex)
 	{
-		bbox3 b = entity.geometry->getBoundingBox();
+		bbox3 b = entity->getBoundingBox();
 		b.transform(entityData.model);
 
 		// shadow box computation
@@ -648,14 +656,10 @@ private:
 	// shadow map
 	std::shared_ptr<framework::RenderTarget> m_shadowMap;
 
+	// rasterizer stage for shadow map rendering
 	std::shared_ptr<framework::RasterizerStage> m_shadowMapRasterizer;
+	// sampler for shadow map rendering
 	std::shared_ptr<framework::Sampler> m_shadowMapSampler;
-
-	// entity
-	struct Entity
-	{
-		std::shared_ptr<framework::Geometry3D> geometry;
-	};
 
 	struct EntityData
 	{
@@ -669,10 +673,10 @@ private:
 			memset(shadowIndices, 0, sizeof(unsigned int) * MAX_SPLITS);
 		}
 	};
-	Entity m_entity;
+	std::shared_ptr<framework::Geometry3D> m_entityGeometry;
 	std::vector<EntityData> m_entitiesData;
 
-	Entity m_plane;
+	std::shared_ptr<framework::Geometry3D> m_planeGeometry;
 	EntityData m_planeData;
 
 	std::shared_ptr<framework::UniformBuffer> m_entityDataBuffer;
