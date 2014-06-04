@@ -2,49 +2,23 @@
 
 // uniforms
 DECLARE_UNIFORMS_BEGIN(PSSMAppUniforms)
-	ENTITY_DATA,
-	ONFRAME_DATA,
+	MODELVIEWPROJECTION_MATRIX,
+	MODEL_MATRIX,
+	SHADOW_INDICES,
 	LIGHTS_DATA,
-	SHADOW_DATA,
+	VIEW_POSITION,
+	SPLIT_COUNT,
+	SHADOWVIEWPROJECTION_MATRICES,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
-	SHADOW_MAP,
-	DEFAULT_SAMPLER,
-	SHADOW_MAP_SAMPLER
+	SHADOW_MAP
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<PSSMAppUniforms>::Uniform
 
 // constants
-const std::string SHADERS_PATH = "data/shaders/dx11/pssm/";
+const std::string SHADERS_PATH = "data/shaders/gl/win32/pssm/";
 const int MAX_SPLITS = 4;
 #define PROFILING 0
-
-// entity data
-#pragma pack (push, 1)
-struct EntityDataRaw
-{
-	matrix44 modelViewProjection;
-	matrix44 model;
-	int shadowIndices[MAX_SPLITS];
-};
-#pragma pack (pop)
-
-// on frame data
-#pragma pack (push, 1)
-struct OnFrameDataRaw
-{
-	vector3 viewPosition;
-	int splitCount;
-};
-#pragma pack (pop)
-
-// shadow data
-#pragma pack (push, 1)
-struct ShadowDataRaw
-{
-	matrix44 shadowViewProjection[MAX_SPLITS];
-};
-#pragma pack (pop)
 
 // application
 class PSSMApp : public framework::Application
@@ -68,7 +42,7 @@ public:
 
 	virtual void init(const std::map<std::string, int>& params)
 	{
-		m_info.title = "Parallel-Split Shadow Mapping (DX11)";
+		m_info.title = "Parallel-Split Shadow Mapping (OpenGL 4)";
 
 		applyStandardParams(params);
 		auto smSize = params.find("shadowmap");
@@ -95,7 +69,7 @@ public:
 	#if PROFILING
 		std::stringstream header;
 		header << m_info.title << "\n" << m_info.windowWidth << "x" << m_info.windowHeight 
-			<< ", samples = " << m_info.samples << ", fullscreen = " << (m_info.flags.fullscreen ? "yes" : "no") << "\n";
+			   << ", samples = " << m_info.samples << ", fullscreen = " << (m_info.flags.fullscreen ? "yes" : "no") << "\n";
 		utils::Profiler::instance().setHeader(header.str());
 		utils::Profiler::instance().setFilename("profiler_" + utils::Utils::currentTimeDate(true) + ".txt");
 	#endif
@@ -109,39 +83,36 @@ public:
 		// overlays
 		initOverlays(root);
 
-		D3D11_TEXTURE2D_DESC desc = framework::RenderTarget::getDefaultDesc(m_shadowMapSize, m_shadowMapSize, DXGI_FORMAT_R32_FLOAT);
-		desc.ArraySize = m_splitCount;
+		// shadow map
 		m_shadowMap.reset(new framework::RenderTarget());
-		m_shadowMap->initWithDescription(desc, true);
-		if (!m_shadowMap->isValid()) exit();
+		if (!m_shadowMap->initArray(m_splitCount, m_info.windowWidth, m_info.windowHeight, GL_R32F, 0, GL_DEPTH_COMPONENT32F)) exit();
 
 		// gpu programs
 		m_sceneRendering.reset(new framework::GpuProgram());
-		m_sceneRendering->addShader(SHADERS_PATH + "scene.vsh.hlsl");
-		m_sceneRendering->addShader(SHADERS_PATH + "scene.psh.hlsl");
+		m_sceneRendering->addShader(SHADERS_PATH + "scene.vsh.glsl");
+		m_sceneRendering->addShader(SHADERS_PATH + "scene.fsh.glsl");
 		if (!m_sceneRendering->init()) exit();
-		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
-		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::ENTITY_DATA, "entityData");
-		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::LIGHTS_DATA, "lightsData");
-		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_DATA, "shadowData");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
+		m_sceneRendering->bindStorageBuffer<PSSMAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::VIEW_POSITION, "viewPosition");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SPLIT_COUNT, "splitsCount");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOWVIEWPROJECTION_MATRICES, "shadowViewProjection");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_MAP, "shadowMap");
-		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
-		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, "shadowMapSampler");
 
 		m_shadowMapRendering.reset(new framework::GpuProgram());
-		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.vsh.hlsl");
-		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.gsh.hlsl");
-		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.psh.hlsl");
+		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.vsh.glsl");
+		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.gsh.glsl");
+		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.fsh.glsl");
 		if (!m_shadowMapRendering->init()) exit();
-		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_DATA, "shadowData");
-		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::ENTITY_DATA, "entityData");
+		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
+		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::SHADOWVIEWPROJECTION_MATRICES, "shadowViewProjection");
+		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_INDICES, "shadowIndices");
 
 		// entity
 		m_entityGeometry = initEntity("data/media/cube/cube.geom");
-		m_entityGeometry->bindToGpuProgram(m_sceneRendering);
-		m_entityGeometry->bindToGpuProgram(m_shadowMapRendering);
 
 		const int ENTITIES_IN_ROW = 6;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
@@ -163,24 +134,11 @@ public:
 		planeInfo.size = vector2(1000.0f, 1000.0f);
 		planeInfo.uvSize = vector2(50.0f, 50.0f);
 		m_planeGeometry = initEntity(planeInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds");
-		m_planeGeometry->bindToGpuProgram(m_sceneRendering);
 		m_planeData.model.ident();
 		m_planeData.isShadowCaster = false;
-		if (m_planeData.isShadowCaster)
-		{
-			m_entityGeometry->bindToGpuProgram(m_shadowMapRendering);
-		}
-
-		// rasterizer stage for shadowmap rendering
-		m_shadowMapRasterizer.reset(new framework::RasterizerStage());
-		D3D11_RASTERIZER_DESC rasterizerDesc = framework::RasterizerStage::getDefault();
-		m_shadowMapRasterizer->initWithDescription(rasterizerDesc);
-		if (!m_shadowMapRasterizer->isValid()) exit();
-		m_shadowMapRasterizer->getViewports().resize(1);
-		m_shadowMapRasterizer->getViewports()[0] = framework::RasterizerStage::getDefaultViewport(m_shadowMapSize, m_shadowMapSize);
 
 		// sampler for shadow mapping
-		m_shadowMapSampler.reset(new framework::Sampler());
+		/*m_shadowMapSampler.reset(new framework::Sampler());
 		D3D11_SAMPLER_DESC samplerDesc = framework::Sampler::getDefault();
 		samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 		samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS;
@@ -191,19 +149,7 @@ public:
 		samplerDesc.BorderColor[2] = 1.0f;
 		samplerDesc.BorderColor[3] = 1.0f;
 		m_shadowMapSampler->initWithDescription(samplerDesc);
-		if (!m_shadowMapSampler->isValid()) exit();
-
-		// entity's data buffer
-		m_entityDataBuffer.reset(new framework::UniformBuffer());
-		if (!m_entityDataBuffer->initDefaultConstant<EntityDataRaw>()) exit();
-
-		// on-frame data buffer
-		m_onFrameDataBuffer.reset(new framework::UniformBuffer());
-		if (!m_onFrameDataBuffer->initDefaultConstant<OnFrameDataRaw>()) exit();
-
-		// shadow buffer
-		m_shadowBuffer.reset(new framework::UniformBuffer());
-		if (!m_shadowBuffer->initDefaultConstant<ShadowDataRaw>()) exit();
+		if (!m_shadowMapSampler->isValid()) exit();*/
 
 		// lights
 		initLights();
@@ -211,6 +157,15 @@ public:
 		// skybox texture
 		//m_skyboxTexture.reset(new framework::Texture());
 		//if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
+
+		framework::DepthState depthTestEnable(true);
+		depthTestEnable.setWriteEnable(true);
+		depthTestEnable.apply();
+
+		framework::PipelineState cullingEnable(GL_CULL_FACE, true);
+		cullingEnable.apply();
+
+		glViewport(0, 0, m_info.windowWidth, m_info.windowHeight);
 	}
 
 	std::shared_ptr<framework::Geometry3D> initEntity(const geom::PlaneGenerationInfo& planeInfo, const std::string& diffuseMap, const std::string& normalMap)
@@ -259,9 +214,8 @@ public:
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->initDefaultConstant<framework::LightRawData>()) exit();
-		m_lightsBuffer->setData(m_lightManager.getRawLightData(0));
-		m_lightsBuffer->applyChanges();
+		if (!m_lightsBuffer->initStorage<framework::LightRawData>(1)) exit();
+		m_lightsBuffer->setElement(0, m_lightManager.getRawLightData(0));
 	}
 
 	void initOverlays(gui::WidgetPtr_T root)
@@ -290,8 +244,11 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
+		// set viewport for shadow map rendering
+		glViewport(0, 0, m_shadowMapSize, m_shadowMapSize);
+
 		// render shadow map
-		getPipeline().clearRenderTarget(m_shadowMap, vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX));
+		/*getPipeline().clearRenderTarget(m_shadowMap, vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX));
 		getPipeline().setRenderTarget(m_shadowMap);
 		if (m_shadowMapRendering->use())
 		{
@@ -311,15 +268,16 @@ public:
 		onFrameData.viewPosition = m_camera.getPosition();
 		onFrameData.splitCount = m_currentSplitCount;
 		m_onFrameDataBuffer->setData(onFrameData);
-		m_onFrameDataBuffer->applyChanges();
+		m_onFrameDataBuffer->applyChanges();*/
 
+		glViewport(0, 0, m_info.windowWidth, m_info.windowHeight);
 		useDefaultRenderTarget();
 
 		// render skybox
 		//renderSkybox(m_camera, m_skyboxTexture);
 
 		// render scene
-		if (m_sceneRendering->use())
+		/*if (m_sceneRendering->use())
 		{
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
 			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
@@ -334,7 +292,7 @@ public:
 			}
 
 			renderGeometry(false, m_planeGeometry, m_planeData);
-		}
+		}*/
 
 		renderDebug();
 	}
@@ -343,7 +301,7 @@ public:
 	{
 		if (shadowmap && (!entityData.isShadowCaster || entityData.shadowInstancesCount == 0)) return;
 
-		EntityDataRaw entityDataRaw;
+		/*EntityDataRaw entityDataRaw;
 		entityDataRaw.modelViewProjection = entityData.mvp;
 		entityDataRaw.model = entityData.model;
 		memcpy(entityDataRaw.shadowIndices, entityData.shadowIndices, sizeof(unsigned int) * MAX_SPLITS);
@@ -367,7 +325,7 @@ public:
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, m_shadowMapSampler);
 			}
 			geometry->renderMesh(i, shadowmap ? entityData.shadowInstancesCount : 1);
-		}	
+		}*/
 	}
 
 	void renderDebug()
@@ -456,7 +414,6 @@ public:
 		m_planeData.shadowInstancesCount = 0;
 
 		// calculate shadow
-		ShadowDataRaw shadowData;
 		calculateMaxSplitDistances();
 		m_furthestPointInCamera = calculateFurthestPointInCamera(cameraView);
 		calculateSplitDistances();
@@ -465,12 +422,9 @@ public:
 			float n = m_splitDistances[i];
 			float f = m_splitDistances[i + 1];
 			bbox3 box = calculateFrustumBox(n, f);
-			shadowData.shadowViewProjection[i] = calculateShadowViewProjection(box);
+			m_shadowViewProjection[i] = calculateShadowViewProjection(box);
 			updateShadowVisibilityMask(box, i);
 		}
-
-		m_shadowBuffer->setData(shadowData);
-		m_shadowBuffer->applyChanges();
 	}
 
 	void calculateMaxSplitDistances()
@@ -655,11 +609,6 @@ private:
 	// shadow map
 	std::shared_ptr<framework::RenderTarget> m_shadowMap;
 
-	// rasterizer stage for shadow map rendering
-	std::shared_ptr<framework::RasterizerStage> m_shadowMapRasterizer;
-	// sampler for shadow map rendering
-	std::shared_ptr<framework::Sampler> m_shadowMapSampler;
-
 	struct EntityData
 	{
 		matrix44 model;
@@ -686,7 +635,6 @@ private:
 	framework::FreeCamera m_camera;
 
 	int m_shadowMapSize;
-
 	std::vector<float> m_maxSplitDistances;
 	float m_farPlane;
 	float m_splitShift;
@@ -695,6 +643,7 @@ private:
 	float m_splitLambda;
 	std::vector<float> m_splitDistances;
 	float m_furthestPointInCamera;
+	matrix44 m_shadowViewProjection[MAX_SPLITS];
 
 	bool m_renderDebug;
 	gui::LabelPtr_T m_debugLabel;
