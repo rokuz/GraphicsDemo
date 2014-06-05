@@ -419,6 +419,15 @@ void FbxLoader::reindexing(FbxMesh* mesh, std::vector<GroupData>& groups, size_t
 {
 	std::vector<int> smoothingGroupsPerPolygon;
 	getSmoothingGroup(mesh, smoothingGroupsPerPolygon);
+
+	int newGroupIndex = -1;
+	int prevIndex = -1;
+	for (size_t polygonIndex = 0; polygonIndex < smoothingGroupsPerPolygon.size(); polygonIndex++)
+	{
+		if (smoothingGroupsPerPolygon[polygonIndex] != prevIndex) newGroupIndex++;
+		prevIndex = smoothingGroupsPerPolygon[polygonIndex];
+		smoothingGroupsPerPolygon[polygonIndex] = newGroupIndex;
+	}
 		
 	std::vector<int> smoothingGroups = smoothingGroupsPerPolygon;
 	std::vector<int>::iterator it = std::unique(smoothingGroups.begin(), smoothingGroups.end());
