@@ -139,13 +139,13 @@ public:
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::ENTITY_DATA, "entityData");
 
 		// entity
-		m_entityGeometry = initEntity("data/media/cube/cube.geom");
+		m_entityGeometry = initEntity("data/media/house/house.geom");
 		m_entityGeometry->bindToGpuProgram(m_sceneRendering);
 		m_entityGeometry->bindToGpuProgram(m_shadowMapRendering);
 
-		const int ENTITIES_IN_ROW = 6;
+		const int ENTITIES_IN_ROW = 2;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
-		const float AREA_HALFLENGTH = 100.0f;
+		const float AREA_HALFLENGTH = 150.0f;
 		m_entitiesData.resize(ENTITIES_IN_ROW * ENTITIES_IN_ROW);
 		for (int i = 0; i < ENTITIES_IN_ROW; i++)
 		{

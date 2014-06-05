@@ -66,12 +66,8 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float ndol = max(0, dot(light.direction, normal));
 
 	// a kind of elimination of double shading
-	float shadowValue = 1;
-	[branch]
-	if (ndol > 0.1)
-	{
-		shadowValue = shadow(input.worldPos);
-	}
+	float shadowValue = shadow(input.worldPos);
+	shadowValue = lerp(ndol, shadowValue, ndol);
 	//return float4(shadowValue, shadowValue, shadowValue, 1);
 		
 	const float SHADOW_INTENSITY = 0.7;
