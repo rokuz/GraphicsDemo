@@ -279,4 +279,52 @@ bool GpuProgram::use()
 	return true;
 }
 
+void GpuProgram::setTextureInternal( int uniformIndex, std::shared_ptr<Texture> texture, int slot )
+{
+	int slotIndex = slot < 0 ? m_freeTextureSlot : slot;
+	if (slotIndex >= MAX_BOUND_TEXTURES) return;
+
+	glActiveTexture(GL_TEXTURE0 + slotIndex);
+	texture->bind();
+	glUniform1i(uniformIndex, slotIndex);
+
+	if (slot < 0) m_freeTextureSlot++;
+}
+
+void GpuProgram::setTextureInternal( int uniformIndex, std::shared_ptr<RenderTarget> renderTarget, int index, int slot )
+{
+	int slotIndex = slot < 0 ? m_freeTextureSlot : slot;
+	if (slotIndex >= MAX_BOUND_TEXTURES) return;
+
+	glActiveTexture(GL_TEXTURE0 + slotIndex);
+	renderTarget->bind(index);
+	glUniform1i(uniformIndex, slotIndex);
+
+	if (slot < 0) m_freeTextureSlot++;
+}
+
+void GpuProgram::setDepthInternal( int uniformIndex, std::shared_ptr<RenderTarget> renderTarget, int slot )
+{
+	int slotIndex = slot < 0 ? m_freeTextureSlot : slot;
+	if (slotIndex >= MAX_BOUND_TEXTURES) return;
+
+	glActiveTexture(GL_TEXTURE0 + slotIndex);
+	renderTarget->bindDepth();
+	glUniform1i(uniformIndex, slotIndex);
+
+	if (slot < 0) m_freeTextureSlot++;
+}
+
+void GpuProgram::setImageInternal( int uniformIndex, std::shared_ptr<RenderTarget> renderTarget, int index, bool readFlag, bool writeFlag, int slot )
+{
+	int slotIndex = slot < 0 ? m_freeTextureSlot : slot;
+	if (slotIndex >= MAX_BOUND_TEXTURES) return;
+
+	glActiveTexture(GL_TEXTURE0 + slotIndex);
+	renderTarget->bindAsImage(index, slotIndex, readFlag, writeFlag);
+	glUniform1i(uniformIndex, slotIndex);
+
+	if (slot < 0) m_freeTextureSlot++;
+}
+
 }

@@ -368,4 +368,20 @@ void RenderTarget::copyColorToBackBuffer()
 	CHECK_GL_ERROR;
 }
 
+void RenderTarget::setShadowMapCompareMode(size_t index)
+{
+	if (index < 0 || index >= (int)m_colorBuffers.size()) return;
+
+	const float BORDER_COLOR[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glBindTexture(m_target, m_colorBuffers[index]);
+	glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(m_target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(m_target, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+	glTexParameteri(m_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameterfv(m_target, GL_TEXTURE_BORDER_COLOR, BORDER_COLOR);
+	glBindTexture(m_target, 0);
+}
+
 }

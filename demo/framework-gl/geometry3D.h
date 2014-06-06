@@ -49,8 +49,8 @@ public:
 	int getID() const { return m_id; }
 	const std::string& getFilename() const { return m_filename; }
 
-    void renderMesh(size_t index);
-	void renderAllMeshes();
+    void renderMesh(size_t index, size_t instancesCount = 1);
+	void renderAllMeshes(size_t instancesCount = 1);
 	void renderBoundingBox(const matrix44& mvp);
 
 private:

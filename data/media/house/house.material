@@ -2,6 +2,6 @@
    {
       "diffuseMap" : "house_diffuse",
       "normalMap" : "house_normal",
-      "specularMap" : ""
+      "specularMap" : "house_spec"
    }
 ]

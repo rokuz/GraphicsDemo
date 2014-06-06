@@ -52,6 +52,8 @@ public:
 	void copyDepthToCurrentDepthBuffer(int samplesCount = 0);
 	void copyColorToBackBuffer();
 
+	void setShadowMapCompareMode(size_t index);
+
 private:
 	virtual void destroy();
 

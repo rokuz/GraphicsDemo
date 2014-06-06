@@ -68,220 +68,70 @@ public:
 	bool isValid() const;
 
 	template<typename UniformType>
-	void bindUniform(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
-	{
-		if (!isValid()) return;
-		if (uniform >= MAX_UNIFORMS) return;
-
-		m_uniforms[uniform] = glGetUniformLocation(m_program, name.c_str());
-		if (m_uniforms[uniform] < 0)
-		{
-			utils::Logger::toLogWithFormat("Error: Uniform '%s' has not been found to bind.\n", name.c_str());
-		}
-	}
+	void bindUniform(typename UniformBase<UniformType>::Uniform uniform, const std::string& name);
 
 	template<typename UniformType>
-	void bindUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
-	{
-		if (!isValid()) return;
-		if (uniform >= MAX_UNIFORMS) return;
-
-		m_uniforms[uniform] = glGetUniformBlockIndex(m_program, name.c_str());
-		if (m_uniforms[uniform] < 0)
-		{
-			utils::Logger::toLogWithFormat("Error: Uniform buffer '%s' has not been found to bind.\n", name.c_str());
-		}
-	}
+	void bindUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name);
 
 	template<typename UniformType>
-	void bindStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
-	{
-		if (!isValid()) return;
-		if (uniform >= MAX_UNIFORMS) return;
-
-		m_uniforms[uniform] = glGetProgramResourceIndex(m_program, GL_SHADER_STORAGE_BLOCK, name.c_str());
-		if (m_uniforms[uniform] < 0)
-		{
-			utils::Logger::toLogWithFormat("Error: Storage buffer '%s' has not been found to bind.\n", name.c_str());
-		}
-	}
+	void bindStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name);
 
 	template<typename UniformType>
-	GLint getUniform(typename UniformBase<UniformType>::Uniform uniform)
-	{
-		return m_uniforms[uniform];
-	}
+	GLint getUniform(typename UniformBase<UniformType>::Uniform uniform);
 
 	template<typename UniformType>
-	GLint getUniformBuffer(typename UniformBase<UniformType>::Uniform uniform)
-	{
-		return m_uniforms[uniform];
-	}
+	GLint getUniformBuffer(typename UniformBase<UniformType>::Uniform uniform);
 
 	template<typename UniformType>
-	void setUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer, int index)
-	{
-		if (!buffer) return;
-
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-
-		buffer->bind(index);
-		glUniformBlockBinding(m_program, uf, index);
-	}
+	void setUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer, int index);
 
 	template<typename UniformType>
-	void setStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<StorageBuffer> buffer, int index)
-	{
-		if (!buffer) return;
-
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-
-		buffer->bind(index);
-		glShaderStorageBlockBinding(m_program, uf, index);
-	}
+	void setStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<StorageBuffer> buffer, int index);
 
 	template<typename UniformType>
-	void setStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer, int index)
-	{
-		if (!buffer) return;
-		if (!buffer->isStorage()) return;
-
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-
-		buffer->bind(index);
-		glShaderStorageBlockBinding(m_program, uf, index);
-	}
+	void setStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer, int index);
 
 	template<typename UniformType>
-	void setFloat(typename UniformBase<UniformType>::Uniform uniform, float v)
-	{
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		glUniform1fv(uf, 1, &v);
-	}
+	void setFloat(typename UniformBase<UniformType>::Uniform uniform, float v);
 
 	template<typename UniformType>
-	void setUint(typename UniformBase<UniformType>::Uniform uniform, unsigned int v)
-	{
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		glUniform1uiv(uf, 1, &v);
-	}
+	void setUint(typename UniformBase<UniformType>::Uniform uniform, unsigned int v);
 
 	template<typename UniformType>
-	void setInt(typename UniformBase<UniformType>::Uniform uniform, int v)
-	{
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		glUniform1iv(uf, 1, &v);
-	}
+	void setInt(typename UniformBase<UniformType>::Uniform uniform, int v);
 
 	template<typename UniformType>
-	void setVector(typename UniformBase<UniformType>::Uniform uniform, const vector2& vec)
-	{
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		glUniform2fv(uf, 1, utils::Utils::convert(vec));
-	}
+	void setIntArray(typename UniformBase<UniformType>::Uniform uniform, int* v, int count);
 
 	template<typename UniformType>
-	void setVector(typename UniformBase<UniformType>::Uniform uniform, const vector3& vec)
-	{
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		glUniform3fv(uf, 1, utils::Utils::convert(vec));
-	}
+	void setVector(typename UniformBase<UniformType>::Uniform uniform, const vector2& vec);
 
 	template<typename UniformType>
-	void setVector(typename UniformBase<UniformType>::Uniform uniform, const vector4& vec)
-	{
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		glUniform4fv(uf, 1, utils::Utils::convert(vec));
-	}
+	void setVector(typename UniformBase<UniformType>::Uniform uniform, const vector3& vec);
 
 	template<typename UniformType>
-	void setVector(typename UniformBase<UniformType>::Uniform uniform, const quaternion& quat)
-	{
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		glUniform4fv(uf, 1, utils::Utils::convert(quat));
-	}
+	void setVector(typename UniformBase<UniformType>::Uniform uniform, const vector4& vec);
 
 	template<typename UniformType>
-	void setMatrix(typename UniformBase<UniformType>::Uniform uniform, const matrix44& mat)
-	{
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		glUniformMatrix4fv(uf, 1, false, &mat.m[0][0]);
-	}
+	void setVector(typename UniformBase<UniformType>::Uniform uniform, const quaternion& quat);
 
 	template<typename UniformType>
-	void setTexture(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<Texture> texture)
-	{
-		if (!texture) return;
-
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
-
-		glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
-		texture->bind();
-		glUniform1i(uf, m_freeTextureSlot);
-
-		m_freeTextureSlot++;
-	}
+	void setMatrix(typename UniformBase<UniformType>::Uniform uniform, const matrix44& mat);
 
 	template<typename UniformType>
-	void setTexture(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int index)
-	{
-		if (!renderTarget) return;
-
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
-
-		glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
-		renderTarget->bind(index);
-		glUniform1i(uf, m_freeTextureSlot);
-
-		m_freeTextureSlot++;
-	}
+	void setMatrixArray(typename UniformBase<UniformType>::Uniform uniform, matrix44* mat, int count);
 
 	template<typename UniformType>
-	void setDepth(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget)
-	{
-		if (!renderTarget) return;
-
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
-
-		glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
-		renderTarget->bindDepth();
-		glUniform1i(uf, m_freeTextureSlot);
-
-		m_freeTextureSlot++;
-	}
+	void setTexture(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<Texture> texture, int slot = -1);
 
 	template<typename UniformType>
-	void setImage(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int index, bool readFlag = true, bool writeFlag = true)
-	{
-		if (!renderTarget) return;
+	void setTexture(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int index, int slot = -1);
 
-		GLint uf = getUniformBuffer<UniformType>(uniform);
-		if (uf < 0) return;
-		if (m_freeTextureSlot >= MAX_BOUND_TEXTURES) return;
+	template<typename UniformType>
+	void setDepth(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int slot = -1);
 
-		glActiveTexture(GL_TEXTURE0 + m_freeTextureSlot);
-		renderTarget->bindAsImage(index, m_freeTextureSlot, readFlag, writeFlag);
-		glUniform1i(uf, m_freeTextureSlot);
-
-		m_freeTextureSlot++;
-	}
+	template<typename UniformType>
+	void setImage(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int index, bool readFlag = true, bool writeFlag = true, int slot = -1);
 
 	bool use();
 
@@ -296,9 +146,222 @@ private:
 	bool validateProgram(GLuint prog);
 	std::string getProgramName();
 
+	void setTextureInternal(int uniformIndex, std::shared_ptr<Texture> texture, int slot);
+	void setTextureInternal(int uniformIndex, std::shared_ptr<RenderTarget> renderTarget, int index, int slot);
+	void setDepthInternal(int uniformIndex, std::shared_ptr<RenderTarget> renderTarget, int slot);
+	void setImageInternal(int uniformIndex, std::shared_ptr<RenderTarget> renderTarget, int index, bool readFlag, bool writeFlag, int slot);
+
 	virtual void destroy();
 };
 
+template<typename UniformType>
+void GpuProgram::bindUniform(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
+{
+	if (!isValid()) return;
+	if (uniform >= MAX_UNIFORMS) return;
+
+	m_uniforms[uniform] = glGetUniformLocation(m_program, name.c_str());
+	if (m_uniforms[uniform] < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: Uniform '%s' has not been found to bind.\n", name.c_str());
+	}
 }
 
-#endif //__GPUPROGRAM_H__
+template<typename UniformType>
+void GpuProgram::bindUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
+{
+	if (!isValid()) return;
+	if (uniform >= MAX_UNIFORMS) return;
+
+	m_uniforms[uniform] = glGetUniformBlockIndex(m_program, name.c_str());
+	if (m_uniforms[uniform] < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: Uniform buffer '%s' has not been found to bind.\n", name.c_str());
+	}
+}
+
+template<typename UniformType>
+void GpuProgram::bindStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, const std::string& name)
+{
+	if (!isValid()) return;
+	if (uniform >= MAX_UNIFORMS) return;
+
+	m_uniforms[uniform] = glGetProgramResourceIndex(m_program, GL_SHADER_STORAGE_BLOCK, name.c_str());
+	if (m_uniforms[uniform] < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: Storage buffer '%s' has not been found to bind.\n", name.c_str());
+	}
+}
+
+template<typename UniformType>
+GLint GpuProgram::getUniform(typename UniformBase<UniformType>::Uniform uniform)
+{
+	return m_uniforms[uniform];
+}
+
+template<typename UniformType>
+GLint GpuProgram::getUniformBuffer(typename UniformBase<UniformType>::Uniform uniform)
+{
+	return m_uniforms[uniform];
+}
+
+template<typename UniformType>
+void GpuProgram::setUniformBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer, int index)
+{
+	if (!buffer) return;
+
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+
+	buffer->bind(index);
+	glUniformBlockBinding(m_program, uf, index);
+}
+
+template<typename UniformType>
+void GpuProgram::setStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<StorageBuffer> buffer, int index)
+{
+	if (!buffer) return;
+
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+
+	buffer->bind(index);
+	glShaderStorageBlockBinding(m_program, uf, index);
+}
+
+template<typename UniformType>
+void GpuProgram::setStorageBuffer(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<UniformBuffer> buffer, int index)
+{
+	if (!buffer) return;
+	if (!buffer->isStorage()) return;
+
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+
+	buffer->bind(index);
+	glShaderStorageBlockBinding(m_program, uf, index);
+}
+
+template<typename UniformType>
+void GpuProgram::setFloat(typename UniformBase<UniformType>::Uniform uniform, float v)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniform1fv(uf, 1, &v);
+}
+
+template<typename UniformType>
+void GpuProgram::setUint(typename UniformBase<UniformType>::Uniform uniform, unsigned int v)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniform1uiv(uf, 1, &v);
+}
+
+template<typename UniformType>
+void GpuProgram::setInt(typename UniformBase<UniformType>::Uniform uniform, int v)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniform1iv(uf, 1, &v);
+}
+
+template<typename UniformType>
+void GpuProgram::setIntArray(typename UniformBase<UniformType>::Uniform uniform, int* v, int count)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniform1iv(uf, count, v);
+}
+
+template<typename UniformType>
+void GpuProgram::setVector(typename UniformBase<UniformType>::Uniform uniform, const vector2& vec)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniform2fv(uf, 1, utils::Utils::convert(vec));
+}
+
+template<typename UniformType>
+void GpuProgram::setVector(typename UniformBase<UniformType>::Uniform uniform, const vector3& vec)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniform3fv(uf, 1, utils::Utils::convert(vec));
+}
+
+template<typename UniformType>
+void GpuProgram::setVector(typename UniformBase<UniformType>::Uniform uniform, const vector4& vec)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniform4fv(uf, 1, utils::Utils::convert(vec));
+}
+
+template<typename UniformType>
+void GpuProgram::setVector(typename UniformBase<UniformType>::Uniform uniform, const quaternion& quat)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniform4fv(uf, 1, utils::Utils::convert(quat));
+}
+
+template<typename UniformType>
+void GpuProgram::setMatrix(typename UniformBase<UniformType>::Uniform uniform, const matrix44& mat)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniformMatrix4fv(uf, 1, false, &mat.m[0][0]);
+}
+
+template<typename UniformType>
+void GpuProgram::setMatrixArray(typename UniformBase<UniformType>::Uniform uniform, matrix44* mat, int count)
+{
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	glUniformMatrix4fv(uf, count, false, &mat[0].m[0][0]);
+}
+
+template<typename UniformType>
+void GpuProgram::setTexture(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<Texture> texture, int slot)
+{
+	if (!texture) return;
+
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	setTextureInternal(uf, std::move(texture), slot);
+}
+
+template<typename UniformType>
+void GpuProgram::setTexture(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int index, int slot)
+{
+	if (!renderTarget) return;
+
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	setTextureInternal(uf, std::move(renderTarget), index, slot);
+}
+
+template<typename UniformType>
+void GpuProgram::setDepth(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int slot)
+{
+	if (!renderTarget) return;
+
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	setDepthInternal(uf, std::move(renderTarget), slot);
+}
+
+template<typename UniformType>
+void GpuProgram::setImage(typename UniformBase<UniformType>::Uniform uniform, std::shared_ptr<RenderTarget> renderTarget, int index, bool readFlag, bool writeFlag, int slot)
+{
+	if (!renderTarget) return;
+
+	GLint uf = getUniformBuffer<UniformType>(uniform);
+	if (uf < 0) return;
+	setImageInternal(uf, std::move(renderTarget), index, readFlag, writeFlag, slot);
+}
+
+}
+
+#endif

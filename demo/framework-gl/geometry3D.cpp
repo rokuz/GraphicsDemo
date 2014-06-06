@@ -162,24 +162,40 @@ size_t Geometry3D::getMeshesCount() const
     return m_meshes.size();
 }
 
-void Geometry3D::renderMesh(size_t index)
+void Geometry3D::renderMesh(size_t index, size_t instancesCount)
 {
-    if (index >= m_meshes.size()) return;
+    if (index >= m_meshes.size() || instancesCount == 0) return;
     
     glBindVertexArray(m_vertexArray);
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
-	glDrawElements(GL_TRIANGLES, (int)m_meshes[index].indicesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[index].offsetInIB * sizeof(unsigned int)));
+	if (instancesCount == 1)
+	{
+		glDrawElements(GL_TRIANGLES, (int)m_meshes[index].indicesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[index].offsetInIB * sizeof(unsigned int)));
+	}
+	else
+	{
+		glDrawElementsInstanced(GL_TRIANGLES, instancesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[index].offsetInIB * sizeof(unsigned int)), (int)m_meshes[index].indicesCount);
+	}	
 }
 
-void Geometry3D::renderAllMeshes()
+void Geometry3D::renderAllMeshes(size_t instancesCount)
 {
+	if (instancesCount == 0) return;
+
 	glBindVertexArray(m_vertexArray);
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
 	for (size_t i = 0; i < m_meshes.size(); i++)
 	{
-		glDrawElements(GL_TRIANGLES, (int)m_meshes[i].indicesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[i].offsetInIB * sizeof(unsigned int)));
+		if (instancesCount == 1)
+		{
+			glDrawElements(GL_TRIANGLES, (int)m_meshes[i].indicesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[i].offsetInIB * sizeof(unsigned int)));
+		}
+		else
+		{
+			glDrawElementsInstanced(GL_TRIANGLES, instancesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[i].offsetInIB * sizeof(unsigned int)), (int)m_meshes[i].indicesCount);
+		}
 	}
 }
 

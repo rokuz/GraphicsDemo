@@ -97,7 +97,7 @@ void main()
 
 	// a kind of elimination of double shading
 	float shadowValue = 1;
-	if (ndol > 0.1)
+	//if (ndol > 0.1)
 	{
 		shadowValue = shadow(psinput.worldPos);
 	}

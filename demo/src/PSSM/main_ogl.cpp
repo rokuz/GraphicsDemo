@@ -85,7 +85,8 @@ public:
 
 		// shadow map
 		m_shadowMap.reset(new framework::RenderTarget());
-		if (!m_shadowMap->initArray(m_splitCount, m_info.windowWidth, m_info.windowHeight, GL_R32F, 0, GL_DEPTH_COMPONENT32F)) exit();
+		if (!m_shadowMap->initArray(m_splitCount, m_shadowMapSize, m_shadowMapSize, GL_R32F, 0, GL_DEPTH_COMPONENT32F)) exit();
+		m_shadowMap->setShadowMapCompareMode(0);
 
 		// gpu programs
 		m_sceneRendering.reset(new framework::GpuProgram());
@@ -136,20 +137,6 @@ public:
 		m_planeGeometry = initEntity(planeInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds");
 		m_planeData.model.ident();
 		m_planeData.isShadowCaster = false;
-
-		// sampler for shadow mapping
-		/*m_shadowMapSampler.reset(new framework::Sampler());
-		D3D11_SAMPLER_DESC samplerDesc = framework::Sampler::getDefault();
-		samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-		samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS;
-		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-		samplerDesc.BorderColor[0] = 1.0f;
-		samplerDesc.BorderColor[1] = 1.0f;
-		samplerDesc.BorderColor[2] = 1.0f;
-		samplerDesc.BorderColor[3] = 1.0f;
-		m_shadowMapSampler->initWithDescription(samplerDesc);
-		if (!m_shadowMapSampler->isValid()) exit();*/
 
 		// lights
 		initLights();
@@ -248,28 +235,21 @@ public:
 		glViewport(0, 0, m_shadowMapSize, m_shadowMapSize);
 
 		// render shadow map
-		/*getPipeline().clearRenderTarget(m_shadowMap, vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX));
-		getPipeline().setRenderTarget(m_shadowMap);
+		m_shadowMap->set();
+		m_shadowMap->clearColorAsFloat(0, vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX));
+		m_shadowMap->clearDepth();
 		if (m_shadowMapRendering->use())
 		{
-			m_shadowMapRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_DATA, m_shadowBuffer);
+			m_shadowMapRendering->setMatrixArray<PSSMAppUniforms>(UF::SHADOWVIEWPROJECTION_MATRICES, m_shadowViewProjection, MAX_SPLITS);
 
-			m_shadowMapRasterizer->apply();
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				renderGeometry(true, m_entityGeometry, m_entitiesData[i]);
 			}
 			renderGeometry(true, m_planeGeometry, m_planeData);
-			m_shadowMapRasterizer->cancel();
 		}
 
-		// set up on-frame data
-		OnFrameDataRaw onFrameData;
-		onFrameData.viewPosition = m_camera.getPosition();
-		onFrameData.splitCount = m_currentSplitCount;
-		m_onFrameDataBuffer->setData(onFrameData);
-		m_onFrameDataBuffer->applyChanges();*/
-
+		// render scene
 		glViewport(0, 0, m_info.windowWidth, m_info.windowHeight);
 		useDefaultRenderTarget();
 
@@ -277,55 +257,52 @@ public:
 		//renderSkybox(m_camera, m_skyboxTexture);
 
 		// render scene
-		/*if (m_sceneRendering->use())
+		if (m_sceneRendering->use())
 		{
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
-
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_DATA, m_shadowBuffer);
-			m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP, m_shadowMap);
+			m_sceneRendering->setVector<PSSMAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());	
+			m_sceneRendering->setInt<PSSMAppUniforms>(UF::SPLIT_COUNT, m_currentSplitCount);
+			m_sceneRendering->setStorageBuffer<PSSMAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
+			m_sceneRendering->setTexture<PSSMAppUniforms>(UF::SHADOW_MAP, m_shadowMap, 0, 0);
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				renderGeometry(false, m_entityGeometry, m_entitiesData[i]);
 			}
-
 			renderGeometry(false, m_planeGeometry, m_planeData);
-		}*/
+		}
 
 		renderDebug();
+
+		//CHECK_GL_ERROR;
 	}
 
 	void renderGeometry(bool shadowmap, const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
 	{
 		if (shadowmap && (!entityData.isShadowCaster || entityData.shadowInstancesCount == 0)) return;
 
-		/*EntityDataRaw entityDataRaw;
-		entityDataRaw.modelViewProjection = entityData.mvp;
-		entityDataRaw.model = entityData.model;
-		memcpy(entityDataRaw.shadowIndices, entityData.shadowIndices, sizeof(unsigned int) * MAX_SPLITS);
-		m_entityDataBuffer->setData(entityDataRaw);
-		m_entityDataBuffer->applyChanges();
-
+		if (shadowmap)
+		{
+			m_shadowMapRendering->setMatrix<PSSMAppUniforms>(UF::MODEL_MATRIX, entityData.model);
+		}
+		else
+		{
+			m_sceneRendering->setMatrix<PSSMAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
+			m_sceneRendering->setMatrix<PSSMAppUniforms>(UF::MODEL_MATRIX, entityData.model);
+			m_sceneRendering->setIntArray<PSSMAppUniforms>(UF::SHADOW_INDICES, (int*)&entityData.shadowIndices[0], MAX_SPLITS);
+		}
+		
 		for (size_t i = 0; i < geometry->getMeshesCount(); i++)
 		{
-			if (shadowmap)
-			{
-				m_shadowMapRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-			}
-			else
+			if (!shadowmap)
 			{
 				auto diffMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_DIFFUSE_MAP);
 				auto normMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_NORMAL_MAP);
-				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, diffMap);
-				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::NORMAL_MAP, normMap);
-
-				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, m_shadowMapSampler);
+				m_sceneRendering->setTexture<PSSMAppUniforms>(UF::DIFFUSE_MAP, diffMap, 1);
+				m_sceneRendering->setTexture<PSSMAppUniforms>(UF::NORMAL_MAP, normMap, 2);
 			}
+
 			geometry->renderMesh(i, shadowmap ? entityData.shadowInstancesCount : 1);
-		}*/
+		}
 	}
 
 	void renderDebug()
@@ -614,11 +591,11 @@ private:
 		matrix44 model;
 		matrix44 mvp;
 		unsigned int shadowInstancesCount;
-		unsigned int shadowIndices[MAX_SPLITS];
+		int shadowIndices[MAX_SPLITS];
 		bool isShadowCaster;
 		EntityData() : isShadowCaster(true), shadowInstancesCount(0)
 		{
-			memset(shadowIndices, 0, sizeof(unsigned int) * MAX_SPLITS);
+			memset(shadowIndices, 0, sizeof(int) * MAX_SPLITS);
 		}
 	};
 	std::shared_ptr<framework::Geometry3D> m_entityGeometry;
