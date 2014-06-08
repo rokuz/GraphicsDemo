@@ -46,17 +46,17 @@ uniform sampler2DArrayShadow shadowMap;
 vec3 getShadowCoords(int splitIndex, vec3 worldPos)
 {
 	vec4 coords = shadowViewProjection[splitIndex] * vec4(worldPos, 1);
-	coords.xy = (coords.xy / coords.ww) * vec2(0.5, -0.5) + vec2(0.5, 0.5);
+	coords.xy = (coords.xy / coords.ww) * vec2(0.5, 0.5) + vec2(0.5, 0.5);
 	return coords.xyz;
 }
 
 float sampleShadowMap(int index, vec3 coords, float bias) 
 { 
-	float receiver = coords.z;
-	vec4 uv = vec4(coords.xy, index, receiver - bias); 
-	//return texture(shadowMap, uv).r; 
+	float receiver = coords.z - bias;
+	vec4 uv = vec4(coords.xy, receiver, float(index));
+	return texture(shadowMap, uv); 
 
-	float sum = 0.0;
+	/*float sum = 0.0;
 	const float step = 1.0 / 1024.0;
 	const int FILTER_SIZE = 3;
 	for (int i = 0; i < FILTER_SIZE; i++)
@@ -66,12 +66,15 @@ float sampleShadowMap(int index, vec3 coords, float bias)
 			sum += texture(shadowMap, uv + step * vec4(i, j, 0, 0)).r;
 		}	
 	}
-	return sum / (FILTER_SIZE * FILTER_SIZE);
+	return sum / (FILTER_SIZE * FILTER_SIZE);*/
 }
 
 float shadow(vec3 worldPos)
 {
-	float shadowValue = 0;
+	vec3 coords = getShadowCoords(0, worldPos);
+	return sampleShadowMap(0, coords, 1.5);
+
+	/*float shadowValue = 0;
 
 	for (int i = 0; i < MAX_SPLITS; i++)
 	{
@@ -82,7 +85,7 @@ float shadow(vec3 worldPos)
 		}
 	}
 		
-	return 1.0 - clamp(shadowValue, 0.0, 1.0);
+	return 1.0 - clamp(shadowValue, 0.0, 1.0);*/
 }
 
 void main()
@@ -101,9 +104,9 @@ void main()
 	{
 		shadowValue = shadow(psinput.worldPos);
 	}
-	//outputColor = vec4(shadowValue, shadowValue, shadowValue, 1);
+	outputColor = vec4(shadowValue, shadowValue, shadowValue, 1);
 		
-	const float SHADOW_INTENSITY = 0.7;
+	/*const float SHADOW_INTENSITY = 0.7;
 	vec3 textureColor = texture(diffuseMap, psinput.uv0).rgb;
 	textureColor = mix(textureColor, textureColor * shadowValue, SHADOW_INTENSITY);
 	vec3 diffuse = textureColor * lightsData[0].diffuseColor * ndol;
@@ -114,5 +117,5 @@ void main()
 	
 	vec3 ambient = textureColor * lightsData[0].ambientColor;
 	
-    outputColor = vec4(clamp(ambient + diffuse + specular, 0, 1), 1);
+    outputColor = vec4(clamp(ambient + diffuse + specular, 0, 1), 1);*/
 }

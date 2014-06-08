@@ -262,7 +262,8 @@ public:
 			m_sceneRendering->setVector<PSSMAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());	
 			m_sceneRendering->setInt<PSSMAppUniforms>(UF::SPLIT_COUNT, m_currentSplitCount);
 			m_sceneRendering->setStorageBuffer<PSSMAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
-			m_sceneRendering->setTexture<PSSMAppUniforms>(UF::SHADOW_MAP, m_shadowMap, 0, 0);
+			m_sceneRendering->setDepth<PSSMAppUniforms>(UF::SHADOW_MAP, m_shadowMap, 0);
+			m_sceneRendering->setMatrixArray<PSSMAppUniforms>(UF::SHADOWVIEWPROJECTION_MATRICES, m_shadowViewProjection, MAX_SPLITS);
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
@@ -283,12 +284,12 @@ public:
 		if (shadowmap)
 		{
 			m_shadowMapRendering->setMatrix<PSSMAppUniforms>(UF::MODEL_MATRIX, entityData.model);
+			m_shadowMapRendering->setIntArray<PSSMAppUniforms>(UF::SHADOW_INDICES, (int*)&entityData.shadowIndices[0], MAX_SPLITS);
 		}
 		else
 		{
 			m_sceneRendering->setMatrix<PSSMAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
 			m_sceneRendering->setMatrix<PSSMAppUniforms>(UF::MODEL_MATRIX, entityData.model);
-			m_sceneRendering->setIntArray<PSSMAppUniforms>(UF::SHADOW_INDICES, (int*)&entityData.shadowIndices[0], MAX_SPLITS);
 		}
 		
 		for (size_t i = 0; i < geometry->getMeshesCount(); i++)

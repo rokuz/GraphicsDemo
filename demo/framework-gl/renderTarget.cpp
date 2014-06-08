@@ -370,11 +370,12 @@ void RenderTarget::copyColorToBackBuffer()
 
 void RenderTarget::setShadowMapCompareMode(size_t index)
 {
-	if (index < 0 || index >= (int)m_colorBuffers.size()) return;
+	//if (index < 0 || index >= (int)m_colorBuffers.size()) return;
 
 	const float BORDER_COLOR[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glBindTexture(m_target, m_colorBuffers[index]);
-	glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glBindTexture(m_target, m_depthBuffer);
+	//glBindTexture(m_target, m_colorBuffers[index]);
+	glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(m_target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 	glTexParameteri(m_target, GL_TEXTURE_COMPARE_FUNC, GL_LESS);

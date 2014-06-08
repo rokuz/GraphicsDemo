@@ -175,7 +175,7 @@ void Geometry3D::renderMesh(size_t index, size_t instancesCount)
 	}
 	else
 	{
-		glDrawElementsInstanced(GL_TRIANGLES, instancesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[index].offsetInIB * sizeof(unsigned int)), (int)m_meshes[index].indicesCount);
+		glDrawElementsInstanced(GL_TRIANGLES, (int)m_meshes[index].indicesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[index].offsetInIB * sizeof(unsigned int)), instancesCount);
 	}	
 }
 
@@ -194,7 +194,7 @@ void Geometry3D::renderAllMeshes(size_t instancesCount)
 		}
 		else
 		{
-			glDrawElementsInstanced(GL_TRIANGLES, instancesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[i].offsetInIB * sizeof(unsigned int)), (int)m_meshes[i].indicesCount);
+			glDrawElementsInstanced(GL_TRIANGLES, (int)m_meshes[i].indicesCount, GL_UNSIGNED_INT, (const GLvoid *)(m_meshes[i].offsetInIB * sizeof(unsigned int)), instancesCount);
 		}
 	}
 }
