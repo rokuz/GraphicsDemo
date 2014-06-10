@@ -128,11 +128,11 @@ public:
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_INDICES, "shadowIndices");
 
 		// entity
-		m_entityGeometry = initEntity("data/media/cube/cube.geom");
+		m_entityGeometry = initEntity("data/media/windmill/windmill.geom");
 
-		const int ENTITIES_IN_ROW = 6;
+		const int ENTITIES_IN_ROW = 2;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
-		const float AREA_HALFLENGTH = 100.0f;
+		const float AREA_HALFLENGTH = 150.0f;
 		m_entitiesData.resize(ENTITIES_IN_ROW * ENTITIES_IN_ROW);
 		for (int i = 0; i < ENTITIES_IN_ROW; i++)
 		{
@@ -157,8 +157,14 @@ public:
 		initLights();
 
 		// skybox texture
-		//m_skyboxTexture.reset(new framework::Texture());
-		//if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
+		m_skyboxTexture.reset(new framework::Texture());
+		m_skyboxTexture.reset(new framework::Texture());
+		if (!m_skyboxTexture->initAsCubemap("data/media/textures/meadow_front.jpg",
+											"data/media/textures/meadow_back.jpg",
+											"data/media/textures/meadow_left.jpg",
+											"data/media/textures/meadow_right.jpg",
+											"data/media/textures/meadow_top.jpg",
+											"data/media/textures/meadow_bottom.jpg", true)) exit();
 
 		framework::DepthState depthTestEnable(true);
 		depthTestEnable.setWriteEnable(true);
@@ -269,7 +275,7 @@ public:
 		useDefaultRenderTarget();
 
 		// render skybox
-		//renderSkybox(m_camera, m_skyboxTexture);
+		renderSkybox(m_camera, m_skyboxTexture);
 
 		// render scene
 		if (m_sceneRendering->use())

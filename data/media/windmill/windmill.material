@@ -1,0 +1,7 @@
+[
+   {
+      "diffuseMap" : "windmill_diffuse",
+      "normalMap" : "windmill_normal",
+      "specularMap" : "windmill_spec"
+   }
+]
