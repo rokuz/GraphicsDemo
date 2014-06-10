@@ -11,8 +11,6 @@ in VS_OUTPUT
 	flat int instanceID;
 } gsinput[];
 
-out float outputDepth;
-
 uniform int shadowIndices[MAX_SPLITS];
 
 void main()
@@ -21,7 +19,6 @@ void main()
 	{
 		gl_Position = gl_in[i].gl_Position;
 		gl_Layer = shadowIndices[gsinput[i].instanceID];
-		outputDepth = gsinput[i].depth;
 		EmitVertex();
 	}
 	EndPrimitive();

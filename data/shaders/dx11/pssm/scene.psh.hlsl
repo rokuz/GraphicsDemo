@@ -67,7 +67,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	// a kind of elimination of double shading
 	float shadowValue = shadow(input.worldPos);
-	shadowValue = lerp(ndol, shadowValue, ndol);
+	shadowValue = lerp(1, shadowValue, ndol);
 	//return float4(shadowValue, shadowValue, shadowValue, 1);
 		
 	const float SHADOW_INTENSITY = 0.7;

@@ -6,8 +6,7 @@ set(SOURCE_OGL main_ogl.cpp)
 set(SHADERS_OGL ${SHADERS_DIR_OGL}/scene.vsh.glsl
 				${SHADERS_DIR_OGL}/scene.fsh.glsl
 				${SHADERS_DIR_OGL}/shadowmap.vsh.glsl
-				${SHADERS_DIR_OGL}/shadowmap.gsh.glsl
-				${SHADERS_DIR_OGL}/shadowmap.fsh.glsl)
+				${SHADERS_DIR_OGL}/shadowmap.gsh.glsl)
 
 # Direct3D 11
 set(SHADERS_DIR_DX11 ${CMAKE_CURRENT_SOURCE_DIR}/../../../data/shaders/dx11/pssm)				

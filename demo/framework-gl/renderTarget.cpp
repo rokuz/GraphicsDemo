@@ -134,6 +134,8 @@ bool RenderTarget::initFramebuffer()
 
 void RenderTarget::initColorBuffers()
 {
+	if (std::find(m_formats.begin(), m_formats.end(), -1) != m_formats.end()) return;
+
 	m_colorBuffers.resize(m_formats.size());
 	glGenTextures(m_formats.size(), m_colorBuffers.data());
 
@@ -215,14 +217,14 @@ void RenderTarget::destroy()
 	m_isInitialized = false;
 }
 
-int RenderTarget::getColorBuffer(int index)
+int RenderTarget::getColorBuffer(int index) const
 {
 	if (!m_isInitialized) return -1;
 	if (index < 0 || index >= (int)m_colorBuffers.size()) return -1;
 	return m_colorBuffers[index];
 }
 
-int RenderTarget::getDepthBuffer()
+int RenderTarget::getDepthBuffer() const
 {
 	if (!m_isInitialized) return -1;
 	if (!m_isUsedDepth) return -1;
@@ -234,7 +236,15 @@ void RenderTarget::set()
 	if (!m_isInitialized) return;
 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferObject);
-	glDrawBuffers(m_colorBuffers.size(), COLOR_ATTACHMENTS);
+	if (!m_colorBuffers.empty())
+	{
+		glDrawBuffers(m_colorBuffers.size(), COLOR_ATTACHMENTS);
+	}
+	else
+	{
+		glDrawBuffer(GL_NONE);
+	}
+	
 	CHECK_GL_ERROR;
 }
 
@@ -368,21 +378,9 @@ void RenderTarget::copyColorToBackBuffer()
 	CHECK_GL_ERROR;
 }
 
-void RenderTarget::setShadowMapCompareMode(size_t index)
+int RenderTarget::getTargetType() const
 {
-	//if (index < 0 || index >= (int)m_colorBuffers.size()) return;
-
-	const float BORDER_COLOR[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glBindTexture(m_target, m_depthBuffer);
-	//glBindTexture(m_target, m_colorBuffers[index]);
-	glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(m_target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glTexParameteri(m_target, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
-	glTexParameteri(m_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	glTexParameterfv(m_target, GL_TEXTURE_BORDER_COLOR, BORDER_COLOR);
-	glBindTexture(m_target, 0);
+	return m_target;
 }
 
 }

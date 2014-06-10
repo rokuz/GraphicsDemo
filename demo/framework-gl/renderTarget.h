@@ -38,8 +38,9 @@ public:
 	bool init(int width, int height, const std::vector<GLint>& formats, int samples = 0, GLint depthFormat = -1);
 	bool initArray(int arraySize, int width, int height, GLint format, int samples = 0, GLint depthFormat = -1);
 
-	int getColorBuffer(int index = 0);
-	int getDepthBuffer();
+	int getColorBuffer(int index = 0) const;
+	int getDepthBuffer() const;
+	int getTargetType() const;
 
 	void bind(int index);
 	void bindDepth();
@@ -51,8 +52,6 @@ public:
 	void clearDepth(float depth = 1.0f);
 	void copyDepthToCurrentDepthBuffer(int samplesCount = 0);
 	void copyColorToBackBuffer();
-
-	void setShadowMapCompareMode(size_t index);
 
 private:
 	virtual void destroy();

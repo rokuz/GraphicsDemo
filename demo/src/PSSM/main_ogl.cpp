@@ -11,7 +11,8 @@ DECLARE_UNIFORMS_BEGIN(PSSMAppUniforms)
 	SHADOWVIEWPROJECTION_MATRICES,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
-	SHADOW_MAP
+	SHADOW_MAP,
+	SHADOW_BLUR_STEP
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<PSSMAppUniforms>::Uniform
 
@@ -35,9 +36,12 @@ public:
 		m_splitLambda = 0.5f;
 		m_farPlane = 0;
 		m_splitShift = 10;
+		m_shadowBlurStep = 1.0f / float(m_shadowMapSize);
+		m_furthestPointInCamera = 0;
 
 		m_renderDebug = false;
-		m_furthestPointInCamera = 0;
+		m_increaseBlurStep = false;
+		m_decreaseBlurStep = false;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
@@ -64,6 +68,8 @@ public:
 		if (m_splitCount > 1) m_maxSplitDistances.resize(m_splitCount - 1);
 		m_currentSplitCount = m_splitCount;
 
+		m_shadowBlurStep = 1.0f / float(m_shadowMapSize);
+
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 
 	#if PROFILING
@@ -83,10 +89,19 @@ public:
 		// overlays
 		initOverlays(root);
 
-		// shadow map
+		// shadow map (depth only)
 		m_shadowMap.reset(new framework::RenderTarget());
-		if (!m_shadowMap->initArray(m_splitCount, m_shadowMapSize, m_shadowMapSize, GL_R32F, 0, GL_DEPTH_COMPONENT32F)) exit();
-		m_shadowMap->setShadowMapCompareMode(0);
+		if (!m_shadowMap->initArray(m_splitCount, m_shadowMapSize, m_shadowMapSize, -1, 0, GL_DEPTH_COMPONENT32F)) exit();
+		const float BORDER_COLOR[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		glBindTexture(m_shadowMap->getTargetType(), m_shadowMap->getDepthBuffer());
+		glTexParameteri(m_shadowMap->getTargetType(), GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(m_shadowMap->getTargetType(), GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(m_shadowMap->getTargetType(), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTexParameteri(m_shadowMap->getTargetType(), GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+		glTexParameteri(m_shadowMap->getTargetType(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(m_shadowMap->getTargetType(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameterfv(m_shadowMap->getTargetType(), GL_TEXTURE_BORDER_COLOR, BORDER_COLOR);
+		glBindTexture(m_shadowMap->getTargetType(), 0);
 
 		// gpu programs
 		m_sceneRendering.reset(new framework::GpuProgram());
@@ -102,11 +117,11 @@ public:
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_MAP, "shadowMap");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_BLUR_STEP, "shadowBlurStep");
 
 		m_shadowMapRendering.reset(new framework::GpuProgram());
 		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.vsh.glsl");
 		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.gsh.glsl");
-		m_shadowMapRendering->addShader(SHADERS_PATH + "shadowmap.fsh.glsl");
 		if (!m_shadowMapRendering->init()) exit();
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::SHADOWVIEWPROJECTION_MATRICES, "shadowViewProjection");
@@ -264,6 +279,7 @@ public:
 			m_sceneRendering->setStorageBuffer<PSSMAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 			m_sceneRendering->setDepth<PSSMAppUniforms>(UF::SHADOW_MAP, m_shadowMap, 0);
 			m_sceneRendering->setMatrixArray<PSSMAppUniforms>(UF::SHADOWVIEWPROJECTION_MATRICES, m_shadowViewProjection, MAX_SPLITS);
+			m_sceneRendering->setFloat<PSSMAppUniforms>(UF::SHADOW_BLUR_STEP, m_shadowBlurStep);
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
@@ -354,6 +370,16 @@ public:
 			m_debugLabel->setVisible(m_renderDebug);
 			return;
 		}
+		if (key == InputKeys::Equals)
+		{
+			m_increaseBlurStep = pressed;
+			return;
+		}
+		else if (key == InputKeys::Minus)
+		{
+			m_decreaseBlurStep = pressed;
+			return;
+		}
 	#if PROFILING
 		if (key == InputKeys::P && pressed)
 		{
@@ -402,6 +428,19 @@ public:
 			bbox3 box = calculateFrustumBox(n, f);
 			m_shadowViewProjection[i] = calculateShadowViewProjection(box);
 			updateShadowVisibilityMask(box, i);
+		}
+
+		if (m_increaseBlurStep)
+		{
+			m_shadowBlurStep += 2.0f * float(elapsedTime) / float(m_shadowMapSize);
+			const float MAX_SHADOW_BLUR = 10.0f / float(m_shadowMapSize);
+			if (m_shadowBlurStep > MAX_SHADOW_BLUR) m_shadowBlurStep = MAX_SHADOW_BLUR;
+		}
+		else if (m_decreaseBlurStep)
+		{
+			m_shadowBlurStep -= 2.0f * float(elapsedTime) / float(m_shadowMapSize);
+			const float MIN_SHADOW_BLUR = 1.0f / float(m_shadowMapSize);
+			if (m_shadowBlurStep < MIN_SHADOW_BLUR) m_shadowBlurStep = MIN_SHADOW_BLUR;
 		}
 	}
 
@@ -622,9 +661,12 @@ private:
 	std::vector<float> m_splitDistances;
 	float m_furthestPointInCamera;
 	matrix44 m_shadowViewProjection[MAX_SPLITS];
+	float m_shadowBlurStep;
 
 	bool m_renderDebug;
 	gui::LabelPtr_T m_debugLabel;
+	bool m_increaseBlurStep;
+	bool m_decreaseBlurStep;
 
 	std::shared_ptr<framework::Texture> m_skyboxTexture;
 };
