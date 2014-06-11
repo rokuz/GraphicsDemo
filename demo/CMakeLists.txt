@@ -63,6 +63,7 @@ endif()
 add_subdirectory(mathlib)
 add_subdirectory(utils)
 add_subdirectory(json)
+add_subdirectory(ptg)
 add_subdirectory(geomlib)
 add_subdirectory(guilib)
 
