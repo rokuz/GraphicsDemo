@@ -106,6 +106,24 @@ bool Geometry3D::initAsPlane(const geom::PlaneGenerationInfo& info)
 	return init(data);
 }
 
+bool Geometry3D::initAsTerrain(const geom::TerrainGenerationInfo& info)
+{
+	destroy();
+
+	geom::TerrainGenerator generator;
+	generator.setTerrainGenerationInfo(info);
+
+	geom::Data data = generator.generate();
+	if (!data.isCorrect())
+	{
+		m_isLoaded = false;
+		utils::Logger::toLog("Error: could not create a terrain.\n");
+		return m_isLoaded;
+	}
+
+	return init(data);
+}
+
 bool Geometry3D::init(const geom::Data& data)
 {
 	m_boundingBox = data.getBoundingBox();

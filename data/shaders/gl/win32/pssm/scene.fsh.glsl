@@ -42,6 +42,7 @@ uniform float shadowBlurStep;
 
 uniform sampler2D diffuseMap;
 uniform sampler2D normalMap;
+uniform sampler2D specularMap;
 uniform sampler2DArrayShadow shadowMap;
 
 vec3 getShadowCoords(int splitIndex, vec3 worldPos)
@@ -55,6 +56,7 @@ float sampleShadowMap(int index, vec3 coords, float bias)
 { 
 	float receiver = coords.z - bias;
 	vec4 uv = vec4(coords.xy, float(index), receiver);
+	if (coords.x < 0 || coords.x > 1 || coords.y < 0 || coords.y > 1) return 1.0f;
 	//return texture(shadowMap, uv); 
 
 	float sum = 0.0;
@@ -109,7 +111,8 @@ void main()
 	
 	vec3 viewDirection = normalize(psinput.worldPos - viewPosition);
 	vec3 h = normalize(viewDirection + lightsData[0].direction);
-	vec3 specular = lightsData[0].specularColor * pow(max(dot(normal, h), 0.0), SPEC_POWER) * shadowValue;
+	vec3 specColor = texture(specularMap, psinput.uv0).rgb;
+	vec3 specular = specColor * lightsData[0].specularColor * pow(max(dot(normal, h), 0.0), SPEC_POWER) * shadowValue;
 	
 	vec3 ambient = textureColor * lightsData[0].ambientColor;
 	

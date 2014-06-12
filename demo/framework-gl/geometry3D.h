@@ -26,6 +26,7 @@
 
 #include "geometry.h"
 #include "planegenerator.h"
+#include "terraingenerator.h"
 
 namespace framework
 {
@@ -41,6 +42,7 @@ public:
     virtual ~Geometry3D();
 	
 	bool init(const std::string& fileName);
+	bool initAsTerrain(const geom::TerrainGenerationInfo& info);
     bool initAsPlane(const geom::PlaneGenerationInfo& info);
 
     size_t getMeshesCount() const;

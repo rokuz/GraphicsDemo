@@ -471,6 +471,36 @@ void Texture::bind()
 	glBindTexture(m_target, m_texture);
 }
 
+std::vector<unsigned char> LoadHeightmapData(const std::string& fileName, unsigned int& width, unsigned int& height)
+{
+	ImageInfo info;
+	if (!gatherImageInfo(info, fileName))
+	{
+		utils::Logger::toLogWithFormat("Error: could not get image info from the file '%s'.\n", fileName.c_str());
+		if (info.dib != 0) FreeImage_Unload(info.dib);
+		return std::vector<unsigned char>();
+	}
+
+	size_t bufSize = info.width * info.height;
+	std::vector<unsigned char> buffer;
+	buffer.resize(bufSize);
+	size_t bytesPP = info.bpp / 8;
+	for (size_t i = 0; i < bufSize; i++)
+	{
+		buffer[i] = info.data[i * bytesPP];
+	}
+
+	if (info.dib != 0)
+	{
+		FreeImage_Unload(info.dib);
+	}
+
+	width = info.width;
+	height = info.height;
+
+	return buffer;
+}
+
 void SaveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture)
 {
 	if (!texture) return;

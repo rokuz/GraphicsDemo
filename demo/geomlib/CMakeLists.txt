@@ -17,6 +17,8 @@ set(SOURCE_LIB 	geometryloader.h
 				planegenerator.cpp
 				geometrygenerator.h
 				geometrygenerator.cpp
+				terraingenerator.h
+				terraingenerator.cpp
 )
 IF (USE_FBX)
 set (SOURCE_LIB ${SOURCE_LIB} fbxloader.h fbxloader.cpp)

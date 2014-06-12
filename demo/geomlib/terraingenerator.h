@@ -21,38 +21,43 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma warning(disable:4996)
-
-#include <list>
-#include <map>
-#include <vector>
-#include <memory>
-#include <string>
-#include <algorithm>
-
-#include "vector.h"
-#include "bbox.h"
-
-#include "utils.h"
-
-#include "geomformat.h"
-#include "data.h"
-
-#include "geometrysaver.h"
-#include "geometryloader.h"
-
-#include "geomsaver.h"
-#include "geomloader.h"
-#ifdef _USE_FBX
-#include <fbxsdk.h>
-#include "fbxloader.h"
-#endif
+#ifndef __TERRAIN_GENERATOR_H__
+#define __TERRAIN_GENERATOR_H__
 
 #include "geometrygenerator.h"
-#include "planegenerator.h"
-#include "terraingenerator.h"
 
-#include "geometry.h"
+namespace geom
+{
 
-#undef min
-#undef max
+struct TerrainGenerationInfo
+{
+	vector3 size;
+	vector2 uvSize;
+	std::vector<unsigned char> heightmap;
+	size_t heightmapWidth;
+	size_t heightmapHeight;
+
+	TerrainGenerationInfo() : size(10.0f, 10.0f, 2.0f), uvSize(1.0f, 1.0f){}
+};
+
+class TerrainGenerator : public GeometryGenerator
+{
+public:
+	TerrainGenerator(){}
+	virtual ~TerrainGenerator(){}
+
+	void setTerrainGenerationInfo(const TerrainGenerationInfo& info);
+	virtual Data generate();
+
+private:
+	TerrainGenerationInfo m_info;
+	int m_terrainWidth;
+	int m_terrainHeight;
+
+	vector3 getPoint(int x, int y);
+	void calculateTangentSpace(int x, int y, vector3& normal, vector3& tangent, vector3& binormal);
+};
+
+}
+
+#endif

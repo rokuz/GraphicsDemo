@@ -37,7 +37,6 @@ public:
     Texture();
 	virtual ~Texture();
     
-    
 	bool init(const std::string& fileName);
 	bool initWithData(GLint format, const unsigned char* buffer, size_t width, size_t height, bool mipmaps = false, int pixelFormat = -1);
 	bool initAsCubemap(const std::string& frontFilename, const std::string& backFilename,
@@ -54,7 +53,7 @@ public:
 	size_t getHeight() const { return m_height; }
 	int getFormat() const { return m_format; }
 	int getPixelFormat() const { return m_pixelFormat; }
-    
+
     class Loader
     {
     public:
@@ -79,6 +78,7 @@ private:
 	virtual void destroy();
 };
 
+std::vector<unsigned char> LoadHeightmapData(const std::string& fileName, unsigned int& width, unsigned int& height);
 void SaveTextureToPng(const std::string& filename, std::shared_ptr<Texture> texture);
 
 }

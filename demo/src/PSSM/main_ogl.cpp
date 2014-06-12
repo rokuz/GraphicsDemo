@@ -11,6 +11,7 @@ DECLARE_UNIFORMS_BEGIN(PSSMAppUniforms)
 	SHADOWVIEWPROJECTION_MATRICES,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
+	SPECULAR_MAP,
 	SHADOW_MAP,
 	SHADOW_BLUR_STEP
 DECLARE_UNIFORMS_END()
@@ -35,7 +36,7 @@ public:
 		m_currentSplitCount = m_splitCount;
 		m_splitLambda = 0.5f;
 		m_farPlane = 0;
-		m_splitShift = 10;
+		m_splitShift = 20;
 		m_shadowBlurStep = 1.0f / float(m_shadowMapSize);
 		m_furthestPointInCamera = 0;
 
@@ -85,6 +86,7 @@ public:
 	{
 		// camera
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(158.0f, 22.0f, -161.0f), vector3(157.27f, 22.0f, -160.32f));
+		m_camera.getInternalCamera().SetFarPlane(2500.0f);
 
 		// overlays
 		initOverlays(root);
@@ -116,6 +118,7 @@ public:
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOWVIEWPROJECTION_MATRICES, "shadowViewProjection");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_MAP, "shadowMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_BLUR_STEP, "shadowBlurStep");
 
@@ -131,34 +134,41 @@ public:
 		m_windmillGeometry = initEntity("data/media/windmill/windmill.geom");
 		m_houseGeometry = initEntity("data/media/house/house.geom");
 
-		geom::PlaneGenerationInfo planeInfo;
-		planeInfo.size = vector2(1000.0f, 1000.0f);
-		planeInfo.uvSize = vector2(50.0f, 50.0f);
-		m_planeGeometry = initEntity(planeInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds");
+		geom::TerrainGenerationInfo terrainInfo;
+		terrainInfo.heightmap = framework::LoadHeightmapData("data/media/textures/heightmap1.png", terrainInfo.heightmapWidth, terrainInfo.heightmapHeight);
+		terrainInfo.size = vector3(5000.0f, 5000.0f, 500.0f);
+		terrainInfo.uvSize = vector2(200.0f, 200.0f);
+		m_terrainGeometry = initEntity(terrainInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds", "data/media/textures/no_specular.png");
 
 		// entities
-		const int ENTITIES_IN_ROW = 2;
-		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
-		const float AREA_HALFLENGTH = 150.0f;
-		m_entitiesData.resize(ENTITIES_IN_ROW * ENTITIES_IN_ROW);
-		for (int i = 0; i < ENTITIES_IN_ROW; i++)
+		vector3 GROUP_OFFSET[] = { vector3(0, 0, 0), vector3(-1000, 130, 600), vector3(0, -4, 900) };
+		for (int k = 0; k < sizeof(GROUP_OFFSET) / sizeof(GROUP_OFFSET[0]); k++)
 		{
-			for (int j = 0; j < ENTITIES_IN_ROW; j++)
+			const int ENTITIES_IN_ROW = 2;
+			const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
+			const float AREA_HALFLENGTH = 150.0f;
+			
+			for (int i = 0; i < ENTITIES_IN_ROW; i++)
 			{
-				int index = i * ENTITIES_IN_ROW + j;
-				float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
-				float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+				for (int j = 0; j < ENTITIES_IN_ROW; j++)
+				{
+					float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+					float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
 
-				m_entitiesData[index].geometry = ((i == 1 && j == 1) ? m_windmillGeometry : m_houseGeometry);
-				m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 5.0f, z * AREA_HALFLENGTH));
+					m_entitiesData.push_back(EntityData());
+					int index = (int)m_entitiesData.size() - 1;
+					m_entitiesData[index].geometry = ((i == 1 && j == 1) ? m_windmillGeometry : m_houseGeometry);
+					m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 5.0f, z * AREA_HALFLENGTH));
+					m_entitiesData[index].model.pos_component() += GROUP_OFFSET[k];
+				}
 			}
 		}
 
-		EntityData planeData;
-		planeData.geometry = m_planeGeometry;
-		planeData.model.ident();
-		planeData.isShadowCaster = false;
-		m_entitiesData.push_back(planeData);
+		EntityData terrainData;
+		terrainData.geometry = m_terrainGeometry;
+		terrainData.model.ident();
+		terrainData.isShadowCaster = false;
+		m_entitiesData.push_back(terrainData);
 		
 		// lights
 		initLights();
@@ -183,18 +193,18 @@ public:
 		glViewport(0, 0, m_info.windowWidth, m_info.windowHeight);
 	}
 
-	std::shared_ptr<framework::Geometry3D> initEntity(const geom::PlaneGenerationInfo& planeInfo, const std::string& diffuseMap, const std::string& normalMap)
+	std::shared_ptr<framework::Geometry3D> initEntity(const geom::TerrainGenerationInfo& terrainInfo, const std::string& diffuseMap, const std::string& normalMap, const std::string& specularMap)
 	{
 		std::shared_ptr<framework::Geometry3D> ent(new framework::Geometry3D());
-		if (!ent->initAsPlane(planeInfo)) 
+		if (!ent->initAsTerrain(terrainInfo))
 		{
 			exit();
 		}
 		else
 		{
-			framework::MaterialManager::instance().initializeMaterial(ent, diffuseMap, normalMap, "");
+			framework::MaterialManager::instance().initializeMaterial(ent, diffuseMap, normalMap, specularMap);
 		}
-		
+
 		return std::move(ent);
 	}
 
@@ -327,8 +337,10 @@ public:
 			{
 				auto diffMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_DIFFUSE_MAP);
 				auto normMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_NORMAL_MAP);
+				auto specMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_SPECULAR_MAP);
 				m_sceneRendering->setTexture<PSSMAppUniforms>(UF::DIFFUSE_MAP, diffMap, 1);
 				m_sceneRendering->setTexture<PSSMAppUniforms>(UF::NORMAL_MAP, normMap, 2);
+				m_sceneRendering->setTexture<PSSMAppUniforms>(UF::SPECULAR_MAP, specMap, 3);
 			}
 
 			geometry->renderMesh(i, shadowmap ? entityData.shadowInstancesCount : 1);
@@ -517,7 +529,7 @@ public:
 
 	matrix44 calculateShadowViewProjection(const bbox3& frustumBox)
 	{
-		const float LIGHT_SOURCE_HEIGHT = 200.0f;
+		const float LIGHT_SOURCE_HEIGHT = 500.0f;
 
 		vector3 viewDir = m_camera.getOrientation().z_direction();
 		vector3 size = frustumBox.size();
@@ -534,7 +546,7 @@ public:
 
 		matrix44 shadowProj;	
 		float d = std::max(size.x, size.z);
-		shadowProj.orthoRh(d, d, 0.1f, 1000.0f);
+		shadowProj.orthoRh(d, d, 0.1f, 2000.0f);
 
 		return shadowView * shadowProj;
 	}
@@ -623,7 +635,7 @@ private:
 
 	std::shared_ptr<framework::Geometry3D> m_houseGeometry;
 	std::shared_ptr<framework::Geometry3D> m_windmillGeometry;
-	std::shared_ptr<framework::Geometry3D> m_planeGeometry;
+	std::shared_ptr<framework::Geometry3D> m_terrainGeometry;
 
 	struct EntityData
 	{
