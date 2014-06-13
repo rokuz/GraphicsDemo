@@ -113,6 +113,8 @@ int Application::run(Application* self, const std::string& commandLine)
 		return EXIT_FAILURE;
 	}
 
+	Texture::init();
+
 	// init other subsystems
 	if (!StandardGpuPrograms::init() || !initGui())
 	{
@@ -122,6 +124,7 @@ int Application::run(Application* self, const std::string& commandLine)
 	}
 	initAxes();
 	m_lightManager.init();
+	
 
 	// user-defined initialization
 	startup(gui::UIManager::instance().root());
@@ -134,6 +137,7 @@ int Application::run(Application* self, const std::string& commandLine)
 	destroyAllDestroyable();
 	destroyGui();
 	destroyD3D11();
+	Texture::cleanup();
 	m_window.destroy();
 	
 	return EXIT_SUCCESS;

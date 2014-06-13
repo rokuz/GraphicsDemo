@@ -66,7 +66,7 @@ float sampleShadowMap(int index, vec3 coords, float bias)
 	{
 		for (int j = 0; j < FILTER_SIZE; j++)
 		{
-			vec2 offset = shadowBlurStep * (vec2(i, j) - HALF_FILTER_SIZE) / float(FILTER_SIZE);
+			vec2 offset = shadowBlurStep * (vec2(i, j) - HALF_FILTER_SIZE) / HALF_FILTER_SIZE;
 			sum += texture(shadowMap, uv + vec4(offset, 0, 0));
 		}	
 	}

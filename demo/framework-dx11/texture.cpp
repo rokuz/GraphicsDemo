@@ -25,9 +25,65 @@
 #include "texture.h"
 
 #include "dds/DDSTextureLoader.h"
+#include <FreeImage.h>
 
 namespace framework
 {
+
+struct ImageInfo
+{
+	FIBITMAP* dib;
+	BYTE* data;
+	DWORD width;
+	DWORD height;
+	unsigned int bpp;
+	ImageInfo() : dib(0), data(0), width(0), height(0), bpp(0) {}
+};
+
+namespace
+{
+	void freeImageOutput(FREE_IMAGE_FORMAT fif, const char *msg)
+	{
+		utils::Logger::toLogWithFormat("FreeImage: %s.\n", msg);
+	}
+
+	bool gatherImageInfo(ImageInfo& info, const std::string& fileName)
+	{
+		if (!utils::Utils::exists(fileName))
+		{
+			utils::Logger::toLogWithFormat("Error: file '%s' has not been found.\n", fileName.c_str());
+			return false;
+		}
+
+		FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+		fif = FreeImage_GetFileType(fileName.c_str(), 0);
+		if (fif == FIF_UNKNOWN)
+		{
+			fif = FreeImage_GetFIFFromFilename(fileName.c_str());
+		}
+		if (fif == FIF_UNKNOWN)
+		{
+			utils::Logger::toLogWithFormat("Error: format of file '%s' is unknown.\n", fileName.c_str());
+			return false;
+		}
+
+		info.dib = FreeImage_Load(fif, fileName.c_str());
+		if (info.dib == 0)
+		{
+			utils::Logger::toLogWithFormat("Error: could not load file '%s'.\n", fileName.c_str());
+			return false;
+		}
+
+		FreeImage_FlipVertical(info.dib);
+
+		info.data = FreeImage_GetBits(info.dib);
+		info.width = FreeImage_GetWidth(info.dib);
+		info.height = FreeImage_GetHeight(info.dib);
+		info.bpp = FreeImage_GetBPP(info.dib);
+
+		return true;
+	}
+}
 
 class DdsLoader : public Texture::Loader
 {
@@ -102,6 +158,17 @@ Texture::Texture() :
 Texture::~Texture()
 {
 	destroy();
+}
+
+void Texture::init()
+{
+	FreeImage_Initialise();
+	FreeImage_SetOutputMessage(freeImageOutput);
+}
+
+void Texture::cleanup()
+{
+	FreeImage_DeInitialise();
 }
 
 bool Texture::initWithDDS(const std::string& fileName)
@@ -207,6 +274,36 @@ ID3D11Resource* Texture::getResource() const
 		return m_texture3D;
 
 	return 0;
+}
+
+std::vector<unsigned char> LoadHeightmapData(const std::string& fileName, unsigned int& width, unsigned int& height)
+{
+	ImageInfo info;
+	if (!gatherImageInfo(info, fileName))
+	{
+		utils::Logger::toLogWithFormat("Error: could not get image info from the file '%s'.\n", fileName.c_str());
+		if (info.dib != 0) FreeImage_Unload(info.dib);
+		return std::vector<unsigned char>();
+	}
+
+	size_t bufSize = info.width * info.height;
+	std::vector<unsigned char> buffer;
+	buffer.resize(bufSize);
+	size_t bytesPP = info.bpp / 8;
+	for (size_t i = 0; i < bufSize; i++)
+	{
+		buffer[i] = info.data[i * bytesPP];
+	}
+
+	if (info.dib != 0)
+	{
+		FreeImage_Unload(info.dib);
+	}
+
+	width = info.width;
+	height = info.height;
+
+	return buffer;
 }
 
 }

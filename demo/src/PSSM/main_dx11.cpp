@@ -9,6 +9,7 @@ DECLARE_UNIFORMS_BEGIN(PSSMAppUniforms)
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SHADOW_MAP,
+	SPECULAR_MAP,
 	DEFAULT_SAMPLER,
 	SHADOW_MAP_SAMPLER
 DECLARE_UNIFORMS_END()
@@ -35,6 +36,10 @@ struct OnFrameDataRaw
 {
 	vector3 viewPosition;
 	int splitCount;
+	float shadowBlurStep;
+	unsigned int : 32;
+	unsigned int : 32;
+	unsigned int : 32;
 };
 #pragma pack (pop)
 
@@ -60,10 +65,13 @@ public:
 		m_currentSplitCount = m_splitCount;
 		m_splitLambda = 0.5f;
 		m_farPlane = 0;
-		m_splitShift = 10;
+		m_splitShift = 20;
+		m_shadowBlurStep = 1.0f / float(m_shadowMapSize);
+		m_furthestPointInCamera = 0;
 
 		m_renderDebug = false;
-		m_furthestPointInCamera = 0;
+		m_increaseBlurStep = false;
+		m_decreaseBlurStep = false;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
@@ -90,6 +98,8 @@ public:
 		if (m_splitCount > 1) m_maxSplitDistances.resize(m_splitCount - 1);
 		m_currentSplitCount = m_splitCount;
 
+		m_shadowBlurStep = 1.0f / float(m_shadowMapSize);
+
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
 
 	#if PROFILING
@@ -104,7 +114,8 @@ public:
 	virtual void startup(gui::WidgetPtr_T root)
 	{
 		// camera
-		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(0, 50, -100), vector3());
+		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(158.0f, 22.0f, -161.0f), vector3(157.27f, 22.0f, -160.32f));
+		m_camera.getInternalCamera().SetFarPlane(2500.0f);
 
 		// overlays
 		initOverlays(root);
@@ -126,6 +137,7 @@ public:
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_DATA, "shadowData");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::NORMAL_MAP, "normalMap");
+		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_MAP, "shadowMap");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 		m_sceneRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, "shadowMapSampler");
@@ -138,38 +150,59 @@ public:
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::SHADOW_DATA, "shadowData");
 		m_shadowMapRendering->bindUniform<PSSMAppUniforms>(UF::ENTITY_DATA, "entityData");
 
-		// entity
-		m_entityGeometry = initEntity("data/media/house/house.geom");
-		m_entityGeometry->bindToGpuProgram(m_sceneRendering);
-		m_entityGeometry->bindToGpuProgram(m_shadowMapRendering);
+		// geometry
+		m_windmillGeometry = initEntity("data/media/windmill/windmill.geom");
+		m_windmillGeometry->bindToGpuProgram(m_sceneRendering);
+		m_windmillGeometry->bindToGpuProgram(m_shadowMapRendering);
 
-		const int ENTITIES_IN_ROW = 2;
-		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
-		const float AREA_HALFLENGTH = 150.0f;
-		m_entitiesData.resize(ENTITIES_IN_ROW * ENTITIES_IN_ROW);
-		for (int i = 0; i < ENTITIES_IN_ROW; i++)
+		m_houseGeometry = initEntity("data/media/house/house.geom");
+		m_houseGeometry->bindToGpuProgram(m_sceneRendering);
+		m_houseGeometry->bindToGpuProgram(m_shadowMapRendering);
+
+		geom::TerrainGenerationInfo terrainInfo;
+		terrainInfo.heightmap = framework::LoadHeightmapData("data/media/textures/heightmap1.png", terrainInfo.heightmapWidth, terrainInfo.heightmapHeight);
+		terrainInfo.size = vector3(5000.0f, 5000.0f, 500.0f);
+		terrainInfo.uvSize = vector2(200.0f, 200.0f);
+		m_terrainGeometry = initEntity(terrainInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds", "data/media/textures/no_specular.dds");
+		m_terrainGeometry->bindToGpuProgram(m_sceneRendering);
+		m_terrainGeometry->bindToGpuProgram(m_shadowMapRendering);
+
+		/*geom::PlaneGenerationInfo terrainInfo;
+		terrainInfo.size = vector2(5000.0f, 5000.0f);
+		terrainInfo.uvSize = vector2(200.0f, 200.0f);
+		m_terrainGeometry = initEntity(terrainInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds", "data/media/textures/no_specular.dds");
+		m_terrainGeometry->bindToGpuProgram(m_sceneRendering);
+		m_terrainGeometry->bindToGpuProgram(m_shadowMapRendering);*/
+		
+		// entities
+		vector3 GROUP_OFFSET[] = { vector3(0, 0, 0), vector3(-1000, 130, 600), vector3(0, -4, 900) };
+		for (int k = 0; k < sizeof(GROUP_OFFSET) / sizeof(GROUP_OFFSET[0]); k++)
 		{
-			for (int j = 0; j < ENTITIES_IN_ROW; j++)
-			{
-				int index = i * ENTITIES_IN_ROW + j;
-				float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
-				float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+			const int ENTITIES_IN_ROW = 2;
+			const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
+			const float AREA_HALFLENGTH = 150.0f;
 
-				m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 5.0f, z * AREA_HALFLENGTH));
+			for (int i = 0; i < ENTITIES_IN_ROW; i++)
+			{
+				for (int j = 0; j < ENTITIES_IN_ROW; j++)
+				{
+					float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+					float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+
+					m_entitiesData.push_back(EntityData());
+					int index = (int)m_entitiesData.size() - 1;
+					m_entitiesData[index].geometry = ((i == 1 && j == 1) ? m_windmillGeometry : m_houseGeometry);
+					m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 5.0f, z * AREA_HALFLENGTH));
+					m_entitiesData[index].model.pos_component() += GROUP_OFFSET[k];
+				}
 			}
 		}
 
-		geom::PlaneGenerationInfo planeInfo;
-		planeInfo.size = vector2(1000.0f, 1000.0f);
-		planeInfo.uvSize = vector2(50.0f, 50.0f);
-		m_planeGeometry = initEntity(planeInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds");
-		m_planeGeometry->bindToGpuProgram(m_sceneRendering);
-		m_planeData.model.ident();
-		m_planeData.isShadowCaster = false;
-		if (m_planeData.isShadowCaster)
-		{
-			m_entityGeometry->bindToGpuProgram(m_shadowMapRendering);
-		}
+		EntityData terrainData;
+		terrainData.geometry = m_terrainGeometry;
+		terrainData.model.ident();
+		terrainData.isShadowCaster = false;
+		m_entitiesData.push_back(terrainData);
 
 		// rasterizer stage for shadowmap rendering
 		m_shadowMapRasterizer.reset(new framework::RasterizerStage());
@@ -209,22 +242,37 @@ public:
 		initLights();
 
 		// skybox texture
-		//m_skyboxTexture.reset(new framework::Texture());
-		//if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
+		m_skyboxTexture.reset(new framework::Texture());
+		if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
 	}
 
-	std::shared_ptr<framework::Geometry3D> initEntity(const geom::PlaneGenerationInfo& planeInfo, const std::string& diffuseMap, const std::string& normalMap)
+	std::shared_ptr<framework::Geometry3D> initEntity(const geom::TerrainGenerationInfo& terrainInfo, const std::string& diffuseMap, const std::string& normalMap, const std::string& specularMap)
 	{
 		std::shared_ptr<framework::Geometry3D> ent(new framework::Geometry3D());
-		if (!ent->initAsPlane(planeInfo)) 
+		if (!ent->initAsTerrain(terrainInfo))
 		{
 			exit();
 		}
 		else
 		{
-			framework::MaterialManager::instance().initializeMaterial(ent, diffuseMap, normalMap, "");
+			framework::MaterialManager::instance().initializeMaterial(ent, diffuseMap, normalMap, specularMap);
 		}
-		
+
+		return std::move(ent);
+	}
+
+	std::shared_ptr<framework::Geometry3D> initEntity(const geom::PlaneGenerationInfo& terrainInfo, const std::string& diffuseMap, const std::string& normalMap, const std::string& specularMap)
+	{
+		std::shared_ptr<framework::Geometry3D> ent(new framework::Geometry3D());
+		if (!ent->initAsPlane(terrainInfo))
+		{
+			exit();
+		}
+		else
+		{
+			framework::MaterialManager::instance().initializeMaterial(ent, diffuseMap, normalMap, specularMap);
+		}
+
 		return std::move(ent);
 	}
 
@@ -270,8 +318,11 @@ public:
 														 gui::Coords::Absolute(500.0f, 300.0f),
 														 gui::RightAligned, gui::BottomAligned);
 		root->addChild(m_debugLabel);
-
 		m_debugLabel->setVisible(m_renderDebug);
+
+		m_fpsLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
+		m_legendLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
+		m_debugLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
 	}
 
 	virtual void shutdown()
@@ -300,9 +351,8 @@ public:
 			m_shadowMapRasterizer->apply();
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
-				renderGeometry(true, m_entityGeometry, m_entitiesData[i]);
+				renderGeometry(true, m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
 			}
-			renderGeometry(true, m_planeGeometry, m_planeData);
 			m_shadowMapRasterizer->cancel();
 		}
 
@@ -310,13 +360,14 @@ public:
 		OnFrameDataRaw onFrameData;
 		onFrameData.viewPosition = m_camera.getPosition();
 		onFrameData.splitCount = m_currentSplitCount;
+		onFrameData.shadowBlurStep = m_shadowBlurStep;
 		m_onFrameDataBuffer->setData(onFrameData);
 		m_onFrameDataBuffer->applyChanges();
 
 		useDefaultRenderTarget();
 
 		// render skybox
-		//renderSkybox(m_camera, m_skyboxTexture);
+		renderSkybox(m_camera, m_skyboxTexture);
 
 		// render scene
 		if (m_sceneRendering->use())
@@ -330,10 +381,8 @@ public:
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
-				renderGeometry(false, m_entityGeometry, m_entitiesData[i]);
+				renderGeometry(false, m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
 			}
-
-			renderGeometry(false, m_planeGeometry, m_planeData);
 		}
 
 		renderDebug();
@@ -360,8 +409,10 @@ public:
 			{
 				auto diffMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_DIFFUSE_MAP);
 				auto normMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_NORMAL_MAP);
+				auto specMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_SPECULAR_MAP);
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::DIFFUSE_MAP, diffMap);
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::NORMAL_MAP, normMap);
+				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SPECULAR_MAP, specMap);
 
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
 				m_sceneRendering->setUniform<PSSMAppUniforms>(UF::SHADOW_MAP_SAMPLER, m_shadowMapSampler);
@@ -385,7 +436,7 @@ public:
 		{
 			stream << std::fixed << m_splitDistances[i];
 			if (i != m_currentSplitCount)
-			{	
+			{
 				if (i % 2 == 0 && i != 0) stream << ",\n"; else stream << ", ";
 			}
 		}
@@ -400,11 +451,6 @@ public:
 				instancesCount += (m_entitiesData[i].shadowInstancesCount - 1);
 			}
 		}
-		if (m_planeData.shadowInstancesCount > 0)
-		{
-			objectsCount++;
-			instancesCount += (m_planeData.shadowInstancesCount - 1);
-		}
 		stream << "\nRendered to SM objects = " << objectsCount << "\nRendered to SM instances = " << instancesCount;
 
 		m_debugLabel->setText(stream.str());
@@ -416,6 +462,16 @@ public:
 		{
 			m_renderDebug = !m_renderDebug;
 			m_debugLabel->setVisible(m_renderDebug);
+			return;
+		}
+		if (key == InputKeys::Equals)
+		{
+			m_increaseBlurStep = pressed;
+			return;
+		}
+		else if (key == InputKeys::Minus)
+		{
+			m_decreaseBlurStep = pressed;
 			return;
 		}
 	#if PROFILING
@@ -452,9 +508,6 @@ public:
 			m_entitiesData[i].shadowInstancesCount = 0;
 		}
 
-		m_planeData.mvp = m_planeData.model * vp;
-		m_planeData.shadowInstancesCount = 0;
-
 		// calculate shadow
 		ShadowDataRaw shadowData;
 		calculateMaxSplitDistances();
@@ -468,9 +521,21 @@ public:
 			shadowData.shadowViewProjection[i] = calculateShadowViewProjection(box);
 			updateShadowVisibilityMask(box, i);
 		}
-
 		m_shadowBuffer->setData(shadowData);
 		m_shadowBuffer->applyChanges();
+
+		if (m_increaseBlurStep)
+		{
+			m_shadowBlurStep += 2.0f * float(elapsedTime) / float(m_shadowMapSize);
+			const float MAX_SHADOW_BLUR = 10.0f / float(m_shadowMapSize);
+			if (m_shadowBlurStep > MAX_SHADOW_BLUR) m_shadowBlurStep = MAX_SHADOW_BLUR;
+		}
+		else if (m_decreaseBlurStep)
+		{
+			m_shadowBlurStep -= 2.0f * float(elapsedTime) / float(m_shadowMapSize);
+			const float MIN_SHADOW_BLUR = 1.0f / float(m_shadowMapSize);
+			if (m_shadowBlurStep < MIN_SHADOW_BLUR) m_shadowBlurStep = MIN_SHADOW_BLUR;
+		}
 	}
 
 	void calculateMaxSplitDistances()
@@ -492,17 +557,11 @@ public:
 	{
 		bbox3 scenebox;
 		scenebox.begin_extend();
-		if (m_planeData.isShadowCaster)
-		{
-			bbox3 b = m_planeGeometry->getBoundingBox();
-			b.transform(m_planeData.model);
-			scenebox.extend(b);
-		}
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
 			if (m_entitiesData[i].isShadowCaster)
 			{
-				bbox3 b = m_entityGeometry->getBoundingBox();
+				bbox3 b = m_entitiesData[i].geometry.lock()->getBoundingBox();
 				b.transform(m_entitiesData[i].model);
 				scenebox.extend(b);
 			}
@@ -510,11 +569,11 @@ public:
 		scenebox.end_extend();
 
 		float maxZ = m_camera.getInternalCamera().GetNearPlane();
-		for(int i = 0; i < 8; i++)
+		for (int i = 0; i < 8; i++)
 		{
 			vector3 corner = scenebox.corner_point(i);
 			float z = -cameraView.transform_coord(corner).z;
-			if(z > maxZ) maxZ = z;
+			if (z > maxZ) maxZ = z;
 		}
 		return std::min(maxZ, m_farPlane);
 	}
@@ -547,7 +606,7 @@ public:
 
 	matrix44 calculateShadowViewProjection(const bbox3& frustumBox)
 	{
-		const float LIGHT_SOURCE_HEIGHT = 200.0f;
+		const float LIGHT_SOURCE_HEIGHT = 500.0f;
 
 		vector3 viewDir = m_camera.getOrientation().z_direction();
 		vector3 size = frustumBox.size();
@@ -562,9 +621,9 @@ public:
 		shadowView.lookatRh(shadowView.pos_component() + lightDir, lightSource.orientation.y_direction());
 		shadowView.invert_simple();
 
-		matrix44 shadowProj;	
+		matrix44 shadowProj;
 		float d = std::max(size.x, size.z);
-		shadowProj.orthoRh(d, d, 0.1f, 1000.0f);
+		shadowProj.orthoRh(d, d, 0.1f, 2000.0f);
 
 		return shadowView * shadowProj;
 	}
@@ -607,15 +666,11 @@ public:
 		bbox3 box = frustumBox;
 		box.transform(boxOffset);
 
-		if (m_planeData.isShadowCaster)
-		{
-			updateShadowVisibilityMask(box, m_planeGeometry, m_planeData, splitIndex);
-		}
 		for (size_t i = 0; i < m_entitiesData.size(); i++)
 		{
 			if (m_entitiesData[i].isShadowCaster)
 			{
-				updateShadowVisibilityMask(box, m_entityGeometry, m_entitiesData[i], splitIndex);
+				updateShadowVisibilityMask(box, m_entitiesData[i].geometry.lock(), m_entitiesData[i], splitIndex);
 			}
 		}
 	}
@@ -637,7 +692,7 @@ public:
 			shadowBox.extend(b.corner_point(i) + lightDir * shadowBoxL);
 		}
 		shadowBox.end_extend();
-	
+
 		if (frustumBox.clipstatus(shadowBox) != bbox3::Outside)
 		{
 			int i = entityData.shadowInstancesCount;
@@ -660,23 +715,25 @@ private:
 	// sampler for shadow map rendering
 	std::shared_ptr<framework::Sampler> m_shadowMapSampler;
 
+	std::shared_ptr<framework::Geometry3D> m_houseGeometry;
+	std::shared_ptr<framework::Geometry3D> m_windmillGeometry;
+	std::shared_ptr<framework::Geometry3D> m_terrainGeometry;
+
 	struct EntityData
 	{
+		std::weak_ptr<framework::Geometry3D> geometry;
 		matrix44 model;
 		matrix44 mvp;
 		unsigned int shadowInstancesCount;
-		unsigned int shadowIndices[MAX_SPLITS];
+		int shadowIndices[MAX_SPLITS];
 		bool isShadowCaster;
 		EntityData() : isShadowCaster(true), shadowInstancesCount(0)
 		{
-			memset(shadowIndices, 0, sizeof(unsigned int) * MAX_SPLITS);
+			memset(shadowIndices, 0, sizeof(int)* MAX_SPLITS);
 		}
 	};
-	std::shared_ptr<framework::Geometry3D> m_entityGeometry;
-	std::vector<EntityData> m_entitiesData;
 
-	std::shared_ptr<framework::Geometry3D> m_planeGeometry;
-	EntityData m_planeData;
+	std::vector<EntityData> m_entitiesData;
 
 	std::shared_ptr<framework::UniformBuffer> m_entityDataBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_onFrameDataBuffer;
@@ -686,7 +743,6 @@ private:
 	framework::FreeCamera m_camera;
 
 	int m_shadowMapSize;
-
 	std::vector<float> m_maxSplitDistances;
 	float m_farPlane;
 	float m_splitShift;
@@ -695,9 +751,12 @@ private:
 	float m_splitLambda;
 	std::vector<float> m_splitDistances;
 	float m_furthestPointInCamera;
+	float m_shadowBlurStep;
 
 	bool m_renderDebug;
 	gui::LabelPtr_T m_debugLabel;
+	bool m_increaseBlurStep;
+	bool m_decreaseBlurStep;
 
 	std::shared_ptr<framework::Texture> m_skyboxTexture;
 };

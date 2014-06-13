@@ -25,6 +25,7 @@
 
 #include "geometry.h"
 #include "planegenerator.h"
+#include "terraingenerator.h"
 
 namespace framework
 {
@@ -45,6 +46,7 @@ public:
 	
 	bool init(const std::string& fileName);
 	bool initAsPlane(const geom::PlaneGenerationInfo& info);
+	bool initAsTerrain(const geom::TerrainGenerationInfo& info);
 	void bindToGpuProgram(std::shared_ptr<GpuProgram> program);
 
 	const std::vector<D3D11_INPUT_ELEMENT_DESC>& getInputLayoutInfo() const { return m_inputLayoutInfo; }

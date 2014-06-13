@@ -38,17 +38,6 @@ class Texture : public Destroyable
 {
     friend class DdsLoader;
 	friend class Application;
-    
-	TextureType m_type;
-	ID3D11Texture1D* m_texture1D;
-	ID3D11Texture2D* m_texture2D;
-	ID3D11Texture3D* m_texture3D;
-	D3D11_TEXTURE1D_DESC m_texture1DDesc;
-	D3D11_TEXTURE2D_DESC m_texture2DDesc;
-	D3D11_TEXTURE3D_DESC m_texture3DDesc;
-	ID3D11ShaderResourceView* m_view;
-
-	virtual void destroy();
 
 public:
     Texture();
@@ -74,6 +63,23 @@ public:
         virtual ~Loader() {}
         virtual bool load(Texture* texture, const std::string& fileName) = 0;
     };
+
+private:
+	static void init();
+	static void cleanup();
+
+	TextureType m_type;
+	ID3D11Texture1D* m_texture1D;
+	ID3D11Texture2D* m_texture2D;
+	ID3D11Texture3D* m_texture3D;
+	D3D11_TEXTURE1D_DESC m_texture1DDesc;
+	D3D11_TEXTURE2D_DESC m_texture2DDesc;
+	D3D11_TEXTURE3D_DESC m_texture3DDesc;
+	ID3D11ShaderResourceView* m_view;
+
+	virtual void destroy();
 };
+
+std::vector<unsigned char> LoadHeightmapData(const std::string& fileName, unsigned int& width, unsigned int& height);
 
 }

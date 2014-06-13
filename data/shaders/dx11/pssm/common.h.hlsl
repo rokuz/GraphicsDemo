@@ -11,6 +11,10 @@ cbuffer onFrameData : register(b1)
 {
 	float3 viewPosition;
 	int splitsCount;
+	float shadowBlurStep;
+	uint onFrameData_dummy1;
+	uint onFrameData_dummy2;
+	uint onFrameData_dummy3;
 };
 
 struct LightData

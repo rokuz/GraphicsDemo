@@ -115,17 +115,15 @@ void TerrainGenerator::calculateTangentSpace(int x, int y, vector3& normal, vect
 			tangent += a;
 			vector3 b = getPoint(x + 1, y) - center;
 			b.norm();
-			binormal += b;
 			normal += (a * b);
 		}
 		if (y - 1 >= 0)
 		{
 			vector3 a = getPoint(x + 1, y) - center;
 			a.norm();
-			tangent += a;
 			vector3 b = getPoint(x, y - 1) - center;
 			b.norm();
-			binormal += b;
+			tangent -= b;
 			normal += (a * b);
 		}
 	}
@@ -135,27 +133,26 @@ void TerrainGenerator::calculateTangentSpace(int x, int y, vector3& normal, vect
 		{
 			vector3 a = getPoint(x - 1, y) - center;
 			a.norm();
-			tangent += a;
 			vector3 b = getPoint(x, y + 1) - center;
 			b.norm();
-			binormal += b;
+			tangent += b;
 			normal += (a * b);
 		}
 		if (y - 1 >= 0)
 		{
 			vector3 a = getPoint(x, y - 1) - center;
 			a.norm();
-			tangent += a;
+			tangent -= a;
 			vector3 b = getPoint(x - 1, y) - center;
 			b.norm();
-			binormal += b;
 			normal += (a * b);
 		}
 	}
 
 	normal.norm();
 	tangent.norm();
-	binormal.norm();
+
+	binormal = normal * tangent;
 }
 
 }
