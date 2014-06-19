@@ -167,13 +167,6 @@ public:
 		m_terrainGeometry->bindToGpuProgram(m_sceneRendering);
 		m_terrainGeometry->bindToGpuProgram(m_shadowMapRendering);
 
-		/*geom::PlaneGenerationInfo terrainInfo;
-		terrainInfo.size = vector2(5000.0f, 5000.0f);
-		terrainInfo.uvSize = vector2(200.0f, 200.0f);
-		m_terrainGeometry = initEntity(terrainInfo, "data/media/textures/grass.dds", "data/media/textures/grass_bump.dds", "data/media/textures/no_specular.dds");
-		m_terrainGeometry->bindToGpuProgram(m_sceneRendering);
-		m_terrainGeometry->bindToGpuProgram(m_shadowMapRendering);*/
-		
 		// entities
 		vector3 GROUP_OFFSET[] = { vector3(0, 0, 0), vector3(-1000, 130, 600), vector3(0, -4, 900) };
 		for (int k = 0; k < sizeof(GROUP_OFFSET) / sizeof(GROUP_OFFSET[0]); k++)
@@ -250,21 +243,6 @@ public:
 	{
 		std::shared_ptr<framework::Geometry3D> ent(new framework::Geometry3D());
 		if (!ent->initAsTerrain(terrainInfo))
-		{
-			exit();
-		}
-		else
-		{
-			framework::MaterialManager::instance().initializeMaterial(ent, diffuseMap, normalMap, specularMap);
-		}
-
-		return std::move(ent);
-	}
-
-	std::shared_ptr<framework::Geometry3D> initEntity(const geom::PlaneGenerationInfo& terrainInfo, const std::string& diffuseMap, const std::string& normalMap, const std::string& specularMap)
-	{
-		std::shared_ptr<framework::Geometry3D> ent(new framework::Geometry3D());
-		if (!ent->initAsPlane(terrainInfo))
 		{
 			exit();
 		}
