@@ -1,0 +1,12 @@
+[
+   {
+      "diffuseMap" : "cat_diff",
+      "normalMap" : "cat_norm",
+      "specularMap" : "cat_spec"
+   },
+   {
+      "diffuseMap" : "cat_diff",
+      "normalMap" : "cat_norm",
+      "specularMap" : "cat_spec"
+   }
+]

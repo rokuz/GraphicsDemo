@@ -42,7 +42,6 @@ include_directories(../../mathlib ../../geomlib ../../utils ../../guilib ${FRAME
 target_link_libraries(${demo_name} framework)
 
 # set copying FreeImage binaries
-if( GRAPHICS_API STREQUAL GRAPHICS_API_OGL )
 foreach(item IN LISTS FREEIMAGE_COPIABLE_BINARIES_DEBUG)
 add_custom_command(TARGET ${demo_name}
 		PRE_BUILD
@@ -53,7 +52,7 @@ add_custom_command(TARGET ${demo_name}
 		PRE_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy "${FREEIMAGE_COPIABLE_BINARIES_DIR_RELEASE}/${item}" "${CMAKE_CURRENT_BINARY_DIR}/Release/${item}")
 endforeach()
-endif()
+
 endif (IS_INITED)
 endmacro(INIT_DEMO)
 
@@ -64,3 +63,4 @@ add_subdirectory(DeferredShading)
 add_subdirectory(PostProcessing)
 add_subdirectory(LightPrePass)
 add_subdirectory(PSSM)
+add_subdirectory(Fur)
