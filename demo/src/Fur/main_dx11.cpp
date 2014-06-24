@@ -8,12 +8,15 @@ DECLARE_UNIFORMS_BEGIN(FurAppUniforms)
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
+	FUR_MAP,
+	FURLENGTH_MAP,
 	DEFAULT_SAMPLER
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<FurAppUniforms>::Uniform
 
 // constants
 const std::string SHADERS_PATH = "data/shaders/dx11/fur/";
+const int FUR_LAYERS = 16;
 #define PROFILING 0
 
 // entity data
@@ -44,6 +47,7 @@ public:
 	FurApp()
 	{
 		m_renderDebug = false;
+		m_renderFur = true;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
@@ -66,6 +70,7 @@ public:
 	{
 		// camera
 		m_camera.initWithPositionDirection(m_info.windowWidth, m_info.windowHeight, vector3(-1, 2, -3), vector3());
+		m_camera.setSpeed(10);
 
 		// overlays
 		initOverlays(root);
@@ -83,40 +88,50 @@ public:
 		m_solidRendering->bindUniform<FurAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 		m_solidRendering->bindUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
+		m_furShellsRendering.reset(new framework::GpuProgram());
+		m_furShellsRendering->addShader(SHADERS_PATH + "furshells.vsh.hlsl");
+		m_furShellsRendering->addShader(SHADERS_PATH + "furshells.psh.hlsl");
+		if (!m_furShellsRendering->init()) exit();
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::ENTITY_DATA, "entityData");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::FURLENGTH_MAP, "furLengthMap");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+
 		// geometry
 		m_catGeometry = initEntity("data/media/cat/cat.geom");
 		m_catGeometry->bindToGpuProgram(m_solidRendering);
+		m_catGeometry->bindToGpuProgram(m_furShellsRendering);
+
+		m_furTexture.reset(new framework::Texture());
+		if (!m_furTexture->initWithDDS("data/media/cat/fur.dds")) exit();
+
+		m_furLengthTexture.reset(new framework::Texture());
+		if (!m_furLengthTexture->initWithDDS("data/media/cat/cat_furlen.dds")) exit();
 
 		// entities
-		/*vector3 GROUP_OFFSET[] = { vector3(0, 0, 0), vector3(-1000, 130, 600), vector3(0, -4, 900) };
-		for (int k = 0; k < sizeof(GROUP_OFFSET) / sizeof(GROUP_OFFSET[0]); k++)
+		const int ENTITIES_IN_ROW = 5;
+		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
+		const float AREA_HALFLENGTH = 8.0f;
+
+		for (int i = 0; i < ENTITIES_IN_ROW; i++)
 		{
-			const int ENTITIES_IN_ROW = 2;
-			const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
-			const float AREA_HALFLENGTH = 150.0f;
-
-			for (int i = 0; i < ENTITIES_IN_ROW; i++)
+			for (int j = 0; j < ENTITIES_IN_ROW; j++)
 			{
-				for (int j = 0; j < ENTITIES_IN_ROW; j++)
-				{
-					float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
-					float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+				float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+				float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
 
-					m_entitiesData.push_back(EntityData());
-					int index = (int)m_entitiesData.size() - 1;
-					m_entitiesData[index].geometry = ((i == 1 && j == 1) ? m_windmillGeometry : m_houseGeometry);
-					m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 5.0f, z * AREA_HALFLENGTH));
-					m_entitiesData[index].model.pos_component() += GROUP_OFFSET[k];
-				}
+				m_entitiesData.push_back(EntityData());
+				int index = (int)m_entitiesData.size() - 1;
+				m_entitiesData[index].geometry = m_catGeometry;
+				quaternion quat;	
+				quat.set_rotate_y(n_deg2rad(utils::Utils::random(-180.0f, -120.0f).x));
+				m_entitiesData[index].model = matrix44(quat);
+				m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 0, z * AREA_HALFLENGTH));
 			}
-		}*/
-
-		EntityData terrainData;
-		terrainData.geometry = m_catGeometry;
-		quaternion quat;
-		quat.set_rotate_y(n_deg2rad(180.0f));
-		terrainData.model = matrix44(quat);
-		m_entitiesData.push_back(terrainData);
+		}
 
 		// entity's data buffer
 		m_entityDataBuffer.reset(new framework::UniformBuffer());
@@ -126,12 +141,18 @@ public:
 		m_onFrameDataBuffer.reset(new framework::UniformBuffer());
 		if (!m_onFrameDataBuffer->initDefaultConstant<OnFrameDataRaw>()) exit();
 
+		// a depth-stencil state to disable depth writing
+		m_disableDepthWriting.reset(new framework::DepthStencilStage());
+		D3D11_DEPTH_STENCIL_DESC depthDesc = framework::DepthStencilStage::getDisableDepthWriting();
+		m_disableDepthWriting->initWithDescription(depthDesc);
+		if (!m_disableDepthWriting->isValid()) exit();
+
 		// lights
 		initLights();
 
 		// skybox texture
 		m_skyboxTexture.reset(new framework::Texture());
-		if (!m_skyboxTexture->initWithDDS("data/media/textures/meadow.dds")) exit();
+		if (!m_skyboxTexture->initWithDDS("data/media/textures/church.dds")) exit();
 	}
 
 	std::shared_ptr<framework::Geometry3D> initEntity(const geom::TerrainGenerationInfo& terrainInfo, const std::string& diffuseMap, const std::string& normalMap, const std::string& specularMap)
@@ -225,7 +246,6 @@ public:
 		// render skybox
 		renderSkybox(m_camera, m_skyboxTexture);
 
-		// render scene
 		if (m_solidRendering->use())
 		{
 			m_solidRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
@@ -235,6 +255,23 @@ public:
 			{
 				renderGeometry(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
 			}
+		}
+
+		if (m_renderFur && m_furShellsRendering->use())
+		{
+			Application::instance()->defaultAlphaBlending()->apply();
+			m_disableDepthWriting->apply();
+
+			m_furShellsRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+			m_furShellsRendering->setUniform<FurAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+
+			for (size_t i = 0; i < m_entitiesData.size(); i++)
+			{
+				renderFurShell(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
+			}
+
+			Application::instance()->defaultAlphaBlending()->cancel();
+			m_disableDepthWriting->cancel();
 		}
 
 		renderDebug();
@@ -264,6 +301,28 @@ public:
 		}	
 	}
 
+	void renderFurShell(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
+	{
+		const int index = 1;
+		if (index >= geometry->getMeshesCount()) return;
+
+		EntityDataRaw entityDataRaw;
+		entityDataRaw.modelViewProjection = entityData.mvp;
+		entityDataRaw.model = entityData.model;
+		m_entityDataBuffer->setData(entityDataRaw);
+		m_entityDataBuffer->applyChanges();
+
+		auto diffMap = framework::MaterialManager::instance().getTexture(geometry, index, framework::MAT_DIFFUSE_MAP);
+		m_furShellsRendering->setUniform<FurAppUniforms>(UF::FURLENGTH_MAP, m_furLengthTexture);
+		m_furShellsRendering->setUniform<FurAppUniforms>(UF::DIFFUSE_MAP, diffMap);
+		m_furShellsRendering->setUniform<FurAppUniforms>(UF::FUR_MAP, m_furTexture);
+		m_furShellsRendering->setUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+
+		m_furShellsRendering->setUniform<FurAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+
+		geometry->renderMesh(index, FUR_LAYERS);
+	}
+
 	void renderDebug()
 	{
 		if (!m_renderDebug) return;
@@ -284,6 +343,11 @@ public:
 		{
 			m_renderDebug = !m_renderDebug;
 			m_debugLabel->setVisible(m_renderDebug);
+			return;
+		}
+		if (key == InputKeys::F2 && pressed)
+		{
+			m_renderFur = !m_renderFur;
 			return;
 		}
 	#if PROFILING
@@ -324,6 +388,8 @@ private:
 	// gpu program to render solid objects in scene
 	std::shared_ptr<framework::GpuProgram> m_solidRendering;
 
+	std::shared_ptr<framework::GpuProgram> m_furShellsRendering;
+
 	std::shared_ptr<framework::Geometry3D> m_catGeometry;
 
 	struct EntityData
@@ -341,10 +407,16 @@ private:
 	std::shared_ptr<framework::UniformBuffer> m_onFrameDataBuffer;
 	std::shared_ptr<framework::UniformBuffer> m_lightsBuffer;
 
+	std::shared_ptr<framework::Texture> m_furLengthTexture;
+	std::shared_ptr<framework::Texture> m_furTexture;
+
+	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
+
 	framework::FreeCamera m_camera;
 
 	bool m_renderDebug;
 	gui::LabelPtr_T m_debugLabel;
+	bool m_renderFur;
 
 	std::shared_ptr<framework::Texture> m_skyboxTexture;
 };

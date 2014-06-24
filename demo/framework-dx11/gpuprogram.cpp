@@ -763,7 +763,7 @@ void GpuProgram::setUniformByIndex(int index, ID3D11ShaderResourceView* view)
 	if (m_vertexShader != 0 && !m_uniforms[VERTEX_SHADER][index].expired())
 	{
 		auto ptr = m_uniforms[VERTEX_SHADER][index].lock();
-		device.context->VSGetShaderResources(ptr->bindingPoint, 1, &view);
+		device.context->VSSetShaderResources(ptr->bindingPoint, 1, &view);
 	}
 	if (m_hullShader != 0 && !m_uniforms[HULL_SHADER][index].expired())
 	{

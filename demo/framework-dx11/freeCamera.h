@@ -41,6 +41,8 @@ public:
 
 	void update(double elapsedTime);
 
+	void setSpeed(float speed) { m_speed = speed; }
+
 private:
 	bool m_moveForward;
 	bool m_moveBackward;

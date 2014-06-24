@@ -16,7 +16,7 @@ SamplerState defaultSampler : register(s0);
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-	const float specPower = 30.0;
+	const float specPower = 10.0;
 
 	float3 normalTS = normalize(normalMap.Sample(defaultSampler, input.uv0).rgb * 2.0 - 1.0);
 	float3x3 ts = float3x3(input.tangent, cross(input.normal, input.tangent), input.normal);

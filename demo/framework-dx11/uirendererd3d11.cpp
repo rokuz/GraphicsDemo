@@ -65,7 +65,7 @@ bool UIRendererD3D11::init()
 	m_textRendering->addShader(GUI_SHADERS_PATH + "text.vsh.hlsl");
 	m_textRendering->addShader(GUI_SHADERS_PATH + "text.gsh.hlsl");
 	m_textRendering->addShader(GUI_SHADERS_PATH + "text.psh.hlsl");
-	if (!m_textRendering->init())
+	if (!m_textRendering->init(true))
 	{
 		utils::Logger::toLog("Error: could not initialize text rendering shader.\n");
 		return false;

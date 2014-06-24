@@ -36,3 +36,5 @@ struct VS_INPUT
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
 };
+
+static const float FUR_LAYERS = 16.0f;
