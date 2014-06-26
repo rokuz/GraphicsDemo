@@ -44,13 +44,16 @@ public:
 	static D3D11_BUFFER_DESC getDefaultVertexBuffer(unsigned int size);
 	static D3D11_BUFFER_DESC getDefaultIndexBuffer(unsigned int size);
 	
-	bool init(const std::string& fileName);
-	bool initAsPlane(const geom::PlaneGenerationInfo& info);
-	bool initAsTerrain(const geom::TerrainGenerationInfo& info);
+	bool init(const std::string& fileName, bool calculateAdjacency = false);
+	bool initAsPlane(const geom::PlaneGenerationInfo& info, bool calculateAdjacency = false);
+	bool initAsTerrain(const geom::TerrainGenerationInfo& info, bool calculateAdjacency = false);
+
 	void bindToGpuProgram(std::shared_ptr<GpuProgram> program);
 
 	const std::vector<D3D11_INPUT_ELEMENT_DESC>& getInputLayoutInfo() const { return m_inputLayoutInfo; }
 	const bbox3& getBoundingBox() const { return m_boundingBox; }
+
+	const std::vector<geom::Data::TriangleAdjacency>& getAdjacency() const { return m_adjacency; }
     
     size_t getMeshesCount() const;
 	const geom::Data::Meshes& getMeshes() const { return m_meshes; }
@@ -60,6 +63,10 @@ public:
 
 	int getID() const { return m_id; }
 	const std::string& getFilename() const { return m_filename; }
+	size_t getVertexSize() const { return m_vertexSize; }
+	ID3D11Buffer* getVertexBuffer() const { return m_vertexBuffer; }
+
+	void applyInputLayout();
 
 private:
 	geom::Data::Meshes m_meshes;
@@ -68,6 +75,8 @@ private:
 	size_t m_indicesCount;
 	size_t m_vertexSize;
 	bbox3 m_boundingBox;
+
+	std::vector<geom::Data::TriangleAdjacency> m_adjacency;
 
 	std::vector<D3D11_INPUT_ELEMENT_DESC> m_inputLayoutInfo;
 	ID3D11Buffer* m_vertexBuffer;
@@ -81,9 +90,8 @@ private:
 	std::string m_filename;
 	int m_id;
 
-	bool init(const geom::Data& data);
+	bool init(const geom::Data& data, bool calculateAdjacency);
 	int getInputLayoutBindingIndex(int programId) const;
-	void applyInputLayout();
 	static int generateId();
 
 	virtual void destroy();

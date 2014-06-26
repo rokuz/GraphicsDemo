@@ -42,6 +42,12 @@ public:
 		vector3 binormal;   // 4
 	};
 
+	struct TriangleAdjacency
+	{
+		int points[3];
+		int adjacentPoints[3];
+	};
+
 	struct Material
 	{
 		std::string diffuseMapFilename;
@@ -80,6 +86,8 @@ public:
 	size_t getVertexSize() const;
 	const char* getSemanticName(size_t index) const;
 	size_t getSemanticIndex(size_t index) const;
+
+	std::vector<TriangleAdjacency> calculateAdjacency() const;
 
 	Data& operator=(const Data& data);
 	Data& operator=(Data&& data);

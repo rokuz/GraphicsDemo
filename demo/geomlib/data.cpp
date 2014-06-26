@@ -175,4 +175,80 @@ const std::vector<unsigned int>& Data::getIndexBuffer() const
 	return m_indexBuffer;
 }
 
+int GetAdjacentIndex(int edge[2], int triangle[3])
+{
+	int pnts_tmp[3] = { triangle[0], triangle[1], triangle[2] };
+	int c = 0;
+	for (int i = 0; i < 2; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			if (edge[i] == triangle[j]) { pnts_tmp[j] = -1; c++; break; }
+		}
+	}
+
+	if (c == 2)
+	{
+		if (pnts_tmp[0] != -1) return pnts_tmp[0];
+		else if (pnts_tmp[1] != -1) return pnts_tmp[1];
+		else return pnts_tmp[2];
+	}
+	return -1;
+}
+
+std::vector<Data::TriangleAdjacency> Data::calculateAdjacency() const
+{
+	std::vector<TriangleAdjacency> output;
+	if (!isCorrect()) return output;
+
+	size_t trianglesCount = m_indexBuffer.size() / 3;
+	output.reserve(trianglesCount);
+
+	TriangleAdjacency t;
+	int edge[2];
+	int triangle[3];
+	for (size_t i = 0; i < trianglesCount; i++)
+	{
+		t.points[0] = m_indexBuffer[i * 3];
+		t.points[1] = m_indexBuffer[i * 3 + 1];
+		t.points[2] = m_indexBuffer[i * 3 + 2];
+		t.adjacentPoints[0] = -1;
+		t.adjacentPoints[1] = -1;
+		t.adjacentPoints[2] = -1;
+		 
+		for (size_t j = 0; j < trianglesCount; j++)
+		{
+			if (j == i) continue;
+
+			triangle[0] = m_indexBuffer[j * 3];
+			triangle[1] = m_indexBuffer[j * 3 + 1];
+			triangle[2] = m_indexBuffer[j * 3 + 2];
+
+			if (t.adjacentPoints[0] == -1)
+			{
+				edge[0] = t.points[0]; edge[1] = t.points[1];
+				t.adjacentPoints[0] = GetAdjacentIndex(edge, triangle);
+			}
+
+			if (t.adjacentPoints[1] == -1)
+			{
+				edge[0] = t.points[1]; edge[1] = t.points[2];
+				t.adjacentPoints[1] = GetAdjacentIndex(edge, triangle);
+			}
+
+			if (t.adjacentPoints[2] == -1)
+			{
+				edge[0] = t.points[2]; edge[1] = t.points[0];
+				t.adjacentPoints[2] = GetAdjacentIndex(edge, triangle);
+			}
+
+			if (t.adjacentPoints[0] != -1 && t.adjacentPoints[1] != -1 && t.adjacentPoints[2] != -1) break;
+		}
+
+		output.push_back(t);
+	}
+
+	return output;
+}
+
 }

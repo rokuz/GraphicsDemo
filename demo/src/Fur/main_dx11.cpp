@@ -47,7 +47,10 @@ public:
 	FurApp()
 	{
 		m_renderDebug = false;
-		m_renderFur = true;
+		m_renderFurShells = true;
+		m_renderFurFins = true;
+		m_catFinsIndexBuffer = 0;
+		m_catFinsIndexBufferSize = 0;
 	}
 
 	virtual void init(const std::map<std::string, int>& params)
@@ -55,7 +58,7 @@ public:
 		m_info.title = "Fur rendering (DX11)";
 		applyStandardParams(params);
 
-		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info");
+		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info\nF2 - on/off shells\nF3 - on/off fins");
 
 	#if PROFILING
 		std::stringstream header;
@@ -101,9 +104,13 @@ public:
 		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		// geometry
-		m_catGeometry = initEntity("data/media/cat/cat.geom");
+		m_catGeometry = initEntity("data/media/cat/cat.geom", true);
 		m_catGeometry->bindToGpuProgram(m_solidRendering);
 		m_catGeometry->bindToGpuProgram(m_furShellsRendering);
+
+		// fins index buffer
+		m_catFinsIndexBuffer = initFinsIndexBuffer(m_catGeometry, m_catFinsIndexBufferSize);
+		if (m_catFinsIndexBuffer == 0) exit();
 
 		m_furTexture.reset(new framework::Texture());
 		if (!m_furTexture->initWithDDS("data/media/cat/fur.dds")) exit();
@@ -112,25 +119,40 @@ public:
 		if (!m_furLengthTexture->initWithDDS("data/media/cat/cat_furlen.dds")) exit();
 
 		// entities
-		const int ENTITIES_IN_ROW = 5;
+		const int ENTITIES_IN_ROW = 1;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
 		const float AREA_HALFLENGTH = 8.0f;
 
-		for (int i = 0; i < ENTITIES_IN_ROW; i++)
+		if (ENTITIES_IN_ROW != 1)
 		{
-			for (int j = 0; j < ENTITIES_IN_ROW; j++)
+			for (int i = 0; i < ENTITIES_IN_ROW; i++)
 			{
-				float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
-				float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+				for (int j = 0; j < ENTITIES_IN_ROW; j++)
+				{
+					float x = (float(i) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
+					float z = (float(j) - HALF_ENTITIES_IN_ROW) / HALF_ENTITIES_IN_ROW;
 
-				m_entitiesData.push_back(EntityData());
-				int index = (int)m_entitiesData.size() - 1;
-				m_entitiesData[index].geometry = m_catGeometry;
-				quaternion quat;	
-				quat.set_rotate_y(n_deg2rad(utils::Utils::random(-180.0f, -120.0f).x));
-				m_entitiesData[index].model = matrix44(quat);
-				m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 0, z * AREA_HALFLENGTH));
+					m_entitiesData.push_back(EntityData());
+					int index = (int)m_entitiesData.size() - 1;
+					m_entitiesData[index].geometry = m_catGeometry;
+					m_entitiesData[index].finsIndexBuffer = m_catFinsIndexBuffer;
+					m_entitiesData[index].finsIndexBufferSize = m_catFinsIndexBufferSize;
+
+					quaternion quat;	
+					quat.set_rotate_y(n_deg2rad(utils::Utils::random(-180.0f, -120.0f).x));
+					m_entitiesData[index].model = matrix44(quat);
+					m_entitiesData[index].model.set_translation(vector3(x * AREA_HALFLENGTH, 0, z * AREA_HALFLENGTH));
+				}
 			}
+		}
+		else
+		{
+			m_entitiesData.push_back(EntityData());
+			int index = (int)m_entitiesData.size() - 1;
+			m_entitiesData[index].geometry = m_catGeometry;
+			quaternion quat;	
+			quat.set_rotate_y(n_deg2rad(-180.0));
+			m_entitiesData[index].model = matrix44(quat);
 		}
 
 		// entity's data buffer
@@ -170,10 +192,10 @@ public:
 		return std::move(ent);
 	}
 
-	std::shared_ptr<framework::Geometry3D> initEntity(const std::string& geometry)
+	std::shared_ptr<framework::Geometry3D> initEntity(const std::string& geometry, bool calculateAdjacency)
 	{
 		std::shared_ptr<framework::Geometry3D> ent(new framework::Geometry3D());
-		if (!ent->init(geometry))
+		if (!ent->init(geometry, calculateAdjacency))
 		{
 			exit();
 		}
@@ -183,6 +205,57 @@ public:
 		}
 
 		return std::move(ent);
+	}
+
+	ID3D11Buffer* initFinsIndexBuffer(const std::shared_ptr<framework::Geometry3D>& geometry, size_t& size)
+	{
+		auto adjacency = geometry->getAdjacency();
+		if (!adjacency.empty())
+		{
+			// calculate fins data
+			std::vector<int> finsData;
+			finsData.reserve(adjacency.size() * 3 * 4);
+			for (size_t i = 0; i < adjacency.size(); i++)
+			{
+				if (adjacency[i].adjacentPoints[0] != -1)
+				{
+					finsData.push_back(adjacency[i].adjacentPoints[0]);
+					finsData.push_back(adjacency[i].points[0]);
+					finsData.push_back(adjacency[i].points[1]);
+					finsData.push_back(adjacency[i].points[2]);
+				}
+				if (adjacency[i].adjacentPoints[1] != -1)
+				{
+					finsData.push_back(adjacency[i].adjacentPoints[1]);
+					finsData.push_back(adjacency[i].points[1]);
+					finsData.push_back(adjacency[i].points[2]);
+					finsData.push_back(adjacency[i].points[0]);
+				}
+				if (adjacency[i].adjacentPoints[2] != -1)
+				{
+					finsData.push_back(adjacency[i].adjacentPoints[2]);
+					finsData.push_back(adjacency[i].points[2]);
+					finsData.push_back(adjacency[i].points[0]);
+					finsData.push_back(adjacency[i].points[1]);
+				}
+			}
+
+			// create buffer
+			D3D11_BUFFER_DESC ibdesc = framework::Geometry3D::getDefaultIndexBuffer(finsData.size() * sizeof(int));
+			D3D11_SUBRESOURCE_DATA ibdata;
+			ibdata.pSysMem = finsData.data();
+			ibdata.SysMemPitch = 0;
+			ibdata.SysMemSlicePitch = 0;
+
+			size = finsData.size();
+
+			ID3D11Buffer* buffer = 0;
+			HRESULT hr = getDevice().device->CreateBuffer(&ibdesc, &ibdata, &buffer);
+			if (hr == S_OK) return buffer;
+		}
+		
+		size = 0;
+		return 0;
 	}
 
 	void initLights()
@@ -214,13 +287,19 @@ public:
 		root->addChild(m_debugLabel);
 		m_debugLabel->setVisible(m_renderDebug);
 
-		m_fpsLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
-		m_legendLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
-		m_debugLabel->setColor(vector4(0.0f, 0.5f, 1.0f, 1.0f));
+		m_fpsLabel->setColor(vector4(1.0f, 1.0f, 0.0f, 1.0f));
+		m_legendLabel->setColor(vector4(1.0f, 1.0f, 0.0f, 1.0f));
+		m_debugLabel->setColor(vector4(1.0f, 1.0f, 0.0f, 1.0f));
 	}
 
 	virtual void shutdown()
 	{
+		if (m_catFinsIndexBuffer != 0)
+		{
+			m_catFinsIndexBuffer->Release();
+			m_catFinsIndexBuffer = 0;
+		}
+
 	#if PROFILING
 		if (utils::Profiler::instance().isRun())
 		{
@@ -246,6 +325,7 @@ public:
 		// render skybox
 		renderSkybox(m_camera, m_skyboxTexture);
 
+		// parts without fur
 		if (m_solidRendering->use())
 		{
 			m_solidRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
@@ -257,7 +337,8 @@ public:
 			}
 		}
 
-		if (m_renderFur && m_furShellsRendering->use())
+		// fur (shells)
+		if (m_renderFurShells && m_furShellsRendering->use())
 		{
 			Application::instance()->defaultAlphaBlending()->apply();
 			m_disableDepthWriting->apply();
@@ -267,11 +348,20 @@ public:
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
-				renderFurShell(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
+				renderFurShells(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
 			}
 
 			Application::instance()->defaultAlphaBlending()->cancel();
 			m_disableDepthWriting->cancel();
+		}
+
+		// fur (fins)
+		if (m_renderFurFins)
+		{
+			for (size_t i = 0; i < m_entitiesData.size(); i++)
+			{
+				renderFurFins(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
+			}
 		}
 
 		renderDebug();
@@ -301,7 +391,7 @@ public:
 		}	
 	}
 
-	void renderFurShell(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
+	void renderFurShells(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
 	{
 		const int index = 1;
 		if (index >= geometry->getMeshesCount()) return;
@@ -321,6 +411,20 @@ public:
 		m_furShellsRendering->setUniform<FurAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
 
 		geometry->renderMesh(index, FUR_LAYERS);
+	}
+
+	void renderFurFins(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
+	{
+		const framework::Device& device = Application::instance()->getDevice();
+
+		//geometry->applyInputLayout();
+		//UINT vertexStride = geometry->getVertexSize();
+		//UINT vertexOffset = 0;
+		//ID3D11Buffer* vb = geometry->getVertexBuffer();
+		//device.context->IASetVertexBuffers(0, 1, &vb, &vertexStride, &vertexOffset);
+		//device.context->IASetIndexBuffer(entityData.finsIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+		//device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+		//device.context->DrawIndexed(entityData.finsIndexBufferSize, 0, 0);
 	}
 
 	void renderDebug()
@@ -347,9 +451,14 @@ public:
 		}
 		if (key == InputKeys::F2 && pressed)
 		{
-			m_renderFur = !m_renderFur;
+			m_renderFurShells = !m_renderFurShells;
 			return;
 		}
+		if (key == InputKeys::F3 && pressed)
+		{
+			m_renderFurFins = !m_renderFurFins;
+			return;
+		}	
 	#if PROFILING
 		if (key == InputKeys::P && pressed)
 		{
@@ -391,14 +500,18 @@ private:
 	std::shared_ptr<framework::GpuProgram> m_furShellsRendering;
 
 	std::shared_ptr<framework::Geometry3D> m_catGeometry;
+	ID3D11Buffer* m_catFinsIndexBuffer;
+	size_t m_catFinsIndexBufferSize;
 
 	struct EntityData
 	{
 		std::weak_ptr<framework::Geometry3D> geometry;
+		ID3D11Buffer* finsIndexBuffer;
+		size_t finsIndexBufferSize;
 		matrix44 model;
 		matrix44 mvp;
 
-		EntityData(){}
+		EntityData() : finsIndexBuffer(0), finsIndexBufferSize(0) {}
 	};
 
 	std::vector<EntityData> m_entitiesData;
@@ -416,7 +529,8 @@ private:
 
 	bool m_renderDebug;
 	gui::LabelPtr_T m_debugLabel;
-	bool m_renderFur;
+	bool m_renderFurShells;
+	bool m_renderFurFins;
 
 	std::shared_ptr<framework::Texture> m_skyboxTexture;
 };
