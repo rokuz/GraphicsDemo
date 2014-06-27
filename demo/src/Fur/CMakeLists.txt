@@ -9,6 +9,9 @@ set(SOURCE_DX11 main_dx11.cpp)
 set(SHADERS_DX11 ${SHADERS_DIR_DX11}/common.h.hlsl
 				 ${SHADERS_DIR_DX11}/furshells.vsh.hlsl
 				 ${SHADERS_DIR_DX11}/furshells.psh.hlsl
+				 ${SHADERS_DIR_DX11}/furfins.vsh.hlsl
+				 ${SHADERS_DIR_DX11}/furfins.gsh.hlsl
+				 ${SHADERS_DIR_DX11}/furfins.psh.hlsl
 				 ${SHADERS_DIR_DX11}/solid.vsh.hlsl
 				 ${SHADERS_DIR_DX11}/solid.psh.hlsl)
 				 

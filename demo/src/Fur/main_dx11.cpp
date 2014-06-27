@@ -103,10 +103,20 @@ public:
 		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");
 		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
+		m_furFinsRendering.reset(new framework::GpuProgram());
+		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.vsh.hlsl");
+		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.gsh.hlsl");
+		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.psh.hlsl");
+		if (!m_furFinsRendering->init()) exit();
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::ENTITY_DATA, "entityData");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+
 		// geometry
 		m_catGeometry = initEntity("data/media/cat/cat.geom", true);
 		m_catGeometry->bindToGpuProgram(m_solidRendering);
 		m_catGeometry->bindToGpuProgram(m_furShellsRendering);
+		m_catGeometry->bindToGpuProgram(m_furFinsRendering);
 
 		// fins index buffer
 		m_catFinsIndexBuffer = initFinsIndexBuffer(m_catGeometry, m_catFinsIndexBufferSize);
@@ -150,6 +160,9 @@ public:
 			m_entitiesData.push_back(EntityData());
 			int index = (int)m_entitiesData.size() - 1;
 			m_entitiesData[index].geometry = m_catGeometry;
+			m_entitiesData[index].finsIndexBuffer = m_catFinsIndexBuffer;
+			m_entitiesData[index].finsIndexBufferSize = m_catFinsIndexBufferSize;
+
 			quaternion quat;	
 			quat.set_rotate_y(n_deg2rad(-180.0));
 			m_entitiesData[index].model = matrix44(quat);
@@ -356,8 +369,10 @@ public:
 		}
 
 		// fur (fins)
-		if (m_renderFurFins)
+		if (m_renderFurFins && m_furFinsRendering->use())
 		{
+			m_furFinsRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
 				renderFurFins(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
@@ -417,14 +432,22 @@ public:
 	{
 		const framework::Device& device = Application::instance()->getDevice();
 
-		//geometry->applyInputLayout();
-		//UINT vertexStride = geometry->getVertexSize();
-		//UINT vertexOffset = 0;
-		//ID3D11Buffer* vb = geometry->getVertexBuffer();
-		//device.context->IASetVertexBuffers(0, 1, &vb, &vertexStride, &vertexOffset);
-		//device.context->IASetIndexBuffer(entityData.finsIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-		//device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-		//device.context->DrawIndexed(entityData.finsIndexBufferSize, 0, 0);
+		EntityDataRaw entityDataRaw;
+		entityDataRaw.modelViewProjection = entityData.mvp;
+		entityDataRaw.model = entityData.model;
+		m_entityDataBuffer->setData(entityDataRaw);
+		m_entityDataBuffer->applyChanges();
+
+		m_furFinsRendering->setUniform<FurAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+
+		geometry->applyInputLayout();
+		UINT vertexStride = geometry->getVertexSize();
+		UINT vertexOffset = 0;
+		ID3D11Buffer* vb = geometry->getVertexBuffer();
+		device.context->IASetVertexBuffers(0, 1, &vb, &vertexStride, &vertexOffset);
+		device.context->IASetIndexBuffer(entityData.finsIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+		device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
+		device.context->DrawIndexed(entityData.finsIndexBufferSize, 0, 0);
 	}
 
 	void renderDebug()
@@ -498,6 +521,8 @@ private:
 	std::shared_ptr<framework::GpuProgram> m_solidRendering;
 
 	std::shared_ptr<framework::GpuProgram> m_furShellsRendering;
+
+	std::shared_ptr<framework::GpuProgram> m_furFinsRendering;
 
 	std::shared_ptr<framework::Geometry3D> m_catGeometry;
 	ID3D11Buffer* m_catFinsIndexBuffer;
