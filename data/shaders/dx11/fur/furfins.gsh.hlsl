@@ -3,14 +3,18 @@
 struct GS_INPUT
 {
     float4 position : SV_POSITION;
-	float3 normal : TEXCOORD0;
+	float2 uv0 : TEXCOORD0;
+	float3 normal : TEXCOORD1;
 };
 
 struct GS_OUTPUT
 {
     float4 position : SV_POSITION;
-	float2 uv0 : TEXCOORD0;
+	float3 uv0 : TEXCOORD0;
 };
+
+texture2D furLengthMap : register(t0);
+SamplerState defaultSampler : register(s0);
 
 [maxvertexcount(6)]
 void main(lineadj GS_INPUT pnt[4], inout TriangleStream<GS_OUTPUT> triStream)
@@ -21,20 +25,20 @@ void main(lineadj GS_INPUT pnt[4], inout TriangleStream<GS_OUTPUT> triStream)
 	float3 viewDirection2 = -normalize(viewPosition - c2);
 	float3 n1 = normalize(cross(pnt[0].position.xyz - pnt[1].position.xyz, pnt[2].position.xyz - pnt[1].position.xyz));
 	float3 n2 = normalize(cross(pnt[1].position.xyz - pnt[2].position.xyz, pnt[3].position.xyz - pnt[2].position.xyz));
-	float viewDotN1 = dot(n1, viewDirection1);
-	float viewDotN2 = dot(n2, viewDirection2);
+	float edge = dot(n1, viewDirection1) * dot(n2, viewDirection2);
 
-	if (viewDotN1 * viewDotN2 > 0)
+	float furLen = furLengthMap.SampleLevel(defaultSampler, pnt[1].uv0, 0).r * FUR_LENGTH;
+	if (edge > 0 && furLen > 1e-3)
 	{
 		GS_OUTPUT p[4];
 		p[0].position = mul(pnt[1].position, modelViewProjection);
-		p[0].uv0 = float2(0, 0);
+		p[0].uv0 = float3(pnt[1].uv0, 0);
 		p[1].position = mul(pnt[2].position, modelViewProjection);
-		p[1].uv0 = float2(0, 0);
-		p[2].position = mul(float4(pnt[1].position.xyz + pnt[1].normal * 0.03, 1), modelViewProjection);
-		p[2].uv0 = float2(0, 0);
-		p[3].position = mul(float4(pnt[2].position.xyz + pnt[2].normal * 0.03, 1), modelViewProjection);
-		p[3].uv0 = float2(0, 0);
+		p[1].uv0 = float3(pnt[2].uv0, 0);
+		p[2].position = mul(float4(pnt[1].position.xyz + pnt[1].normal * furLen, 1), modelViewProjection);
+		p[2].uv0 = float3(pnt[1].uv0, 1);
+		p[3].position = mul(float4(pnt[2].position.xyz + pnt[2].normal * furLen, 1), modelViewProjection);
+		p[3].uv0 = float3(pnt[2].uv0, 1);
 
 		triStream.Append(p[2]);
 		triStream.Append(p[1]);

@@ -17,7 +17,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 {
 	const float specPower = 30.0;
 
-	float3 coords = input.uv0 * float3(50.0, 50.0, 1.0f);
+	float3 coords = input.uv0 * float3(FUR_SCALE, FUR_SCALE, 1.0f);
 	float4 fur = furMap.Sample(defaultSampler, coords);
 	clip(fur.a - 0.01);
 
@@ -38,10 +38,9 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float sinTE = sqrt(1 - TdotE * TdotE);
 	outputColor.xyz = light.ambientColor * outputColor.rgb +
 					  light.diffuseColor * (1.0 - sinTL) * outputColor.rgb +
-					  light.specularColor * pow(abs((TdotL * TdotE + sinTL * sinTE)), specPower) * 0.2;
+					  light.specularColor * pow(abs((TdotL * TdotE + sinTL * sinTE)), specPower) * FUR_SPECULAR_POWER;
 
-	float minShadow = 1.0;
-	float shadow = input.uv0.z * (1.0f - minShadow) + minShadow;
+	float shadow = input.uv0.z * (1.0f - FUR_SELF_SHADOWING) + FUR_SELF_SHADOWING;
 	outputColor.rgb *= shadow;
 
 	return outputColor;

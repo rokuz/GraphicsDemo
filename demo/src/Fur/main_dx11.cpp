@@ -111,6 +111,10 @@ public:
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::ENTITY_DATA, "entityData");
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::FURLENGTH_MAP, "furLengthMap");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		// geometry
 		m_catGeometry = initEntity("data/media/cat/cat.geom", true);
@@ -129,7 +133,7 @@ public:
 		if (!m_furLengthTexture->initWithDDS("data/media/cat/cat_furlen.dds")) exit();
 
 		// entities
-		const int ENTITIES_IN_ROW = 1;
+		const int ENTITIES_IN_ROW = 5;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
 		const float AREA_HALFLENGTH = 8.0f;
 
@@ -349,24 +353,9 @@ public:
 				renderGeometry(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
 			}
 		}
-
-		// fur (shells)
-		if (m_renderFurShells && m_furShellsRendering->use())
-		{
-			Application::instance()->defaultAlphaBlending()->apply();
-			m_disableDepthWriting->apply();
-
-			m_furShellsRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
-			m_furShellsRendering->setUniform<FurAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
-
-			for (size_t i = 0; i < m_entitiesData.size(); i++)
-			{
-				renderFurShells(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
-			}
-
-			Application::instance()->defaultAlphaBlending()->cancel();
-			m_disableDepthWriting->cancel();
-		}
+	
+		Application::instance()->defaultAlphaBlending()->apply();
+		m_disableDepthWriting->apply();
 
 		// fur (fins)
 		if (m_renderFurFins && m_furFinsRendering->use())
@@ -378,6 +367,21 @@ public:
 				renderFurFins(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
 			}
 		}
+
+		// fur (shells)
+		if (m_renderFurShells && m_furShellsRendering->use())
+		{
+			m_furShellsRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+			m_furShellsRendering->setUniform<FurAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+
+			for (size_t i = 0; i < m_entitiesData.size(); i++)
+			{
+				renderFurShells(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
+			}
+		}
+
+		Application::instance()->defaultAlphaBlending()->cancel();
+		m_disableDepthWriting->cancel();
 
 		renderDebug();
 	}
@@ -430,6 +434,9 @@ public:
 
 	void renderFurFins(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
 	{
+		const int index = 1;
+		if (index >= geometry->getMeshesCount()) return;
+
 		const framework::Device& device = Application::instance()->getDevice();
 
 		EntityDataRaw entityDataRaw;
@@ -438,6 +445,12 @@ public:
 		m_entityDataBuffer->setData(entityDataRaw);
 		m_entityDataBuffer->applyChanges();
 
+		auto diffMap = framework::MaterialManager::instance().getTexture(geometry, index, framework::MAT_DIFFUSE_MAP);
+		m_furFinsRendering->setUniform<FurAppUniforms>(UF::FURLENGTH_MAP, m_furLengthTexture);
+		m_furFinsRendering->setUniform<FurAppUniforms>(UF::DIFFUSE_MAP, diffMap);
+		m_furFinsRendering->setUniform<FurAppUniforms>(UF::FUR_MAP, m_furTexture);
+
+		m_furFinsRendering->setUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
 		m_furFinsRendering->setUniform<FurAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
 
 		geometry->applyInputLayout();

@@ -38,3 +38,7 @@ struct VS_INPUT
 };
 
 static const float FUR_LAYERS = 16.0f;
+static const float FUR_LENGTH = 0.03f;
+static const float FUR_SELF_SHADOWING = 0.9f;
+static const float FUR_SCALE = 50.0f;
+static const float FUR_SPECULAR_POWER = 0.35f;
