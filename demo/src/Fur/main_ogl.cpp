@@ -2,40 +2,22 @@
 
 // uniforms
 DECLARE_UNIFORMS_BEGIN(FurAppUniforms)
-	ENTITY_DATA,
-	ONFRAME_DATA,
+	MODELVIEWPROJECTION_MATRIX,
+	MODEL_MATRIX,
 	LIGHTS_DATA,
+	VIEW_POSITION,
 	DIFFUSE_MAP,
 	NORMAL_MAP,
 	SPECULAR_MAP,
 	FUR_MAP,
-	FURLENGTH_MAP,
-	DEFAULT_SAMPLER
+	FURLENGTH_MAP
 DECLARE_UNIFORMS_END()
 #define UF framework::UniformBase<FurAppUniforms>::Uniform
 
 // constants
-const std::string SHADERS_PATH = "data/shaders/dx11/fur/";
+const std::string SHADERS_PATH = "data/shaders/gl/win32/fur/";
 const int FUR_LAYERS = 16;
 #define PROFILING 0
-
-// entity data
-#pragma pack (push, 1)
-struct EntityDataRaw
-{
-	matrix44 modelViewProjection;
-	matrix44 model;
-};
-#pragma pack (pop)
-
-// on frame data
-#pragma pack (push, 1)
-struct OnFrameDataRaw
-{
-	vector3 viewPosition;
-	unsigned int : 32;
-};
-#pragma pack (pop)
 
 // application
 class FurApp : public framework::Application
@@ -55,7 +37,7 @@ public:
 
 	virtual void init(const std::map<std::string, int>& params)
 	{
-		m_info.title = "Fur rendering (DX11)";
+		m_info.title = "Fur rendering (OpenGL 4)";
 		applyStandardParams(params);
 
 		setLegend("WASD - move camera\nLeft mouse button - rotate camera\nF1 - debug info\nF2 - on/off shells\nF3 - on/off fins");
@@ -80,57 +62,52 @@ public:
 
 		// gpu programs
 		m_solidRendering.reset(new framework::GpuProgram());
-		m_solidRendering->addShader(SHADERS_PATH + "solid.vsh.hlsl");
-		m_solidRendering->addShader(SHADERS_PATH + "solid.psh.hlsl");
+		m_solidRendering->addShader(SHADERS_PATH + "solid.vsh.glsl");
+		m_solidRendering->addShader(SHADERS_PATH + "solid.fsh.glsl");
 		if (!m_solidRendering->init()) exit();
-		m_solidRendering->bindUniform<FurAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
-		m_solidRendering->bindUniform<FurAppUniforms>(UF::ENTITY_DATA, "entityData");
-		m_solidRendering->bindUniform<FurAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_solidRendering->bindUniform<FurAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_solidRendering->bindUniform<FurAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
+		m_solidRendering->bindStorageBuffer<FurAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_solidRendering->bindUniform<FurAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_solidRendering->bindUniform<FurAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_solidRendering->bindUniform<FurAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_solidRendering->bindUniform<FurAppUniforms>(UF::SPECULAR_MAP, "specularMap");
-		m_solidRendering->bindUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
-		m_furShellsRendering.reset(new framework::GpuProgram());
-		m_furShellsRendering->addShader(SHADERS_PATH + "furshells.vsh.hlsl");
-		m_furShellsRendering->addShader(SHADERS_PATH + "furshells.psh.hlsl");
+		/*m_furShellsRendering.reset(new framework::GpuProgram());
+		m_furShellsRendering->addShader(SHADERS_PATH + "furshells.vsh.glsl");
+		m_furShellsRendering->addShader(SHADERS_PATH + "furshells.fsh.glsl");
 		if (!m_furShellsRendering->init()) exit();
-		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
-		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::ENTITY_DATA, "entityData");
-		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::MODEL_MATRIX, "modelMatrix");
+		m_furShellsRendering->bindStorageBuffer<FurAppUniforms>(UF::LIGHTS_DATA, "lightsDataBuffer");
+		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
 		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::FURLENGTH_MAP, "furLengthMap");
 		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");
-		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
 
 		m_furFinsRendering.reset(new framework::GpuProgram());
 		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.vsh.hlsl");
 		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.gsh.hlsl");
-		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.psh.hlsl");
+		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.fsh.hlsl");
 		if (!m_furFinsRendering->init()) exit();
-		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::ONFRAME_DATA, "onFrameData");
-		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::ENTITY_DATA, "entityData");
-		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::LIGHTS_DATA, "lightsData");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::FURLENGTH_MAP, "furLengthMap");
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");
-		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, "defaultSampler");
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");*/
 
 		// geometry
 		m_catGeometry = initEntity("data/media/cat/cat.geom", true);
-		m_catGeometry->bindToGpuProgram(m_solidRendering);
-		m_catGeometry->bindToGpuProgram(m_furShellsRendering);
-		m_catGeometry->bindToGpuProgram(m_furFinsRendering);
 
 		// fins index buffer
-		m_catFinsIndexBuffer = initFinsIndexBuffer(m_catGeometry, m_catFinsIndexBufferSize);
-		if (m_catFinsIndexBuffer == 0) exit();
+		//m_catFinsIndexBuffer = initFinsIndexBuffer(m_catGeometry, m_catFinsIndexBufferSize);
+		//if (m_catFinsIndexBuffer == 0) exit();
 
-		m_furTexture.reset(new framework::Texture());
-		if (!m_furTexture->initWithDDS("data/media/cat/fur.dds")) exit();
+		//m_furTexture.reset(new framework::Texture());
+		//if (!m_furTexture->initWithDDS("data/media/cat/fur.dds")) exit();
 
-		m_furLengthTexture.reset(new framework::Texture());
-		if (!m_furLengthTexture->initWithDDS("data/media/cat/cat_furlen.dds")) exit();
+		//m_furLengthTexture.reset(new framework::Texture());
+		//if (!m_furLengthTexture->initWithDDS("data/media/cat/cat_furlen.dds")) exit();
 
 		// entities
 		const int ENTITIES_IN_ROW = 5;
@@ -172,26 +149,26 @@ public:
 			m_entitiesData[index].model = matrix44(quat);
 		}
 
-		// entity's data buffer
-		m_entityDataBuffer.reset(new framework::UniformBuffer());
-		if (!m_entityDataBuffer->initDefaultConstant<EntityDataRaw>()) exit();
-
-		// on-frame data buffer
-		m_onFrameDataBuffer.reset(new framework::UniformBuffer());
-		if (!m_onFrameDataBuffer->initDefaultConstant<OnFrameDataRaw>()) exit();
-
-		// a depth-stencil state to disable depth writing
-		m_disableDepthWriting.reset(new framework::DepthStencilStage());
-		D3D11_DEPTH_STENCIL_DESC depthDesc = framework::DepthStencilStage::getDisableDepthWriting();
-		m_disableDepthWriting->initWithDescription(depthDesc);
-		if (!m_disableDepthWriting->isValid()) exit();
-
 		// lights
 		initLights();
 
 		// skybox texture
 		m_skyboxTexture.reset(new framework::Texture());
-		if (!m_skyboxTexture->initWithDDS("data/media/textures/church.dds")) exit();
+		if (!m_skyboxTexture->initAsCubemap("data/media/textures/church_posz.jpg",
+											"data/media/textures/church_negz.jpg",
+											"data/media/textures/church_negx.jpg",
+											"data/media/textures/church_posx.jpg",
+											"data/media/textures/church_posy.jpg",
+											"data/media/textures/church_negy.jpg", true)) exit();
+
+		framework::DepthState depthTestEnable(true);
+		depthTestEnable.setWriteEnable(true);
+		depthTestEnable.apply();
+
+		framework::PipelineState cullingEnable(GL_CULL_FACE, true);
+		cullingEnable.apply();
+
+		glViewport(0, 0, m_info.windowWidth, m_info.windowHeight);
 	}
 
 	std::shared_ptr<framework::Geometry3D> initEntity(const std::string& geometry, bool calculateAdjacency)
@@ -209,7 +186,7 @@ public:
 		return std::move(ent);
 	}
 
-	ID3D11Buffer* initFinsIndexBuffer(const std::shared_ptr<framework::Geometry3D>& geometry, size_t& size)
+	/*ID3D11Buffer* initFinsIndexBuffer(const std::shared_ptr<framework::Geometry3D>& geometry, size_t& size)
 	{
 		auto adjacency = geometry->getAdjacency();
 		if (!adjacency.empty())
@@ -258,14 +235,14 @@ public:
 		
 		size = 0;
 		return 0;
-	}
+	}*/
 
 	void initLights()
 	{
 		// directional light
 		framework::LightSource source;
 		source.type = framework::LightType::DirectLight;
-		source.position = vector3(0, 5, 0);
+		source.position = vector3(0, 15, 0);
 		vector3 dir(1, -1, 1);
 		dir.norm();
 		source.orientation.set_from_axes(vector3(0, 0, 1), dir);
@@ -276,9 +253,8 @@ public:
 
 		// light buffer
 		m_lightsBuffer.reset(new framework::UniformBuffer());
-		if (!m_lightsBuffer->initDefaultConstant<framework::LightRawData>()) exit();
-		m_lightsBuffer->setData(m_lightManager.getRawLightData(0));
-		m_lightsBuffer->applyChanges();
+		if (!m_lightsBuffer->initStorage<framework::LightRawData>(1)) exit();
+		m_lightsBuffer->setElement(0, m_lightManager.getRawLightData(0));
 	}
 
 	void initOverlays(gui::WidgetPtr_T root)
@@ -296,11 +272,11 @@ public:
 
 	virtual void shutdown()
 	{
-		if (m_catFinsIndexBuffer != 0)
-		{
-			m_catFinsIndexBuffer->Release();
-			m_catFinsIndexBuffer = 0;
-		}
+		//if (m_catFinsIndexBuffer != 0)
+		//{
+		//	m_catFinsIndexBuffer->Release();
+		//	m_catFinsIndexBuffer = 0;
+		//}
 
 	#if PROFILING
 		if (utils::Profiler::instance().isRun())
@@ -316,12 +292,7 @@ public:
 		m_camera.update(elapsedTime);
 		update(elapsedTime);
 
-		// set up on-frame data
-		OnFrameDataRaw onFrameData;
-		onFrameData.viewPosition = m_camera.getPosition();
-		m_onFrameDataBuffer->setData(onFrameData);
-		m_onFrameDataBuffer->applyChanges();
-
+		glViewport(0, 0, m_info.windowWidth, m_info.windowHeight);
 		useDefaultRenderTarget();
 
 		// render skybox
@@ -330,8 +301,8 @@ public:
 		// parts without fur
 		if (m_solidRendering->use())
 		{
-			m_solidRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
-			m_solidRendering->setUniform<FurAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+			m_solidRendering->setVector<FurAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
+			m_solidRendering->setStorageBuffer<FurAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
@@ -339,7 +310,7 @@ public:
 			}
 		}
 	
-		Application::instance()->defaultAlphaBlending()->apply();
+		/*Application::instance()->defaultAlphaBlending()->apply();
 		m_disableDepthWriting->apply();
 
 		// fur (fins)
@@ -366,36 +337,30 @@ public:
 		}
 
 		Application::instance()->defaultAlphaBlending()->cancel();
-		m_disableDepthWriting->cancel();
+		m_disableDepthWriting->cancel();*/
 
 		renderDebug();
 	}
 
 	void renderGeometry(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
 	{
-		EntityDataRaw entityDataRaw;
-		entityDataRaw.modelViewProjection = entityData.mvp;
-		entityDataRaw.model = entityData.model;
-		m_entityDataBuffer->setData(entityDataRaw);
-		m_entityDataBuffer->applyChanges();
+		m_solidRendering->setMatrix<FurAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
+		m_solidRendering->setMatrix<FurAppUniforms>(UF::MODEL_MATRIX, entityData.model);
 
 		for (size_t i = 0; i < geometry->getMeshesCount(); i++)
 		{
 			auto diffMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_DIFFUSE_MAP);
 			auto normMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_NORMAL_MAP);
 			auto specMap = framework::MaterialManager::instance().getTexture(geometry, i, framework::MAT_SPECULAR_MAP);
-			m_solidRendering->setUniform<FurAppUniforms>(UF::DIFFUSE_MAP, diffMap);
-			m_solidRendering->setUniform<FurAppUniforms>(UF::NORMAL_MAP, normMap);
-			m_solidRendering->setUniform<FurAppUniforms>(UF::SPECULAR_MAP, specMap);
-			m_solidRendering->setUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
+			m_solidRendering->setTexture<FurAppUniforms>(UF::DIFFUSE_MAP, diffMap, 0);
+			m_solidRendering->setTexture<FurAppUniforms>(UF::NORMAL_MAP, normMap, 1);
+			m_solidRendering->setTexture<FurAppUniforms>(UF::SPECULAR_MAP, specMap, 2);
 
-			m_solidRendering->setUniform<FurAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-			
 			geometry->renderMesh(i);
-		}	
+		}
 	}
 
-	void renderFurShells(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
+	/*void renderFurShells(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
 	{
 		const int index = 1;
 		if (index >= geometry->getMeshesCount()) return;
@@ -446,7 +411,7 @@ public:
 		device.context->IASetIndexBuffer(entityData.finsIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 		device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
 		device.context->DrawIndexed(entityData.finsIndexBufferSize, 0, 0);
-	}
+	}*/
 
 	void renderDebug()
 	{
@@ -517,19 +482,19 @@ public:
 private:
 	// gpu program to render solid objects in scene
 	std::shared_ptr<framework::GpuProgram> m_solidRendering;
-
+	// gpu program to render shells
 	std::shared_ptr<framework::GpuProgram> m_furShellsRendering;
-
+	// gpu program to render fins
 	std::shared_ptr<framework::GpuProgram> m_furFinsRendering;
 
 	std::shared_ptr<framework::Geometry3D> m_catGeometry;
-	ID3D11Buffer* m_catFinsIndexBuffer;
+	int m_catFinsIndexBuffer;
 	size_t m_catFinsIndexBufferSize;
 
 	struct EntityData
 	{
 		std::weak_ptr<framework::Geometry3D> geometry;
-		ID3D11Buffer* finsIndexBuffer;
+		int finsIndexBuffer;
 		size_t finsIndexBufferSize;
 		matrix44 model;
 		matrix44 mvp;
@@ -545,8 +510,6 @@ private:
 
 	std::shared_ptr<framework::Texture> m_furLengthTexture;
 	std::shared_ptr<framework::Texture> m_furTexture;
-
-	std::shared_ptr<framework::DepthStencilStage> m_disableDepthWriting;
 
 	framework::FreeCamera m_camera;
 

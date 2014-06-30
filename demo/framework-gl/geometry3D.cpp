@@ -72,7 +72,7 @@ void Geometry3D::destroy()
 	m_isLoaded = false;
 }
 
-bool Geometry3D::init(const std::string& fileName)
+bool Geometry3D::init(const std::string& fileName, bool calculateAdjacency)
 {
 	destroy();
 
@@ -85,10 +85,10 @@ bool Geometry3D::init(const std::string& fileName)
 	}
 	m_filename = fileName;
 
-	return init(data);
+	return init(data, calculateAdjacency);
 }
 
-bool Geometry3D::initAsPlane(const geom::PlaneGenerationInfo& info)
+bool Geometry3D::initAsPlane(const geom::PlaneGenerationInfo& info, bool calculateAdjacency)
 {
 	destroy();
 
@@ -103,10 +103,10 @@ bool Geometry3D::initAsPlane(const geom::PlaneGenerationInfo& info)
 		return m_isLoaded;
 	}
 
-	return init(data);
+	return init(data, calculateAdjacency);
 }
 
-bool Geometry3D::initAsTerrain(const geom::TerrainGenerationInfo& info)
+bool Geometry3D::initAsTerrain(const geom::TerrainGenerationInfo& info, bool calculateAdjacency)
 {
 	destroy();
 
@@ -121,16 +121,20 @@ bool Geometry3D::initAsTerrain(const geom::TerrainGenerationInfo& info)
 		return m_isLoaded;
 	}
 
-	return init(data);
+	return init(data, calculateAdjacency);
 }
 
-bool Geometry3D::init(const geom::Data& data)
+bool Geometry3D::init(const geom::Data& data, bool calculateAdjacency)
 {
 	m_boundingBox = data.getBoundingBox();
 	m_additionalUVsCount = data.getAdditionalUVsCount();
 	m_meshes = data.getMeshes();
 	m_verticesCount = data.getVerticesCount();
 	m_indicesCount = data.getIndexBuffer().size();
+	if (calculateAdjacency)
+	{
+		m_adjacency = data.calculateAdjacency();
+	}
 
 	glGenBuffers(1, &m_vertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);

@@ -41,15 +41,16 @@ public:
     Geometry3D();
     virtual ~Geometry3D();
 	
-	bool init(const std::string& fileName);
-	bool initAsTerrain(const geom::TerrainGenerationInfo& info);
-    bool initAsPlane(const geom::PlaneGenerationInfo& info);
+	bool init(const std::string& fileName, bool calculateAdjacency = false);
+	bool initAsTerrain(const geom::TerrainGenerationInfo& info, bool calculateAdjacency = false);
+	bool initAsPlane(const geom::PlaneGenerationInfo& info, bool calculateAdjacency = false);
 
     size_t getMeshesCount() const;
 	const geom::Data::Meshes& getMeshes() const { return m_meshes; }
 	const bbox3& getBoundingBox() const { return m_boundingBox; }
 	int getID() const { return m_id; }
 	const std::string& getFilename() const { return m_filename; }
+	const std::vector<geom::Data::TriangleAdjacency>& getAdjacency() const { return m_adjacency; }
 
     void renderMesh(size_t index, size_t instancesCount = 1);
 	void renderAllMeshes(size_t instancesCount = 1);
@@ -66,13 +67,15 @@ private:
 	size_t m_indicesCount;
 	bbox3 m_boundingBox;
 
+	std::vector<geom::Data::TriangleAdjacency> m_adjacency;
+
 	std::string m_filename;
 	int m_id;
 
 	bool m_isLoaded;
 	std::shared_ptr<Line3D> m_boundingBoxLine;
 
-	bool init(const geom::Data& data);
+	bool init(const geom::Data& data, bool calculateAdjacency);
 	static int generateId();
 	virtual void destroy();
 };
