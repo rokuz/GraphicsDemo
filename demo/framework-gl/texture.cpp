@@ -236,7 +236,8 @@ Texture::Texture():
 	m_width(0),
 	m_height(0),
 	m_format(-1),
-	m_pixelFormat(-1)
+	m_pixelFormat(-1),
+	m_arraySize(1)
 {
 }
 
@@ -418,11 +419,82 @@ bool Texture::initAsCubemap( const std::string& frontFilename, const std::string
 	return m_isLoaded;
 }
 
+bool Texture::initAsArray(const std::vector<std::string>& filenames, bool mipmaps)
+{
+	destroy();
+
+	m_arraySize = filenames.size();
+	std::vector<ImageInfo> info;
+	info.resize(m_arraySize);
+	auto cleanFunc = [&]()
+	{
+		for (size_t i = 0; i < m_arraySize; i++) if (info[i].dib != 0) FreeImage_Unload(info[i].dib);
+	};
+
+	for (size_t i = 0; i < info.size(); i++)
+	{
+		if (!gatherImageInfo(info[i], filenames[i]))
+		{
+			cleanFunc();
+			return false;
+		}
+
+		if (i > 0 && !compareImageInfos(info[i], info[i - 1]))
+		{
+			utils::Logger::toLogWithFormat("Error: could not create an array, files have different properties (width, height, bpp).\n");
+			cleanFunc();
+			return false;
+		}
+	}
+
+	if (!getFormatByImageInfo(info[0], m_format))
+	{
+		utils::Logger::toLogWithFormat("Error: format of a cubemap is unsupported.\n");
+		cleanFunc();
+		return false;
+	}
+	m_pixelFormat = findPixelFormatFreeImage(m_format);
+	if (m_pixelFormat < 0)
+	{
+		utils::Logger::toLogWithFormat("Error: could not create a cubemap, pixel format is unsupported.\n");
+		cleanFunc();
+		return false;
+	}
+
+	m_target = GL_TEXTURE_2D_ARRAY;
+	m_width = info[0].width;
+	m_height = info[0].height;
+	glGenTextures(1, &m_texture);
+	glBindTexture(m_target, m_texture);
+	int mipLevels = mipmaps ? getMipLevelsCount(m_width, m_height) : 1;
+	glTexStorage3D(m_target, mipLevels, m_format, m_width, m_height, m_arraySize);
+	for (size_t i = 0; i < m_arraySize; i++)
+	{
+		glTexSubImage3D(m_target, 0, 0, 0, i, m_width, m_height, 1, m_pixelFormat, GL_UNSIGNED_BYTE, info[i].data);
+	}
+	setSampling();
+	if (mipmaps) generateMipmaps();
+	glBindTexture(m_target, 0);
+
+	cleanFunc();
+
+	if (CHECK_GL_ERROR)
+	{
+		destroy();
+		return false;
+	}
+
+	m_isLoaded = true;
+	initDestroyable();
+
+	return m_isLoaded;
+}
+
 void Texture::setSampling()
 {
 	if (m_target != 0 && m_texture != 0)
 	{
-		if (m_target == GL_TEXTURE_CUBE_MAP)
+		if (m_target == GL_TEXTURE_CUBE_MAP || m_target == GL_TEXTURE_2D_ARRAY)
 		{
 			glTexParameteri(m_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

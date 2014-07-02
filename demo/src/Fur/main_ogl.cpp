@@ -100,14 +100,21 @@ public:
 		m_catGeometry = initEntity("data/media/cat/cat.geom", true);
 
 		// fins index buffer
-		//m_catFinsIndexBuffer = initFinsIndexBuffer(m_catGeometry, m_catFinsIndexBufferSize);
-		//if (m_catFinsIndexBuffer == 0) exit();
+		m_catFinsIndexBuffer = initFinsIndexBuffer(m_catGeometry, m_catFinsIndexBufferSize);
+		if (m_catFinsIndexBuffer == 0) exit();
 
-		//m_furTexture.reset(new framework::Texture());
-		//if (!m_furTexture->initWithDDS("data/media/cat/fur.dds")) exit();
+		m_furTexture.reset(new framework::Texture());
+		std::vector<std::string> furTexturesArray;
+		for (int i = 0; i < FUR_LAYERS; i++)
+		{
+			char buf[128];
+			sprintf(buf, "data/media/cat/furlayers/FurLayer%02d.dds", i);
+			furTexturesArray.push_back(buf);
+		}
+		if (!m_furTexture->initAsArray(furTexturesArray)) exit();
 
-		//m_furLengthTexture.reset(new framework::Texture());
-		//if (!m_furLengthTexture->initWithDDS("data/media/cat/cat_furlen.dds")) exit();
+		m_furLengthTexture.reset(new framework::Texture());
+		if (!m_furLengthTexture->init("data/media/cat/cat_furlen.dds")) exit();
 
 		// entities
 		const int ENTITIES_IN_ROW = 5;
@@ -186,7 +193,7 @@ public:
 		return std::move(ent);
 	}
 
-	/*ID3D11Buffer* initFinsIndexBuffer(const std::shared_ptr<framework::Geometry3D>& geometry, size_t& size)
+	unsigned int initFinsIndexBuffer(const std::shared_ptr<framework::Geometry3D>& geometry, size_t& size)
 	{
 		auto adjacency = geometry->getAdjacency();
 		if (!adjacency.empty())
@@ -220,22 +227,19 @@ public:
 			}
 
 			// create buffer
-			D3D11_BUFFER_DESC ibdesc = framework::Geometry3D::getDefaultIndexBuffer(finsData.size() * sizeof(int));
-			D3D11_SUBRESOURCE_DATA ibdata;
-			ibdata.pSysMem = finsData.data();
-			ibdata.SysMemPitch = 0;
-			ibdata.SysMemSlicePitch = 0;
-
+			unsigned int indexBuffer = 0;
+			glGenBuffers(1, &indexBuffer);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, finsData.size() * sizeof(int), finsData.data(), GL_STATIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 			size = finsData.size();
 
-			ID3D11Buffer* buffer = 0;
-			HRESULT hr = getDevice().device->CreateBuffer(&ibdesc, &ibdata, &buffer);
-			if (hr == S_OK) return buffer;
+			if (!CHECK_GL_ERROR) return indexBuffer;
 		}
 		
 		size = 0;
 		return 0;
-	}*/
+	}
 
 	void initLights()
 	{
@@ -272,11 +276,11 @@ public:
 
 	virtual void shutdown()
 	{
-		//if (m_catFinsIndexBuffer != 0)
-		//{
-		//	m_catFinsIndexBuffer->Release();
-		//	m_catFinsIndexBuffer = 0;
-		//}
+		if (m_catFinsIndexBuffer != 0)
+		{
+			glDeleteBuffers(1, &m_catFinsIndexBuffer);
+			m_catFinsIndexBuffer = 0;
+		}
 
 	#if PROFILING
 		if (utils::Profiler::instance().isRun())
@@ -488,13 +492,13 @@ private:
 	std::shared_ptr<framework::GpuProgram> m_furFinsRendering;
 
 	std::shared_ptr<framework::Geometry3D> m_catGeometry;
-	int m_catFinsIndexBuffer;
+	unsigned int m_catFinsIndexBuffer;
 	size_t m_catFinsIndexBufferSize;
 
 	struct EntityData
 	{
 		std::weak_ptr<framework::Geometry3D> geometry;
-		int finsIndexBuffer;
+		unsigned int finsIndexBuffer;
 		size_t finsIndexBufferSize;
 		matrix44 model;
 		matrix44 mvp;

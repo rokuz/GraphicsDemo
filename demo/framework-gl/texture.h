@@ -43,6 +43,7 @@ public:
 					   const std::string& leftFilename, const std::string& rightFilename,
 					   const std::string& topFilename, const std::string& bottomFilename,
 					   bool mipmaps = false);
+	bool initAsArray(const std::vector<std::string>& filenames, bool mipmaps = true);
 
 	static void init();
 	static void cleanup();
@@ -69,6 +70,7 @@ private:
 	int m_format;
 	int m_pixelFormat;
 	bool m_isLoaded;
+	size_t m_arraySize;
 
 	void setSampling();
 	void generateMipmaps();
