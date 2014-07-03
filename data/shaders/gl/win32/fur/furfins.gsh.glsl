@@ -34,13 +34,13 @@ void main()
 	vec3 uv[4];
 	if (edge > 0 && furLen > 1e-3)
 	{
-		p[0] = mul(gl_in[1].gl_Position, modelViewProjectionMatrix);
+		p[0] = modelViewProjectionMatrix * vec4(gl_in[1].gl_Position.xyz, 1);
 		uv[0] = vec3(gsinput[1].uv0, 0);
-		p[1] = mul(gl_in[2].gl_Position, modelViewProjectionMatrix);
+		p[1] = modelViewProjectionMatrix * vec4(gl_in[2].gl_Position.xyz, 1);
 		uv[1] = vec3(gsinput[2].uv0, 0);
-		p[2] = mul(vec4(gl_in[1].gl_Position.xyz + gsinput[1].normal * furLen, 1), modelViewProjectionMatrix);
+		p[2] = modelViewProjectionMatrix * vec4(gl_in[1].gl_Position.xyz + gsinput[1].normal * furLen, 1);
 		uv[2] = vec3(gsinput[1].uv0, FUR_LAYERS - 1);
-		p[3] = mul(vec4(gl_in[2].gl_Position.xyz + gsinput[2].normal * furLen, 1), modelViewProjectionMatrix);
+		p[3] = modelViewProjectionMatrix * vec4(gl_in[2].gl_Position.xyz + gsinput[2].normal * furLen, 1);
 		uv[3] = vec3(gsinput[2].uv0, FUR_LAYERS - 1);
 
 		gl_Position = p[2]; texcoords = uv[2];
