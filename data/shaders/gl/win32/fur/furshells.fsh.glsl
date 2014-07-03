@@ -1,47 +1,68 @@
-#include <common.h.hlsl>
+#version 430 core
 
-struct PS_INPUT
+in VS_OUTPUT
 {
-	float4 position : SV_POSITION;
-	float3 uv0 : TEXCOORD0;
-	float3 tangent : TEXCOORD1;
-	float3 normal : TEXCOORD2;
-	float3 worldPos : TEXCOORD3;
+	vec3 uv0;
+	vec3 normal;
+	vec3 tangent;
+	vec3 worldPos;
+} psinput;
+
+out vec4 outputColor;
+
+const float FUR_LAYERS = 16.0f;
+const float FUR_SELF_SHADOWING = 0.9f;
+const float FUR_SCALE = 50.0f;
+const float FUR_SPECULAR_POWER = 0.35f;
+
+// lights
+struct LightData
+{
+	vec3 position;
+	uint lightType;
+	vec3 direction;
+	float falloff;
+	vec3 diffuseColor;
+	float angle;
+	vec3 ambientColor;
+	uint dummy;
+	vec3 specularColor;
+	uint dummy2;
+};
+layout(std430) buffer lightsDataBuffer
+{
+    LightData lightsData[];
 };
 
-texture2D diffuseMap : register(t1);
-texture3D furMap : register(t2);
-SamplerState defaultSampler : register(s0);
+uniform sampler2D diffuseMap;
+uniform sampler2DArray furMap;
+uniform vec3 viewPosition;
 
-float4 main(PS_INPUT input) : SV_TARGET
+void main()
 {
 	const float specPower = 30.0;
 
-	float3 coords = input.uv0 * float3(FUR_SCALE, FUR_SCALE, 1.0f);
-	float4 fur = furMap.Sample(defaultSampler, coords);
-	clip(fur.a - 0.01);
+	vec3 coords = psinput.uv0 * vec3(FUR_SCALE, FUR_SCALE, 1.0);
+	vec4 fur = texture(furMap, coords);
+	if (fur.a < 0.01) discard;
 
-	float4 outputColor = float4(0, 0, 0, 0);
-	outputColor.a = fur.a * (1.0 - input.uv0.z);
+	float d = psinput.uv0.z / (FUR_LAYERS - 1.0);
+	outputColor = vec4(texture(diffuseMap, psinput.uv0.xy).rgb, fur.a * (1.0 - d));
 
-	outputColor.rgb = diffuseMap.Sample(defaultSampler, input.uv0.xy).rgb;
-
-	float3 viewDirection = normalize(input.worldPos - viewPosition);
+	vec3 viewDirection = normalize(psinput.worldPos - viewPosition);
 	
-	float3x3 ts = float3x3(input.tangent, cross(input.normal, input.tangent), input.normal);
-	float3 tangentVector = normalize((fur.rgb - 0.5f) * 2.0f);
-	tangentVector = normalize(mul(tangentVector, ts));
+	vec3 tangentVector = normalize((fur.rgb - 0.5) * 2.0);
+	mat3 ts = mat3(psinput.tangent, cross(psinput.normal, psinput.tangent), psinput.normal);
+	tangentVector = normalize(ts * tangentVector);
 
-	float TdotL = dot(tangentVector, light.direction);
+	float TdotL = dot(tangentVector, lightsData[0].direction);
 	float TdotE = dot(tangentVector, viewDirection);
 	float sinTL = sqrt(1 - TdotL * TdotL);
 	float sinTE = sqrt(1 - TdotE * TdotE);
-	outputColor.xyz = light.ambientColor * outputColor.rgb +
-					  light.diffuseColor * (1.0 - sinTL) * outputColor.rgb +
-					  light.specularColor * pow(abs((TdotL * TdotE + sinTL * sinTE)), specPower) * FUR_SPECULAR_POWER;
+	outputColor.rgb = lightsData[0].ambientColor * outputColor.rgb +
+					  lightsData[0].diffuseColor * (1.0 - sinTL) * outputColor.rgb +
+					  lightsData[0].specularColor * pow(abs((TdotL * TdotE + sinTL * sinTE)), specPower) * FUR_SPECULAR_POWER;
 
-	float shadow = input.uv0.z * (1.0f - FUR_SELF_SHADOWING) + FUR_SELF_SHADOWING;
+	float shadow = d * (1.0 - FUR_SELF_SHADOWING) + FUR_SELF_SHADOWING;
 	outputColor.rgb *= shadow;
-
-	return outputColor;
 }

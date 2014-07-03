@@ -51,6 +51,8 @@ public:
 	int getID() const { return m_id; }
 	const std::string& getFilename() const { return m_filename; }
 	const std::vector<geom::Data::TriangleAdjacency>& getAdjacency() const { return m_adjacency; }
+	GLuint getVertexArray() const { return m_vertexArray; }
+	GLuint getVertexBuffer() const { return m_vertexBuffer; }
 
     void renderMesh(size_t index, size_t instancesCount = 1);
 	void renderAllMeshes(size_t instancesCount = 1);

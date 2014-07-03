@@ -1,25 +1,25 @@
-#include <common.h.hlsl>
+#version 430 core
 
-struct PS_INPUT
+in vec3 texcoords;
+out vec4 outputColor;
+
+const float FUR_LAYERS = 16.0f;
+const float FUR_SELF_SHADOWING = 0.9f;
+const float FUR_SCALE = 50.0f;
+
+uniform sampler2D diffuseMap;
+uniform sampler2DArray furMap;
+
+void main()
 {
-	float4 position : SV_POSITION;
-	float3 uv0 : TEXCOORD0;
-};
+	outputColor.rgb = texture(diffuseMap, texcoords.xy).rgb;
+	vec3 coords = texcoords * vec3(FUR_SCALE, FUR_SCALE, 1.0);
+	vec4 fur = texture(furMap, coords);
+	if (fur.a < 0.01) discard;
 
-texture2D diffuseMap : register(t1);
-texture3D furMap : register(t2);
-SamplerState defaultSampler : register(s0);
+	float d = texcoords.z / (FUR_LAYERS - 1.0);
+	outputColor.a = fur.a * (1.0 - d);
 
-float4 main(PS_INPUT input) : SV_TARGET
-{
-	float3 color = diffuseMap.Sample(defaultSampler, input.uv0.xy).rgb;
-	float3 coords = input.uv0 * float3(FUR_SCALE, FUR_SCALE, 1.0f);
-	float4 fur = furMap.Sample(defaultSampler, coords);
-	clip(fur.a - 0.01);
-	float alpha = fur.a * (1.0 - input.uv0.z);
-
-	float shadow = input.uv0.z * (1.0f - FUR_SELF_SHADOWING) + FUR_SELF_SHADOWING;
-	color.rgb *= shadow;
-
-	return float4(color, alpha);
+	float shadow = d * (1.0 - FUR_SELF_SHADOWING) + FUR_SELF_SHADOWING;
+	outputColor.rgb *= shadow;
 }

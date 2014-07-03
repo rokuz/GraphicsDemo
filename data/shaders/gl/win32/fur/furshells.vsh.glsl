@@ -1,28 +1,34 @@
-#include <common.h.hlsl>
+#version 430 core
 
-struct VS_OUTPUT
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 uv0;
+layout(location = 3) in vec3 tangent;
+layout(location = 4) in vec3 binormal;
+
+out VS_OUTPUT
 {
-	float4 position : SV_POSITION;
-	float3 uv0 : TEXCOORD0;
-	float3 tangent : TEXCOORD1;
-	float3 normal : TEXCOORD2;
-	float3 worldPos : TEXCOORD3;
-};
+	vec3 uv0;
+	vec3 normal;
+	vec3 tangent;
+	vec3 worldPos;
+} vsoutput;
 
-texture2D furLengthMap : register(t0);
-SamplerState defaultSampler : register(s0);
+const float FUR_LAYERS = 16.0f;
+const float FUR_LENGTH = 0.03f;
 
-VS_OUTPUT main(VS_INPUT input, unsigned int instID : SV_InstanceID)
+uniform mat4 modelViewProjectionMatrix;
+uniform mat4 modelMatrix;
+uniform sampler2D furLengthMap;
+
+void main()
 {
-	VS_OUTPUT output;
-	float furLen = furLengthMap.SampleLevel(defaultSampler, input.uv0, 0).r;
-
-	float3 pos = input.position.xyz + normalize(input.normal) * furLen * FUR_LENGTH * float(instID + 1) / FUR_LAYERS;
-	output.position = mul(float4(pos, 1), modelViewProjection);
-	output.uv0 = float3(input.uv0, float(instID + 1) / FUR_LAYERS);
-	output.normal = mul(normalize(input.normal), (float3x3)model);
-	output.tangent = mul(normalize(input.tangent), (float3x3)model);
-	output.worldPos = mul(float4(pos, 1), model);
-
-	return output;
+	float furLen = texture(furLengthMap, uv0).r;
+	vec3 pos = position + normalize(normal) * furLen * FUR_LENGTH * float(gl_InstanceID + 1) / FUR_LAYERS;
+	gl_Position = modelViewProjectionMatrix * vec4(pos, 1);
+	vsoutput.uv0 = vec3(uv0, float(gl_InstanceID));
+	mat3 modelMatrixRot = mat3(modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz);
+	vsoutput.normal = modelMatrixRot * normalize(normal);
+	vsoutput.tangent = modelMatrixRot * normalize(tangent);
+	vsoutput.worldPos = (modelMatrix * vec4(pos, 1)).xyz;
 }

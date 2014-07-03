@@ -73,7 +73,7 @@ public:
 		m_solidRendering->bindUniform<FurAppUniforms>(UF::NORMAL_MAP, "normalMap");
 		m_solidRendering->bindUniform<FurAppUniforms>(UF::SPECULAR_MAP, "specularMap");
 
-		/*m_furShellsRendering.reset(new framework::GpuProgram());
+		m_furShellsRendering.reset(new framework::GpuProgram());
 		m_furShellsRendering->addShader(SHADERS_PATH + "furshells.vsh.glsl");
 		m_furShellsRendering->addShader(SHADERS_PATH + "furshells.fsh.glsl");
 		if (!m_furShellsRendering->init()) exit();
@@ -86,15 +86,15 @@ public:
 		m_furShellsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");
 
 		m_furFinsRendering.reset(new framework::GpuProgram());
-		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.vsh.hlsl");
-		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.gsh.hlsl");
-		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.fsh.hlsl");
+		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.vsh.glsl");
+		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.gsh.glsl");
+		m_furFinsRendering->addShader(SHADERS_PATH + "furfins.fsh.glsl");
 		if (!m_furFinsRendering->init()) exit();
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, "modelViewProjectionMatrix");
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::VIEW_POSITION, "viewPosition");
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::FURLENGTH_MAP, "furLengthMap");
 		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::DIFFUSE_MAP, "diffuseMap");
-		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");*/
+		m_furFinsRendering->bindUniform<FurAppUniforms>(UF::FUR_MAP, "furMap");
 
 		// geometry
 		m_catGeometry = initEntity("data/media/cat/cat.geom", true);
@@ -117,7 +117,7 @@ public:
 		if (!m_furLengthTexture->init("data/media/cat/cat_furlen.dds")) exit();
 
 		// entities
-		const int ENTITIES_IN_ROW = 5;
+		const int ENTITIES_IN_ROW = 1;
 		const float HALF_ENTITIES_IN_ROW = float(ENTITIES_IN_ROW) * 0.5f;
 		const float AREA_HALFLENGTH = 8.0f;
 
@@ -313,14 +313,18 @@ public:
 				renderGeometry(m_entitiesData[i].geometry.lock(), m_entitiesData[i]);
 			}
 		}
-	
-		/*Application::instance()->defaultAlphaBlending()->apply();
-		m_disableDepthWriting->apply();
 
+		framework::BlendState blendingEnable(true);
+		blendingEnable.setBlending(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		blendingEnable.apply();
+		framework::DepthState disableDepthWriting(true);
+		disableDepthWriting.setWriteEnable(false);
+		disableDepthWriting.apply();
+	
 		// fur (fins)
 		if (m_renderFurFins && m_furFinsRendering->use())
 		{
-			m_furFinsRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
+			m_furFinsRendering->setVector<FurAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
@@ -331,8 +335,8 @@ public:
 		// fur (shells)
 		if (m_renderFurShells && m_furShellsRendering->use())
 		{
-			m_furShellsRendering->setUniform<FurAppUniforms>(UF::ONFRAME_DATA, m_onFrameDataBuffer);
-			m_furShellsRendering->setUniform<FurAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer);
+			m_furShellsRendering->setVector<FurAppUniforms>(UF::VIEW_POSITION, m_camera.getPosition());
+			m_furShellsRendering->setStorageBuffer<FurAppUniforms>(UF::LIGHTS_DATA, m_lightsBuffer, 0);
 
 			for (size_t i = 0; i < m_entitiesData.size(); i++)
 			{
@@ -340,8 +344,8 @@ public:
 			}
 		}
 
-		Application::instance()->defaultAlphaBlending()->cancel();
-		m_disableDepthWriting->cancel();*/
+		blendingEnable.cancel();
+		disableDepthWriting.cancel();
 
 		renderDebug();
 	}
@@ -364,24 +368,18 @@ public:
 		}
 	}
 
-	/*void renderFurShells(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
+	void renderFurShells(const std::shared_ptr<framework::Geometry3D>& geometry, const EntityData& entityData)
 	{
 		const int index = 1;
 		if (index >= geometry->getMeshesCount()) return;
 
-		EntityDataRaw entityDataRaw;
-		entityDataRaw.modelViewProjection = entityData.mvp;
-		entityDataRaw.model = entityData.model;
-		m_entityDataBuffer->setData(entityDataRaw);
-		m_entityDataBuffer->applyChanges();
+		m_furShellsRendering->setMatrix<FurAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
+		m_furShellsRendering->setMatrix<FurAppUniforms>(UF::MODEL_MATRIX, entityData.model);
 
 		auto diffMap = framework::MaterialManager::instance().getTexture(geometry, index, framework::MAT_DIFFUSE_MAP);
-		m_furShellsRendering->setUniform<FurAppUniforms>(UF::FURLENGTH_MAP, m_furLengthTexture);
-		m_furShellsRendering->setUniform<FurAppUniforms>(UF::DIFFUSE_MAP, diffMap);
-		m_furShellsRendering->setUniform<FurAppUniforms>(UF::FUR_MAP, m_furTexture);
-		m_furShellsRendering->setUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
-
-		m_furShellsRendering->setUniform<FurAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
+		m_furShellsRendering->setTexture<FurAppUniforms>(UF::FURLENGTH_MAP, m_furLengthTexture);
+		m_furShellsRendering->setTexture<FurAppUniforms>(UF::DIFFUSE_MAP, diffMap);
+		m_furShellsRendering->setTexture<FurAppUniforms>(UF::FUR_MAP, m_furTexture);
 
 		geometry->renderMesh(index, FUR_LAYERS);
 	}
@@ -391,31 +389,18 @@ public:
 		const int index = 1;
 		if (index >= geometry->getMeshesCount()) return;
 
-		const framework::Device& device = Application::instance()->getDevice();
-
-		EntityDataRaw entityDataRaw;
-		entityDataRaw.modelViewProjection = entityData.mvp;
-		entityDataRaw.model = entityData.model;
-		m_entityDataBuffer->setData(entityDataRaw);
-		m_entityDataBuffer->applyChanges();
+		m_furFinsRendering->setMatrix<FurAppUniforms>(UF::MODELVIEWPROJECTION_MATRIX, entityData.mvp);
 
 		auto diffMap = framework::MaterialManager::instance().getTexture(geometry, index, framework::MAT_DIFFUSE_MAP);
-		m_furFinsRendering->setUniform<FurAppUniforms>(UF::FURLENGTH_MAP, m_furLengthTexture);
-		m_furFinsRendering->setUniform<FurAppUniforms>(UF::DIFFUSE_MAP, diffMap);
-		m_furFinsRendering->setUniform<FurAppUniforms>(UF::FUR_MAP, m_furTexture);
+		m_furFinsRendering->setTexture<FurAppUniforms>(UF::FURLENGTH_MAP, m_furLengthTexture);
+		m_furFinsRendering->setTexture<FurAppUniforms>(UF::DIFFUSE_MAP, diffMap);
+		m_furFinsRendering->setTexture<FurAppUniforms>(UF::FUR_MAP, m_furTexture);
 
-		m_furFinsRendering->setUniform<FurAppUniforms>(UF::DEFAULT_SAMPLER, anisotropicSampler());
-		m_furFinsRendering->setUniform<FurAppUniforms>(UF::ENTITY_DATA, m_entityDataBuffer);
-
-		geometry->applyInputLayout();
-		UINT vertexStride = geometry->getVertexSize();
-		UINT vertexOffset = 0;
-		ID3D11Buffer* vb = geometry->getVertexBuffer();
-		device.context->IASetVertexBuffers(0, 1, &vb, &vertexStride, &vertexOffset);
-		device.context->IASetIndexBuffer(entityData.finsIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-		device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
-		device.context->DrawIndexed(entityData.finsIndexBufferSize, 0, 0);
-	}*/
+		glBindVertexArray(geometry->getVertexArray());
+		glBindBuffer(GL_ARRAY_BUFFER, geometry->getVertexBuffer());
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entityData.finsIndexBuffer);
+		glDrawElements(GL_LINES_ADJACENCY, entityData.finsIndexBufferSize, GL_UNSIGNED_INT, 0);
+	}
 
 	void renderDebug()
 	{

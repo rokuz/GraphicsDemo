@@ -1,18 +1,20 @@
-#include <common.h.hlsl>
+#version 430 core
 
-struct VS_OUTPUT
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 uv0;
+layout(location = 3) in vec3 tangent;
+layout(location = 4) in vec3 binormal;
+
+out VS_OUTPUT
 {
-	float4 position : SV_POSITION;
-	float2 uv0 : TEXCOORD0;
-	float3 normal : TEXCOORD1;
-};
+	vec2 uv0;
+	vec3 normal;
+} vsoutput;
 
-VS_OUTPUT main(VS_INPUT input)
+void main()
 {
-	VS_OUTPUT output;
-
-	output.position = float4(input.position, 1);
-	output.uv0 = input.uv0;
-	output.normal = normalize(input.normal);
-	return output;
+	gl_Position = vec4(position, 1);
+	vsoutput.uv0 = uv0;
+	vsoutput.normal = normalize(normal);
 }
