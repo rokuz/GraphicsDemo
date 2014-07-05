@@ -46,7 +46,7 @@ void main()
 	vec4 fur = texture(furMap, coords);
 	if (fur.a < 0.01) discard;
 
-	float d = psinput.uv0.z / (FUR_LAYERS - 1.0);
+	float d = psinput.uv0.z / FUR_LAYERS;
 	outputColor = vec4(texture(diffuseMap, psinput.uv0.xy).rgb, fur.a * (1.0 - d));
 
 	vec3 viewDirection = normalize(psinput.worldPos - viewPosition);

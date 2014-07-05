@@ -17,7 +17,7 @@ void main()
 	vec4 fur = texture(furMap, coords);
 	if (fur.a < 0.01) discard;
 
-	float d = texcoords.z / (FUR_LAYERS - 1.0);
+	float d = texcoords.z / FUR_LAYERS;
 	outputColor.a = fur.a * (1.0 - d);
 
 	float shadow = d * (1.0 - FUR_SELF_SHADOWING) + FUR_SELF_SHADOWING;

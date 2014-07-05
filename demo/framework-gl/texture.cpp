@@ -494,11 +494,17 @@ void Texture::setSampling()
 {
 	if (m_target != 0 && m_texture != 0)
 	{
-		if (m_target == GL_TEXTURE_CUBE_MAP || m_target == GL_TEXTURE_2D_ARRAY)
+		if (m_target == GL_TEXTURE_CUBE_MAP)
 		{
 			glTexParameteri(m_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(m_target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		}
+		else if (m_target == GL_TEXTURE_2D_ARRAY)
+		{
+			glTexParameteri(m_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(m_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(m_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
 		}
 		else
 		{
