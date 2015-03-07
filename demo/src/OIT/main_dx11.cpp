@@ -192,7 +192,7 @@ public:
 		ent.geometry.reset(new framework::Geometry3D());
 		if (!ent.geometry->init(geometry)) exit();
 
-		return std::move(ent);
+		return ent;
 	}
 
 	void initLights()

@@ -58,7 +58,7 @@ D3D11_BLEND_DESC BlendStage::getDisableColorWriting()
 	{
 		desc.RenderTarget[i].RenderTargetWriteMask = 0;
 	}
-	return std::move(desc);
+	return desc;
 }
 
 D3D11_BLEND_DESC BlendStage::getAlphaBlending()
@@ -70,7 +70,7 @@ D3D11_BLEND_DESC BlendStage::getAlphaBlending()
 		desc.RenderTarget[i].SrcBlend = D3D11_BLEND_SRC_ALPHA;
 		desc.RenderTarget[i].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
 	}
-	return std::move(desc);
+	return desc;
 }
 
 

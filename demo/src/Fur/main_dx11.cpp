@@ -206,7 +206,7 @@ public:
 			framework::MaterialManager::instance().initializeMaterial(ent);
 		}
 
-		return std::move(ent);
+		return ent;
 	}
 
 	ID3D11Buffer* initFinsIndexBuffer(const std::shared_ptr<framework::Geometry3D>& geometry, size_t& size)

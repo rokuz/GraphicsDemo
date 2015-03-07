@@ -342,7 +342,7 @@ std::vector<int> OpenGLContext::getMultisamplingLevels()
 	delete [] samples;
 	std::sort(multisamplingLevels.begin(), multisamplingLevels.end());
 
-	return std::move(multisamplingLevels);
+	return multisamplingLevels;
 }
 
 void OpenGLContext::makeCurrent()

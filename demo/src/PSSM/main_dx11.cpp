@@ -251,7 +251,7 @@ public:
 			framework::MaterialManager::instance().initializeMaterial(ent, diffuseMap, normalMap, specularMap);
 		}
 
-		return std::move(ent);
+		return ent;
 	}
 
 	std::shared_ptr<framework::Geometry3D> initEntity(const std::string& geometry)
@@ -266,7 +266,7 @@ public:
 			framework::MaterialManager::instance().initializeMaterial(ent);
 		}
 
-		return std::move(ent);
+		return ent;
 	}
 
 	void initLights()

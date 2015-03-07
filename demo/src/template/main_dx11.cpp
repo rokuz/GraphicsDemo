@@ -150,10 +150,10 @@ public:
 		}
 
 		//m_geometry->renderBoundingBox(m_mvp);
-
-		matrix44 vp = m_camera.getView() * m_camera.getProjection();
-		renderAxes(vp);
-		m_lightManager.renderDebugVisualization(vp);
+		
+		//matrix44 vp = m_camera.getView() * m_camera.getProjection();
+		//renderAxes(vp);
+		//m_lightManager.renderDebugVisualization(vp);
 	}
 
 	virtual void onKeyButton(int key, int scancode, bool pressed)

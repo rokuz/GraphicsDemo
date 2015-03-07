@@ -378,14 +378,14 @@ Font FontManager::createFont(const std::string& fontPath, size_t height)
 	static int idGenerator = 0;
 	Font font;
 	if (!m_freetype->loadFont(font, fontPath, height)) 
-		return std::move(Font());
+		return Font();
 
 	font.m_id = idGenerator;
 	idGenerator++;
 
 	m_fonts.push_back(font);
 
-	return std::move(font);
+	return font;
 }
 
 const Font& FontManager::getFont(int id) const

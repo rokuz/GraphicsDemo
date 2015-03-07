@@ -214,7 +214,7 @@ std::vector<int> Profiler::getProfilingThreads() const
 	{
 		v.push_back(it->first);
 	}
-	return std::move(v);
+	return v;
 }
 
 std::string Profiler::getProfilingThreadDesc(unsigned int id) const

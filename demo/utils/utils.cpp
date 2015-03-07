@@ -76,7 +76,7 @@ std::string Utils::getExtention(const std::string& fileName)
 		ext[i] = std::tolower(ext[i], loc);
 	}
 	
-	return std::move(ext);
+	return ext;
 }
 
 std::list<std::string> Utils::getExtentions(const std::string& fileName)
@@ -98,7 +98,7 @@ std::list<std::string> Utils::getExtentions(const std::string& fileName)
 		result.push_back(std::move(ext));
 	}
 
-	return std::move(result);
+	return result;
 }
 
 std::string Utils::getPath(const std::string& fileName)
@@ -118,8 +118,7 @@ std::string Utils::getPath(const std::string& fileName)
 
 	if (p == 0) return "";
 
-	std::string path = fileName.substr(0, p + 1);
-	return std::move(path);
+	return fileName.substr(0, p + 1);
 }
 
 std::string Utils::getFilename(const std::string& path)
@@ -181,8 +180,7 @@ std::string Utils::fromUnicode( const std::wstring& str )
 	if (reslen < (int)maxLen) buffer.get()[reslen] = 0;
 	else if (buffer.get()[maxLen - 1]) buffer.get()[0] = 0;
 
-	std::string output = buffer.get();
-	return std::move(output);
+	return buffer.get();
 }
 
 std::wstring Utils::toUnicode( const std::string& str )
@@ -195,8 +193,7 @@ std::wstring Utils::toUnicode( const std::string& str )
 	if (reslen < (int)maxLen) buffer.get()[reslen] = 0;
 	else if (buffer.get()[maxLen - 1]) buffer.get()[0] = 0;
 
-	std::wstring output = buffer.get();
-	return std::move(output);
+	return buffer.get();
 }
 
 vector3 Utils::random(float minValue, float maxValue)
@@ -211,7 +208,7 @@ vector3 Utils::random(float minValue, float maxValue)
 std::map<std::string, int> Utils::parseCommandLine(const std::string& commandLine)
 {
 	std::map<std::string, int> result;
-	if (commandLine.size() < 2) return std::move(result);
+	if (commandLine.size() < 2) return result;
 
 	std::list<size_t> offsets;
 	size_t offset = 0;
@@ -254,7 +251,7 @@ std::map<std::string, int> Utils::parseCommandLine(const std::string& commandLin
 		}
 	}
 
-	return std::move(result);
+	return result;
 }
 
 std::string Utils::currentTimeDate(bool withoutSpaces)
@@ -268,7 +265,7 @@ std::string Utils::currentTimeDate(bool withoutSpaces)
 		std::replace(str.begin(), str.end(), ':', '_');
 	}
 	str.pop_back(); // remove \n
-	return std::move(str);
+	return str;
 }
 
 std::list<std::string> Utils::findFilesInDirectory( const std::string& path, const std::string& mask )

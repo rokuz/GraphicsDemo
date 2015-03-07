@@ -170,7 +170,7 @@ public:
 			ent.specularTexture->init(specularTexture);
 		}
 
-		return std::move(ent);
+		return ent;
 	}
 
 	void initLights()

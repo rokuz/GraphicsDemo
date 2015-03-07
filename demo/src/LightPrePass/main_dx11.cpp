@@ -214,7 +214,7 @@ public:
 			ent.specularTexture->initWithDDS(specularTexture);
 		}
 
-		return std::move(ent);
+		return ent;
 	}
 
 	void initLights()
